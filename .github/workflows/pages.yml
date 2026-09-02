@@ -23,10 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Build static site for project Pages
-        run: npm run build
-        env:
-          GITHUB_PAGES: "true"
+      - run: npm run build
       - name: Publish gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:

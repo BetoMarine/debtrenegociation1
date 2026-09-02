@@ -16,7 +16,13 @@ Public HTTPS production build (static files only; your letter and photos stay on
 
 If Safari says 404, GitHub Pages is not switched on yet. In the GitHub app or safari, open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages) → **Build and deployment** → **Source: Deploy from a branch** → **Branch: `gh-pages`** / **folder: `/ (root)`** → Save. Wait a minute and reload the URL.
 
-The `gh-pages` branch is the `npm run build` output (`GITHUB_PAGES=true`). After merge to `main`, `.github/workflows/pages.yml` rebuilds that branch.
+The `gh-pages` branch is the `npm run build` output (relative asset paths). After merge to `main`, `.github/workflows/pages.yml` rebuilds that branch.
+
+Until Pages is switched on, the same production files are also on HTTPS here (CDN cache of `gh-pages`, not a backend):
+
+**https://cdn.jsdelivr.net/gh/BetoMarine/debtrenegociation1@gh-pages/index.html**
+
+Use the github.io URL for Add to Home Screen once Pages is on. The jsDelivr link is only so you can open the app today without a computer.
 
 ## Who this build is for
 
