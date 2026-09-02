@@ -1,7 +1,10 @@
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const pagesBase = process.env.GITHUB_PAGES === "true" ? "/debtrenegociation1/" : "/";
+
 export default defineConfig({
+  base: pagesBase,
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
@@ -9,7 +12,7 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
-        navigateFallback: "/index.html",
+        navigateFallback: `${pagesBase}index.html`,
         runtimeCaching: [],
       },
     }),

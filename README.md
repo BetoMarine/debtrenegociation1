@@ -4,6 +4,20 @@ A free Hong Kong consumer tool. Someone in financial difficulty prepares a hards
 
 This repository is the v1 proof of concept for the first 20 testers (job-loss / pre-default). It is not an App Store app, not a debt mill, and not a collector.
 
+## Open on iPhone (no npm)
+
+Public HTTPS production build (static files only; your letter and photos stay on the phone):
+
+**https://betomarine.github.io/debtrenegociation1/**
+
+1. Open that link in **Safari** (not the in-app GitHub browser if it blocks Add to Home Screen).
+2. Share → Add to Home Screen.
+3. After the first load it works offline. Completing a pack does not POST your name, HKID, amounts, or files.
+
+If Safari says 404, GitHub Pages is not switched on yet. In the GitHub app or safari, open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages) → **Build and deployment** → **Source: Deploy from a branch** → **Branch: `gh-pages`** / **folder: `/ (root)`** → Save. Wait a minute and reload the URL.
+
+The `gh-pages` branch is the `npm run build` output (`GITHUB_PAGES=true`). After merge to `main`, `.github/workflows/pages.yml` rebuilds that branch.
+
 ## Who this build is for
 
 Banked Hong Kong borrowers **before write-off**, typically:
@@ -79,6 +93,10 @@ npm run preview
 There is no server of your data. Vite only serves static files.
 
 ## How to test on a phone
+
+Founder / testers with only an iPhone: open **https://betomarine.github.io/debtrenegociation1/** in Safari, then Share → Add to Home Screen.
+
+Local preview (needs Node):
 
 1. Put the phone and the computer on the same Wi-Fi.
 2. Run `npm run build && npm run preview -- --host`.
