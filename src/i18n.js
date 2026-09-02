@@ -9,7 +9,7 @@ const zh = {
   save: "儲存在這部手機",
   done: "完成",
   optional: "可選",
-  version: "PoC v0.1.0",
+  version: "PoC v0.1.1",
   localOnly: "資料只留在這部手機。卸除網頁或 App 就會清走。我們不會寄給銀行、也不建帳號。",
 
   promiseKicker: "免費 · 只在這部手機 · 你自己寄出",
@@ -46,6 +46,8 @@ const zh = {
     "加一個暱稱即可，例如「滙豐卡」。金額可留空。全部只存在這部手機。",
   nickname: "暱稱",
   nicknamePh: "例如：滙豐卡、恒生私人貸款",
+  accountRef: "戶口編號（可選）",
+  accountRefPh: "例如：後四位 1234",
   type: "類型",
   amount: "尚欠（可選）",
   amountPh: "例如：HK$80,000",
@@ -63,17 +65,35 @@ const zh = {
   },
 
   situationTitle: "現況",
-  situationHint: "用下面幾欄就夠。信件會用第一人稱、以你的名字寫出。寄出前你可以改每一個字。",
+  situationHint: "用下面幾欄。信件是第一人稱、銀行檔語氣。寄出前你可以改每一個字。數字屬自行申報，未經審計。",
   fullName: "你的姓名（寫進信件）",
   fullNamePh: "例如：陳大文",
+  hkid: "香港身分證號碼",
+  hkidPh: "例如：A123456(7)",
+  phone: "電話",
+  phonePh: "例如：9123 4567",
   whatChanged: "發生了甚麼事",
   whatChangedPh: "例如：公司裁員，上月底最後工作日。",
   when: "何時開始",
   whenPh: "例如：2026年8月",
-  incomeNow: "現在每月收入",
-  incomeNowPh: "例如：現時沒有薪金／兼職約 HK$8,000",
-  canPay: "你現在每月可以繳付多少",
-  canPayPh: "例如：所有無抵押貸款合計每月 HK$2,000",
+  incomeItems: "收入項目（自行申報）",
+  incomeItemsPh: "例如：現無薪金；兼職散工",
+  incomeAmount: "每月收入",
+  incomeAmountPh: "例如：HK$0 或 HK$8,000",
+  expenseItems: "必要開支項目（自行申報）",
+  expenseItemsPh: "例如：租金、膳食、交通",
+  expenseAmount: "每月必要開支",
+  expenseAmountPh: "例如：HK$12,000",
+  surplus: "可供還款盈餘（每月）",
+  surplusPh: "例如：HK$2,000",
+  tenor: "建議重組期",
+  tenorMonths: {
+    "3": "3 個月",
+    "6": "6 個月（預設）",
+    "9": "9 個月",
+    "12": "12 個月",
+  },
+  askInterestFreeze: "另外請求考慮凍結利息（可選，預設關閉；不是零利率承諾）",
   letterTitle: "信件（可改每一個字）",
   regenerate: "用上面欄位重新產生",
   letterEdited: "你已改過正文。再產生會覆蓋你的修改。",
@@ -115,23 +135,27 @@ const zh = {
 
   docsTitle: "文件清單",
   docsHint:
-    "在這裏打勾。照片可選擇加進本地信件包，不會上傳到任何伺服器。卸除就會清走。",
+    "必需文件要先加進這部手機，才能產生或分享 PDF。照片只存在本地。本工具不能核對月結單是否三個不同月份，所以近三個月月結單需上傳三張影像。",
   attach: "加照片（只存本地）",
   attached: "已加照片",
-  removePhoto: "移除照片",
+  attachMore: "再加一張",
+  removePhoto: "移除",
+  requiredTag: "必需",
+  optionalTag: "可選",
+  photoCount: "已加 {have}／需 {need} 張",
   docs: {
-    identity: "身分證明（例如香港身分證副本）",
-    income_change: "收入改變證明（解僱信、減薪／減工時信）",
-    payslips: "最近糧單",
-    bank_statements: "最近銀行月結單",
-    creditor_statements: "各債權人最近月結單",
-    expenses: "每月開支概要",
-    address: "住址證明",
-    assets_liabilities: "資產與負債清單",
+    hardship_proof: "困難證明（解僱信、減薪／減工時信或同類文件）",
+    bank_statements: "近三個月銀行月結單（請上傳三張；未能核對月份）",
+    identity: "香港身分證副本",
+    other: "其他",
   },
+  missingTitle: "尚未能產生或分享 PDF",
+  missingHint: "下列必需附件還未在這部手機齊全。",
+  missingHardship: "困難證明：還欠 {remain} 張（至少 1 張）",
+  missingStatements: "近三個月銀行月結單：還欠 {remain} 張（需 3 張；未能核對是否三個不同月份）",
 
   packTitle: "信件包",
-  packHint: "PDF 在這部手機產生。用系統分享或下載。我們不會代寄。",
+  packHint: "畫面預覽與 PDF 同一份正文。PDF 在這部手機產生。附件只留在本地，會作為附頁影像放進 PDF。我們不會代寄。",
   makePdf: "產生 PDF",
   makingPdf: "正在產生…",
   share: "分享 PDF",
@@ -177,7 +201,7 @@ const en = {
   save: "Save on this phone",
   done: "Done",
   optional: "Optional",
-  version: "PoC v0.1.0",
+  version: "PoC v0.1.1",
   localOnly:
     "Everything stays on this phone. Uninstalling the site or app wipes it. We do not send this to a bank, and there is no account.",
 
@@ -214,6 +238,8 @@ const en = {
   creditorsHint: "A nickname is enough, e.g. “HSBC card”. Amounts are optional. Stored here only.",
   nickname: "Nickname",
   nicknamePh: "e.g. HSBC card, Hang Seng loan",
+  accountRef: "Account ref (optional)",
+  accountRefPh: "e.g. last four 1234",
   type: "Type",
   amount: "Amount owed (optional)",
   amountPh: "e.g. HK$80,000",
@@ -232,17 +258,35 @@ const en = {
 
   situationTitle: "Your situation",
   situationHint:
-    "Structured fields only. The letter is first person, in your name. You can edit every word before the PDF.",
+    "Structured fields. The letter is first person, in a bank-file tone. You can edit every word before the PDF. Figures are self-declared, not audited.",
   fullName: "Your name (goes in the letter)",
   fullNamePh: "e.g. Chan Tai Man",
+  hkid: "HKID number",
+  hkidPh: "e.g. A123456(7)",
+  phone: "Phone",
+  phonePh: "e.g. 9123 4567",
   whatChanged: "What changed",
   whatChangedPh: "e.g. Role made redundant. Last day was end of last month.",
   when: "When it started",
   whenPh: "e.g. August 2026",
-  incomeNow: "Income now",
-  incomeNowPh: "e.g. No salary / part-time about HK$8,000",
-  canPay: "What you can pay each month",
-  canPayPh: "e.g. HK$2,000 across all unsecured debts",
+  incomeItems: "Income items (self-declared)",
+  incomeItemsPh: "e.g. No salary; occasional part-time",
+  incomeAmount: "Monthly income",
+  incomeAmountPh: "e.g. HK$0 or HK$8,000",
+  expenseItems: "Essential expenses (self-declared)",
+  expenseItemsPh: "e.g. Rent, food, transport",
+  expenseAmount: "Monthly essential expenses",
+  expenseAmountPh: "e.g. HK$12,000",
+  surplus: "Surplus available for repayment each month",
+  surplusPh: "e.g. HK$2,000",
+  tenor: "Proposed restructure period",
+  tenorMonths: {
+    "3": "3 months",
+    "6": "6 months (default)",
+    "9": "9 months",
+    "12": "12 months",
+  },
+  askInterestFreeze: "Also ask them to consider freezing interest (optional, off by default — not a 0% promise)",
   letterTitle: "Letter (edit every word)",
   regenerate: "Rebuild from the fields above",
   letterEdited: "You edited the letter. Rebuilding will overwrite your edits.",
@@ -285,23 +329,27 @@ const en = {
 
   docsTitle: "Document checklist",
   docsHint:
-    "Tick what you have. Photos can sit in the local pack. They are not uploaded. Uninstall wipes them.",
+    "Required files must be on this phone before you can create or share a PDF. Photos stay here. This tool cannot check that three statements are three different months, so please upload three images for the last three months.",
   attach: "Add photo (this phone only)",
   attached: "Photo attached",
-  removePhoto: "Remove photo",
+  attachMore: "Add another",
+  removePhoto: "Remove",
+  requiredTag: "Required",
+  optionalTag: "Optional",
+  photoCount: "{have} of {need} photos",
   docs: {
-    identity: "Proof of identity (e.g. HKID copy)",
-    income_change: "Proof of income change (termination or hours/pay-cut letter)",
-    payslips: "Recent payslips",
-    bank_statements: "Recent bank statements",
-    creditor_statements: "Latest statement from each creditor",
-    expenses: "Monthly expenses summary",
-    address: "Proof of address",
-    assets_liabilities: "List of assets and liabilities",
+    hardship_proof: "Hardship proof (termination, pay-cut letter, or similar)",
+    bank_statements: "Bank statements — last three months (upload three images; months are not verified)",
+    identity: "HKID copy",
+    other: "Other",
   },
+  missingTitle: "PDF and Share are blocked",
+  missingHint: "These required attachments are not yet on this phone.",
+  missingHardship: "Hardship proof: {remain} more photo(s) needed (at least 1)",
+  missingStatements: "Bank statements for the last three months: {remain} more photo(s) needed (3 required; months are not verified)",
 
   packTitle: "Your pack",
-  packHint: "The PDF is built on this phone. Share it or download it. We do not send it.",
+  packHint: "The preview matches the PDF text. The PDF is built on this phone. Attachments stay local and are added as image annexes. We do not send it.",
   makePdf: "Create PDF",
   makingPdf: "Creating…",
   share: "Share PDF",
@@ -339,14 +387,18 @@ const en = {
 
 export const STRINGS = { zh, en };
 
-export function t(lang, key) {
+export function t(lang, key, vars) {
   const table = STRINGS[lang] || zh;
   const parts = key.split(".");
   let cur = table;
   for (const part of parts) {
     cur = cur?.[part];
   }
-  return cur ?? key;
+  let text = cur ?? key;
+  if (vars && typeof text === "string") {
+    text = text.replace(/\{(\w+)\}/g, (_, name) => (vars[name] == null ? "" : String(vars[name])));
+  }
+  return text;
 }
 
 export function hrefs(lang) {

@@ -6,9 +6,14 @@ const FORBIDDEN = [
   /secret channel/i,
   /we know the bank/i,
   /legal jargon/i,
+  /special recovery unit/i,
+  /credit risk management/i,
+  /\bAUDITED\b/,
+  /section 28/i,
   /隱藏部門/,
   /秘密渠道/,
   /我們認識銀行/,
+  /特別追收/,
 ];
 
 function walk(value, acc = []) {

@@ -14,7 +14,8 @@ import {
 } from "./db.js";
 import { countEvents, makeEvent } from "./events.js";
 import { DOORS, recommendDoor } from "./door.js";
-import { buildLetter, emptyDocuments, formatToday } from "./letter.js";
+import { DOCUMENT_DEFS, missingAttachments, normalizeDocuments } from "./docs.js";
+import { buildLetter, letterContext } from "./letter.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
 
 const STATUSES = ["draft", "sent", "waiting", "accepted", "rejected", "gave_up"];
@@ -25,13 +26,40 @@ let lang = "zh";
 let pack = null;
 let screen = "home";
 let versionTaps = 0;
-let draftCreditor = { nickname: "", type: "hsbc", amount: "" };
+let draftCreditor = { nickname: "", type: "hsbc", amount: "", ref: "" };
 let busy = false;
 let notice = "";
 
+function migratePack(raw) {
+  if (!raw) return raw;
+  const sit = raw.situation || {};
+  return {
+    ...raw,
+    hkid: raw.hkid || "",
+    phone: raw.phone || "",
+    situation: {
+      whatChanged: sit.whatChanged || "",
+      when: sit.when || "",
+      incomeItems: sit.incomeItems || "",
+      incomeAmount: sit.incomeAmount || sit.incomeNow || "",
+      expenseItems: sit.expenseItems || "",
+      expenseAmount: sit.expenseAmount || "",
+      surplus: sit.surplus || sit.canPay || "",
+      tenorMonths: sit.tenorMonths || "6",
+      askInterestFreeze: !!sit.askInterestFreeze,
+    },
+    documents: normalizeDocuments(raw.documents),
+  };
+}
+
+function syncLetter() {
+  if (!pack) return;
+  pack.letter = buildLetter(letterContext(pack, lang));
+}
+
 export async function boot() {
   lang = await getLang();
-  pack = await getPack();
+  pack = migratePack(await getPack());
   await log("app_open");
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
@@ -75,15 +103,16 @@ function go(name) {
 
 async function ensurePack() {
   if (!pack) {
-    pack = newPack(lang);
-    pack.documents = emptyDocuments();
+    pack = migratePack(newPack(lang));
     pack = await savePack(pack);
+  } else {
+    pack = migratePack(pack);
   }
   return pack;
 }
 
-function s(key) {
-  return t(lang, key);
+function s(key, vars) {
+  return t(lang, key, vars);
 }
 
 function el(html) {
@@ -139,16 +168,7 @@ async function toggleLang() {
   await setLang(lang);
   if (pack) {
     pack.lang = lang;
-    if (!pack.letterTouched) {
-      pack.letter = buildLetter({
-        lang,
-        fullName: pack.fullName,
-        reason: pack.reason,
-        creditors: pack.creditors,
-        situation: pack.situation,
-        today: formatToday(lang),
-      });
-    }
+    if (!pack.letterTouched) syncLetter();
     pack = await savePack(pack);
   }
   render();
@@ -295,7 +315,7 @@ function renderCreditors() {
       <div class="card creditor">
         <div>
           <strong>${escapeHtml(c.nickname)}</strong>
-          <div class="tiny">${escapeHtml(s(`types.${c.type}`))}${c.amount ? ` · ${escapeHtml(c.amount)}` : ""}</div>
+          <div class="tiny">${escapeHtml(s(`types.${c.type}`))}${c.ref ? ` · ${escapeHtml(c.ref)}` : ""}${c.amount ? ` · ${escapeHtml(c.amount)}` : ""}</div>
         </div>
         <button class="btn" type="button" style="width:auto;min-height:40px;padding:8px 12px">${escapeHtml(s("remove"))}</button>
       </div>
@@ -310,6 +330,9 @@ function renderCreditors() {
       </label>
       <label class="field">${escapeHtml(s("type"))}
         <select id="type">${TYPES.map((type) => `<option value="${type}" ${draftCreditor.type === type ? "selected" : ""}>${escapeHtml(s(`types.${type}`))}</option>`).join("")}</select>
+      </label>
+      <label class="field">${escapeHtml(s("accountRef"))}
+        <input id="ref" maxlength="40" placeholder="${escapeHtml(s("accountRefPh"))}" value="${escapeHtml(draftCreditor.ref)}" />
       </label>
       <label class="field">${escapeHtml(s("amount"))}
         <input id="amt" maxlength="32" placeholder="${escapeHtml(s("amountPh"))}" value="${escapeHtml(draftCreditor.amount)}" />
@@ -327,6 +350,9 @@ function renderCreditors() {
   form.querySelector("#type").addEventListener("change", (e) => {
     draftCreditor.type = e.target.value;
   });
+  form.querySelector("#ref").addEventListener("input", (e) => {
+    draftCreditor.ref = e.target.value;
+  });
   form.querySelector("#amt").addEventListener("input", (e) => {
     draftCreditor.amount = e.target.value;
   });
@@ -341,9 +367,10 @@ async function addCreditor() {
     id: crypto.randomUUID(),
     nickname,
     type: draftCreditor.type,
+    ref: draftCreditor.ref.trim(),
     amount: draftCreditor.amount.trim(),
   });
-  draftCreditor = { nickname: "", type: draftCreditor.type, amount: "" };
+  draftCreditor = { nickname: "", type: draftCreditor.type, ref: "", amount: "" };
   pack.letterTouched = false;
   pack = await savePack(pack);
   render();
@@ -356,23 +383,42 @@ async function removeCreditor(index) {
   render();
 }
 
+function readSituationForm(form) {
+  return {
+    fullName: form.querySelector("#fullName").value,
+    hkid: form.querySelector("#hkid").value,
+    phone: form.querySelector("#phone").value,
+    situation: {
+      whatChanged: form.querySelector("#what").value,
+      when: form.querySelector("#when").value,
+      incomeItems: form.querySelector("#incomeItems").value,
+      incomeAmount: form.querySelector("#incomeAmount").value,
+      expenseItems: form.querySelector("#expenseItems").value,
+      expenseAmount: form.querySelector("#expenseAmount").value,
+      surplus: form.querySelector("#surplus").value,
+      tenorMonths: form.querySelector("#tenor").value,
+      askInterestFreeze: form.querySelector("#freeze").checked,
+    },
+  };
+}
+
 function renderSituation() {
   const sit = pack?.situation || {};
-  if (pack && !pack.letter) {
-    pack.letter = buildLetter({
-      lang,
-      fullName: pack.fullName,
-      reason: pack.reason,
-      creditors: pack.creditors,
-      situation: pack.situation,
-      today: formatToday(lang),
-    });
-  }
+  if (pack && !pack.letter) syncLetter();
   const body = el(`<div class="stack"><h1>${escapeHtml(s("situationTitle"))}</h1><p class="hint">${escapeHtml(s("situationHint"))}</p></div>`);
+  const tenorOpts = ["3", "6", "9", "12"]
+    .map((n) => `<option value="${n}" ${String(sit.tenorMonths || "6") === n ? "selected" : ""}>${escapeHtml(s(`tenorMonths.${n}`))}</option>`)
+    .join("");
   const form = el(`
     <div class="stack">
       <label class="field">${escapeHtml(s("fullName"))}
         <input id="fullName" maxlength="80" placeholder="${escapeHtml(s("fullNamePh"))}" value="${escapeHtml(pack?.fullName || "")}" />
+      </label>
+      <label class="field">${escapeHtml(s("hkid"))}
+        <input id="hkid" maxlength="20" placeholder="${escapeHtml(s("hkidPh"))}" value="${escapeHtml(pack?.hkid || "")}" autocomplete="off" />
+      </label>
+      <label class="field">${escapeHtml(s("phone"))}
+        <input id="phone" maxlength="20" placeholder="${escapeHtml(s("phonePh"))}" value="${escapeHtml(pack?.phone || "")}" inputmode="tel" />
       </label>
       <label class="field">${escapeHtml(s("whatChanged"))}
         <textarea id="what" class="short" placeholder="${escapeHtml(s("whatChangedPh"))}">${escapeHtml(sit.whatChanged || "")}</textarea>
@@ -380,11 +426,27 @@ function renderSituation() {
       <label class="field">${escapeHtml(s("when"))}
         <input id="when" maxlength="40" placeholder="${escapeHtml(s("whenPh"))}" value="${escapeHtml(sit.when || "")}" />
       </label>
-      <label class="field">${escapeHtml(s("incomeNow"))}
-        <input id="income" maxlength="80" placeholder="${escapeHtml(s("incomeNowPh"))}" value="${escapeHtml(sit.incomeNow || "")}" />
+      <label class="field">${escapeHtml(s("incomeItems"))}
+        <input id="incomeItems" maxlength="120" placeholder="${escapeHtml(s("incomeItemsPh"))}" value="${escapeHtml(sit.incomeItems || "")}" />
       </label>
-      <label class="field">${escapeHtml(s("canPay"))}
-        <input id="canPay" maxlength="80" placeholder="${escapeHtml(s("canPayPh"))}" value="${escapeHtml(sit.canPay || "")}" />
+      <label class="field">${escapeHtml(s("incomeAmount"))}
+        <input id="incomeAmount" maxlength="40" placeholder="${escapeHtml(s("incomeAmountPh"))}" value="${escapeHtml(sit.incomeAmount || "")}" />
+      </label>
+      <label class="field">${escapeHtml(s("expenseItems"))}
+        <input id="expenseItems" maxlength="120" placeholder="${escapeHtml(s("expenseItemsPh"))}" value="${escapeHtml(sit.expenseItems || "")}" />
+      </label>
+      <label class="field">${escapeHtml(s("expenseAmount"))}
+        <input id="expenseAmount" maxlength="40" placeholder="${escapeHtml(s("expenseAmountPh"))}" value="${escapeHtml(sit.expenseAmount || "")}" />
+      </label>
+      <label class="field">${escapeHtml(s("surplus"))}
+        <input id="surplus" maxlength="40" placeholder="${escapeHtml(s("surplusPh"))}" value="${escapeHtml(sit.surplus || "")}" />
+      </label>
+      <label class="field">${escapeHtml(s("tenor"))}
+        <select id="tenor">${tenorOpts}</select>
+      </label>
+      <label class="doc-head">
+        <input id="freeze" class="check" type="checkbox" ${sit.askInterestFreeze ? "checked" : ""} />
+        <span>${escapeHtml(s("askInterestFreeze"))}</span>
       </label>
       <p class="tiny">${escapeHtml(s("creditHonesty"))}</p>
       <label class="field">${escapeHtml(s("letterTitle"))}
@@ -401,44 +463,29 @@ function renderSituation() {
   body.append(box);
   shell(body);
 
-  const fields = {
-    fullName: form.querySelector("#fullName"),
-    what: form.querySelector("#what"),
-    when: form.querySelector("#when"),
-    income: form.querySelector("#income"),
-    canPay: form.querySelector("#canPay"),
-    letter: form.querySelector("#letter"),
-  };
   const persist = async (forceRebuild) => {
-    pack.fullName = fields.fullName.value;
-    pack.situation = {
-      whatChanged: fields.what.value,
-      when: fields.when.value,
-      incomeNow: fields.income.value,
-      canPay: fields.canPay.value,
-    };
+    const next = readSituationForm(form);
+    pack.fullName = next.fullName;
+    pack.hkid = next.hkid;
+    pack.phone = next.phone;
+    pack.situation = next.situation;
     if (forceRebuild || !pack.letterTouched) {
-      pack.letter = buildLetter({
-        lang,
-        fullName: pack.fullName,
-        reason: pack.reason,
-        creditors: pack.creditors,
-        situation: pack.situation,
-        today: formatToday(lang),
-      });
+      syncLetter();
       if (forceRebuild) pack.letterTouched = false;
-      fields.letter.value = pack.letter;
+      form.querySelector("#letter").value = pack.letter;
     } else {
-      pack.letter = fields.letter.value;
+      pack.letter = form.querySelector("#letter").value;
     }
     pack = await savePack(pack);
   };
-  ["fullName", "what", "when", "income", "canPay"].forEach((id) => {
-    fields[id].addEventListener("input", () => persist(false));
+  ["fullName", "hkid", "phone", "what", "when", "incomeItems", "incomeAmount", "expenseItems", "expenseAmount", "surplus"].forEach((id) => {
+    form.querySelector(`#${id}`).addEventListener("input", () => persist(false));
   });
-  fields.letter.addEventListener("input", async () => {
+  form.querySelector("#tenor").addEventListener("change", () => persist(false));
+  form.querySelector("#freeze").addEventListener("change", () => persist(false));
+  form.querySelector("#letter").addEventListener("input", async (e) => {
     pack.letterTouched = true;
-    pack.letter = fields.letter.value;
+    pack.letter = e.target.value;
     pack = await savePack(pack);
   });
   form.querySelector("[data-act=regen]").addEventListener("click", async () => {
@@ -463,7 +510,8 @@ function renderSituation() {
 async function finishAssessment() {
   const door = recommendDoor(pack.creditors);
   pack.door = door;
-  if (!pack.documents.length) pack.documents = emptyDocuments();
+  pack.documents = normalizeDocuments(pack.documents);
+  if (!pack.letterTouched) syncLetter();
   pack = await savePack(pack);
   await log("assessment_done");
   await log("door_chosen", door);
@@ -534,69 +582,92 @@ function renderDoor() {
 }
 
 function renderDocuments() {
+  pack.documents = normalizeDocuments(pack.documents);
   const body = el(`<div class="stack"><h1>${escapeHtml(s("docsTitle"))}</h1><p class="hint">${escapeHtml(s("docsHint"))}</p></div>`);
-  (pack.documents || []).forEach((doc, i) => {
+  pack.documents.forEach((doc, i) => {
+    const def = DOCUMENT_DEFS.find((d) => d.key === doc.key);
+    const have = doc.attachmentIds.length;
+    const need = def?.minFiles || 0;
+    const required = !!def?.required;
     const card = el(`
       <div class="card doc">
-        <label class="doc-head">
-          <input class="check" type="checkbox" ${doc.checked ? "checked" : ""} />
-          <span>${escapeHtml(s(`docs.${doc.key}`))}</span>
-        </label>
-        <input class="hidden-file" type="file" accept="image/*" />
-        <button class="btn" type="button">${escapeHtml(doc.attachmentId ? s("attached") : s("attach"))}</button>
+        <div>
+          <span class="tag">${escapeHtml(required ? s("requiredTag") : s("optionalTag"))}</span>
+          <strong>${escapeHtml(s(`docs.${doc.key}`))}</strong>
+          ${need ? `<p class="tiny">${escapeHtml(s("photoCount", { have, need }))}</p>` : have ? `<p class="tiny">${have}</p>` : ""}
+        </div>
+        <input class="hidden-file" type="file" accept="image/*" multiple />
+        <button class="btn" type="button">${escapeHtml(have ? s("attachMore") : s("attach"))}</button>
+        <div class="thumbs"></div>
       </div>
     `);
     const file = card.querySelector('input[type="file"]');
-    card.querySelector(".check").addEventListener("change", async (e) => {
-      pack.documents[i].checked = e.target.checked;
-      pack = await savePack(pack);
-    });
     card.querySelector(".btn").addEventListener("click", () => file.click());
     file.addEventListener("change", async (e) => {
-      const chosen = e.target.files?.[0];
-      if (!chosen) return;
-      const blob = await compressImage(chosen);
-      const id = pack.documents[i].attachmentId || crypto.randomUUID();
-      await putAttachment(id, blob);
-      pack.documents[i].attachmentId = id;
-      pack.documents[i].checked = true;
+      const chosen = [...(e.target.files || [])];
+      for (const item of chosen) {
+        const blob = await compressImage(item);
+        const id = crypto.randomUUID();
+        await putAttachment(id, blob);
+        pack.documents[i].attachmentIds.push(id);
+      }
+      if (!pack.letterTouched) syncLetter();
       pack = await savePack(pack);
       render();
     });
-    if (doc.attachmentId) {
-      const remove = el(`<button class="btn btn-ghost" type="button">${escapeHtml(s("removePhoto"))}</button>`);
-      remove.addEventListener("click", async () => {
-        await deleteAttachment(doc.attachmentId);
-        pack.documents[i].attachmentId = null;
+    const thumbs = card.querySelector(".thumbs");
+    doc.attachmentIds.forEach((id, photoIndex) => {
+      const row = el(`<div class="thumb-row"><button class="btn btn-ghost" type="button">${escapeHtml(s("removePhoto"))}</button></div>`);
+      row.querySelector("button").addEventListener("click", async () => {
+        await deleteAttachment(id);
+        pack.documents[i].attachmentIds.splice(photoIndex, 1);
+        if (!pack.letterTouched) syncLetter();
         pack = await savePack(pack);
         render();
       });
-      card.append(remove);
-      getAttachment(doc.attachmentId).then((blob) => {
+      getAttachment(id).then((blob) => {
         if (!blob) return;
         const img = document.createElement("img");
         img.className = "thumb";
         img.alt = "";
         img.src = URL.createObjectURL(blob);
-        card.append(img);
+        row.prepend(img);
       });
-    }
+      thumbs.append(row);
+    });
     body.append(card);
   });
   body.append(nav("door", "pack"));
   shell(body);
 }
 
+function missingCopy(gap) {
+  if (gap.key === "hardship_proof") return s("missingHardship", { remain: gap.remain });
+  if (gap.key === "bank_statements") return s("missingStatements", { remain: gap.remain });
+  return s(`docs.${gap.key}`);
+}
+
 function renderPack() {
+  pack.documents = normalizeDocuments(pack.documents);
+  if (!pack.letterTouched) syncLetter();
+  const gaps = missingAttachments(pack.documents);
+  const blocked = gaps.length > 0;
   const reminder = reminderState();
   const showReminder = reminder && (pack.status === "sent" || pack.status === "waiting");
   const body = el(`<div class="stack"><h1>${escapeHtml(s("packTitle"))}</h1><p class="hint">${escapeHtml(s("packHint"))}</p></div>`);
-  body.append(el(`<div class="card"><pre style="white-space:pre-wrap;font:inherit;margin:0">${escapeHtml(pack.letter || "")}</pre></div>`));
+  body.append(el(`<article class="letter-file">${escapeHtml(pack.letter || "")}</article>`));
+  if (blocked) {
+    const miss = el(`<div class="card warn stack"><strong>${escapeHtml(s("missingTitle"))}</strong><p class="tiny">${escapeHtml(s("missingHint"))}</p></div>`);
+    gaps.forEach((gap) => miss.append(el(`<p>${escapeHtml(missingCopy(gap))}</p>`)));
+    body.append(miss);
+  }
   const actions = el(`<div class="nav"></div>`);
   const make = el(`<button class="btn btn-accent" type="button">${escapeHtml(busy ? s("makingPdf") : s("makePdf"))}</button>`);
   const share = el(`<button class="btn btn-primary" type="button">${escapeHtml(s("share"))}</button>`);
   const download = el(`<button class="btn" type="button">${escapeHtml(s("download"))}</button>`);
-  make.disabled = busy;
+  make.disabled = busy || blocked;
+  share.disabled = busy || blocked;
+  download.disabled = busy || blocked;
   actions.append(make, share, download);
   body.append(actions);
   body.append(el(`<h2>${escapeHtml(s("statusTitle"))}</h2>`));
@@ -617,9 +688,11 @@ function renderPack() {
   });
   body.append(nav("documents", null));
   shell(body);
-  make.addEventListener("click", () => handlePdf("download"));
-  share.addEventListener("click", () => handlePdf("share"));
-  download.addEventListener("click", () => handlePdf("download"));
+  if (!blocked) {
+    make.addEventListener("click", () => handlePdf("download"));
+    share.addEventListener("click", () => handlePdf("share"));
+    download.addEventListener("click", () => handlePdf("download"));
+  }
 }
 
 async function setStatus(status) {
@@ -633,16 +706,21 @@ async function setStatus(status) {
 
 async function collectAttachments() {
   const map = {};
-  for (const doc of pack.documents || []) {
-    if (!doc.attachmentId) continue;
-    const blob = await getAttachment(doc.attachmentId);
-    if (blob) map[doc.attachmentId] = blob;
+  for (const doc of normalizeDocuments(pack.documents)) {
+    for (const id of doc.attachmentIds) {
+      const blob = await getAttachment(id);
+      if (blob) map[id] = blob;
+    }
   }
   return map;
 }
 
 async function handlePdf(mode) {
   if (busy) return;
+  if (missingAttachments(pack.documents).length) {
+    render();
+    return;
+  }
   busy = true;
   render();
   try {

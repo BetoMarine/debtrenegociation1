@@ -261,6 +261,38 @@ textarea.short {
   border: 1px solid var(--line);
 }
 
+.thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.thumb-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+
+.letter-file {
+  background: #fff;
+  border: 1px solid #141414;
+  padding: 18px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  font-family: "PingFang TC", "PingFang HK", "Noto Sans TC", "Songti TC", serif;
+}
+
 .script {
   background: #111;
   color: #fafaf8;

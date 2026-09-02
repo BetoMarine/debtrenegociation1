@@ -42,8 +42,8 @@ On iPhone Safari (add to Home Screen):
 4. Creditors as nicknames + type (amounts optional)
 5. Structured situation fields → first-person letter in your name, editable before PDF
 6. Deterministic door (not a chatbot)
-7. Document checklist; photos stay in local storage
-8. Client-side PDF; share via the OS share sheet or download
+7. Document checklist: hardship proof (≥1 photo) and last-three-months bank statements (3 photos). HKID/other optional. Photos stay in local storage. PDF/Share stay blocked until the required files are on the phone.
+8. Client-side PDF of the structured letter plus image annexes; share via the OS share sheet or download
 9. Pack status you tap: draft / sent / waiting / accepted / rejected / gave up. After “sent”, a 7-day come-back card
 10. Hidden on-device counters (tap the version number five times)
 
