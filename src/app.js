@@ -358,6 +358,16 @@ async function removeCreditor(index) {
 
 function renderSituation() {
   const sit = pack?.situation || {};
+  if (pack && !pack.letter) {
+    pack.letter = buildLetter({
+      lang,
+      fullName: pack.fullName,
+      reason: pack.reason,
+      creditors: pack.creditors,
+      situation: pack.situation,
+      today: formatToday(lang),
+    });
+  }
   const body = el(`<div class="stack"><h1>${escapeHtml(s("situationTitle"))}</h1><p class="hint">${escapeHtml(s("situationHint"))}</p></div>`);
   const form = el(`
     <div class="stack">
@@ -399,7 +409,7 @@ function renderSituation() {
     canPay: form.querySelector("#canPay"),
     letter: form.querySelector("#letter"),
   };
-  const persist = async (rebuild) => {
+  const persist = async (forceRebuild) => {
     pack.fullName = fields.fullName.value;
     pack.situation = {
       whatChanged: fields.what.value,
@@ -407,7 +417,7 @@ function renderSituation() {
       incomeNow: fields.income.value,
       canPay: fields.canPay.value,
     };
-    if (rebuild) {
+    if (forceRebuild || !pack.letterTouched) {
       pack.letter = buildLetter({
         lang,
         fullName: pack.fullName,
@@ -416,14 +426,16 @@ function renderSituation() {
         situation: pack.situation,
         today: formatToday(lang),
       });
-      pack.letterTouched = false;
+      if (forceRebuild) pack.letterTouched = false;
       fields.letter.value = pack.letter;
     } else {
       pack.letter = fields.letter.value;
     }
     pack = await savePack(pack);
   };
-  if (!pack.letter) persist(true);
+  ["fullName", "what", "when", "income", "canPay"].forEach((id) => {
+    fields[id].addEventListener("input", () => persist(false));
+  });
   fields.letter.addEventListener("input", async () => {
     pack.letterTouched = true;
     pack.letter = fields.letter.value;
