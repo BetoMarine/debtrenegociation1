@@ -6,23 +6,21 @@ This repository is the v1 proof of concept for the first 20 testers (job-loss / 
 
 ## Open on iPhone (no npm)
 
-Public HTTPS production build (static files only; your letter and photos stay on the phone):
+Public HTTPS URL (production Vite build, static files only):
 
 **https://betomarine.github.io/debtrenegociation1/**
 
-1. Open that link in **Safari** (not the in-app GitHub browser if it blocks Add to Home Screen).
-2. Share → Add to Home Screen.
-3. After the first load it works offline. Completing a pack does not POST your name, HKID, amounts, or files.
+This agent pushed the `npm run build` output to the `gh-pages` branch and added `.github/workflows/pages.yml`. It **cannot** flip the Pages switch (GitHub API 403). Until you do that one tap, the URL is 404.
 
-If Safari says 404, GitHub Pages is not switched on yet. In the GitHub app or safari, open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages) → **Build and deployment** → **Source: Deploy from a branch** → **Branch: `gh-pages`** / **folder: `/ (root)`** → Save. Wait a minute and reload the URL.
+On iPhone, use **Safari** (the GitHub app often hides repo Settings):
 
-The `gh-pages` branch is the `npm run build` output (relative asset paths). After merge to `main`, `.github/workflows/pages.yml` rebuilds that branch.
+1. Open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages) and sign in if asked.
+2. **Build and deployment** → **Source** → **Deploy from a branch**.
+3. **Branch:** `gh-pages` · **Folder:** `/ (root)`.
+4. **Save**. Wait about one minute.
+5. Open **https://betomarine.github.io/debtrenegociation1/** in Safari → Share → Add to Home Screen.
 
-Until Pages is switched on, the same production files are also on HTTPS here (CDN cache of `gh-pages`, not a backend):
-
-**https://cdn.jsdelivr.net/gh/BetoMarine/debtrenegociation1@gh-pages/index.html**
-
-Use the github.io URL for Add to Home Screen once Pages is on. The jsDelivr link is only so you can open the app today without a computer.
+After merge to `main`, the workflow rebuilds `gh-pages` on each push. Completing a pack still does not POST names, HKID, amounts, or files — hosting is JS/CSS only.
 
 ## Who this build is for
 
@@ -100,7 +98,7 @@ There is no server of your data. Vite only serves static files.
 
 ## How to test on a phone
 
-Founder / testers with only an iPhone: open **https://betomarine.github.io/debtrenegociation1/** in Safari, then Share → Add to Home Screen.
+Founder / testers with only an iPhone: after the Pages tap above, open **https://betomarine.github.io/debtrenegociation1/** in Safari, then Share → Add to Home Screen.
 
 Local preview (needs Node):
 
