@@ -1,0 +1,22 @@
+{
+  "name": "right-door",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Right Door (正確的門) and Sunday Pack — on-device HK hardship letter and FDW counsellor briefing",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "jspdf": "^3.0.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^3.0.8"
+  }
+}
