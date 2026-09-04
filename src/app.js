@@ -226,6 +226,9 @@ function renderHome() {
     el(`<p class="kicker">${escapeHtml(s("promiseKicker"))}</p>`),
     el(`<h1>${escapeHtml(s("promiseTitle"))}</h1>`),
     el(`<p class="lede">${escapeHtml(s("promiseLead"))}</p>`),
+    el(
+      `<div class="card privacy"><strong>${escapeHtml(s("privacyTitle"))}</strong><p>${escapeHtml(s("privacyBody"))}</p></div>`,
+    ),
     el(`<p>${escapeHtml(s("promiseBody"))}</p>`),
     el(`<p>${escapeHtml(s("promiseNever"))}</p>`),
     el(`<p class="card warn">${escapeHtml(s("creditHonesty"))}</p>`),

@@ -37,7 +37,7 @@ Not in this build: FDH flows, police/NGO triage, passport cases, money-lender-on
 On iPhone Safari (add to Home Screen):
 
 1. Traditional Chinese first, English toggle
-2. One-screen promise: the account manager is the wrong door; prepare the letter here; you send it
+2. One-screen promise: the account manager is the wrong door; prepare the letter here; you send it. A callout states that the pack, photos, HKID, and amounts stay on this phone, and that we do not upload, store, or collect data.
 3. Why you are here (one choice)
 4. Creditors as nicknames + type (amounts optional)
 5. Structured situation fields → first-person letter in your name, editable before PDF
@@ -47,7 +47,7 @@ On iPhone Safari (add to Home Screen):
 9. Pack status you tap: draft / sent / waiting / accepted / rejected / gave up. After “sent”, a 7-day come-back card
 10. Hidden on-device counters (tap the version number five times)
 
-Nothing about identity, HKID, amounts, creditor names, photos, or PDFs is uploaded. There is no account, login, OTP, or Apple/Google sign-in.
+Nothing about identity, HKID, amounts, creditor names, photos, or PDFs is uploaded, stored, or collected. There is no account, login, OTP, or Apple/Google sign-in. Uninstall wipes it.
 
 ## Product rules
 

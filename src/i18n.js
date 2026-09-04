@@ -9,12 +9,16 @@ const zh = {
   save: "儲存在這部手機",
   done: "完成",
   optional: "可選",
-  version: "PoC v0.1.1",
-  localOnly: "資料只留在這部手機。卸除網頁或 App 就會清走。我們不會寄給銀行、也不建帳號。",
+  version: "PoC v0.1.2",
+  localOnly:
+    "我們不收集資料。信件包、照片、身分證號碼和金額只留在這部手機。沒有帳號。卸除就清走。我們不會寄給銀行。",
 
   promiseKicker: "免費 · 只在這部手機 · 你自己寄出",
   promiseTitle: "你的客戶經理不是正確的門。",
   promiseLead: "在這裏準備信件。由你自己寄出。",
+  privacyTitle: "全部留在這部手機。我們不收集資料。",
+  privacyBody:
+    "信件包、照片、香港身分證號碼、金額，都不會離開這部手機——除非你自己用系統分享或寄出。我們不上傳、不代存、不收集。沒有帳號。卸除網頁或 App，資料就沒有了。",
   promiseBody:
     "銀行公布的門，是困難還款單位，或者銀行公會的綜合債務紓緩計劃（IDRP）。不是分行客戶經理，也不是代你打電話的中介。",
   promiseNever:
@@ -201,13 +205,16 @@ const en = {
   save: "Save on this phone",
   done: "Done",
   optional: "Optional",
-  version: "PoC v0.1.1",
+  version: "PoC v0.1.2",
   localOnly:
-    "Everything stays on this phone. Uninstalling the site or app wipes it. We do not send this to a bank, and there is no account.",
+    "We do not collect your data. Pack, photos, HKID, and amounts stay on this phone. No account. Uninstall wipes it. We do not send this to a bank.",
 
   promiseKicker: "Free · on this phone only · you send it",
   promiseTitle: "Your account manager is the wrong door.",
   promiseLead: "Prepare the letter here. You send it.",
+  privacyTitle: "Everything stays on this phone. We do not collect data.",
+  privacyBody:
+    "The pack, photos, HKID, and amounts never leave this phone unless you share or send them yourself. We do not upload, store, or collect your data. No account. Uninstalling the site or app wipes it.",
   promiseBody:
     "The published door is the bank’s hardship or workout unit, or the Interbank Debt Relief Plan (IDRP). Not the branch RM. Not someone who calls the bank for you.",
   promiseNever:

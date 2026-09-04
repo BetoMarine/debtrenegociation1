@@ -32,8 +32,14 @@ describe("product copy", () => {
 
   it("states that data dies with uninstall and that the user sends the pack", () => {
     expect(STRINGS.zh.localOnly).toMatch(/卸除/);
-    expect(STRINGS.en.localOnly).toMatch(/Uninstalling/);
+    expect(STRINGS.zh.localOnly).toMatch(/不收集/);
+    expect(STRINGS.en.localOnly).toMatch(/Uninstall/);
+    expect(STRINGS.en.localOnly).toMatch(/do not collect/);
     expect(STRINGS.zh.promiseLead).toMatch(/你自己寄出/);
     expect(STRINGS.en.promiseLead).toMatch(/You send it/);
+    expect(STRINGS.zh.privacyTitle).toMatch(/不收集/);
+    expect(STRINGS.en.privacyTitle).toMatch(/do not collect/i);
+    expect(STRINGS.zh.privacyBody).toMatch(/不上傳/);
+    expect(STRINGS.en.privacyBody).toMatch(/do not upload/i);
   });
 });
