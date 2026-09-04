@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Your Life | Tools for people banks leave behind</title>
+    <meta name="description" content="Plan Your Life builds small, honest tools for people banks do not serve well. Right Door is live. Offshore is research. PYL Invest is earlier work.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            purple: '#7e22ce',
+                            teal: '#06b6d4',
+                            dark: '#0f172a',
+                            card: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+
+    <header id="header" class="fixed top-0 left-0 w-full z-40 transition-all duration-300 py-6">
+        <div class="container mx-auto px-6 flex justify-between items-center gap-4">
+            <a href="#home" class="flex items-center gap-2 group">
+                <i data-lucide="layout-grid" class="w-8 h-8 text-brand-teal group-hover:scale-110 transition-transform duration-300"></i>
+                <span class="text-xl font-bold text-white tracking-tight">Plan Your Life</span>
+            </a>
+            <nav class="flex items-center gap-4 sm:gap-8">
+                <a href="#work" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Work</a>
+                <a href="#how" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">How we work</a>
+                <a href="#contact" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-all">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section id="home" class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden reveal">
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+                <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-purple/20 rounded-full blur-[100px]"></div>
+                <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-teal/20 rounded-full blur-[100px]"></div>
+            </div>
+            <div class="container mx-auto px-6 relative z-10 text-center">
+                <div class="inline-block px-4 py-1.5 mb-6 border border-brand-teal/30 rounded-full bg-brand-teal/10 backdrop-blur-md">
+                    <span class="text-brand-teal text-sm font-semibold tracking-wide uppercase">Hong Kong · small studio · product first</span>
+                </div>
+                <h1 class="text-4xl sm:text-5xl md:text-7xl font-bold mb-8 leading-tight text-white">
+                    Tools for people
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">banks leave behind</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                    Plan Your Life builds tools you can use yourself. The live one is Right Door:
+                    a free, on-device hardship letter for banked Hong Kong borrowers. We do not
+                    call the bank for you. We do not collect your data.
+                </p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <a href="https://betomarine.github.io/debtrenegociation1/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-purple-900/20 text-center">
+                        Open Right Door
+                    </a>
+                    <a href="#work" class="w-full sm:w-auto px-8 py-4 border border-slate-700 text-slate-300 rounded-lg font-semibold hover:bg-slate-800 hover:text-white transition-colors text-center">
+                        See what is live vs research
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="work" class="py-24 bg-slate-900 relative reveal">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">The work</h2>
+                    <p class="text-slate-400 max-w-2xl mx-auto">One product is live. The rest is labeled honestly.</p>
+                </div>
+
+                <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-12 mb-10">
+                    <div class="flex flex-wrap items-center gap-3 mb-6">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
+                        <span class="text-slate-500 text-sm">Featured · Hong Kong</span>
+                    </div>
+                    <div class="grid lg:grid-cols-[1.4fr_1fr] gap-10 items-start">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
+                                <i data-lucide="door-open" class="w-6 h-6 text-brand-teal"></i>
+                            </div>
+                            <h3 class="text-2xl md:text-3xl font-bold text-white mb-4">Right Door · 正確的門</h3>
+                            <p class="text-slate-400 leading-relaxed mb-6">
+                                A free PWA for banked Hong Kong borrowers who lost hours or a job and need
+                                to write to the published hardship door — IDRP or the bank’s own workout unit —
+                                not the branch account manager. You prepare the letter on your phone. You send it.
+                            </p>
+                            <ul class="space-y-3 text-slate-300 text-sm mb-8">
+                                <li class="flex gap-3"><i data-lucide="smartphone" class="w-5 h-5 text-brand-teal shrink-0"></i><span>On this phone only. Pack, photos, HKID, and amounts stay here unless you share them.</span></li>
+                                <li class="flex gap-3"><i data-lucide="shield-off" class="w-5 h-5 text-brand-teal shrink-0"></i><span>No account. We do not upload, store, or collect your data. Uninstall wipes it.</span></li>
+                                <li class="flex gap-3"><i data-lucide="book-open" class="w-5 h-5 text-brand-teal shrink-0"></i><span>Published doors only. We never contact a bank, lender, or anyone else in your name.</span></li>
+                            </ul>
+                            <a href="https://betomarine.github.io/debtrenegociation1/" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                                Open the tool
+                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                            <p class="text-xs uppercase tracking-wide text-slate-500 mb-3">What it is not</p>
+                            <p class="text-slate-400 text-sm leading-relaxed">
+                                Not a debt mill. Not a collector. Not someone who calls the bank for you.
+                                Not a hidden department. Restructuring is usually reported to credit agencies —
+                                the point is avoiding a 60-day default, bankruptcy, or write-off, not a clean score.
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <article class="bg-slate-950 border border-slate-800 rounded-3xl p-8 hover:border-slate-600 transition-all duration-300">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-800 text-slate-300 border border-slate-700">Research</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center mb-6">
+                            <i data-lucide="compass" class="w-6 h-6 text-brand-purple"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">Offshore</h3>
+                        <p class="text-slate-400 leading-relaxed text-sm">
+                            Research into tools for migrant domestic workers in Hong Kong — people who send
+                            money home and are poorly served by banks. This is <strong class="text-slate-200 font-medium">not a shipped remittance product</strong>.
+                            There is no live payment rail, no wallet, and no claim of a working remittance ecosystem.
+                            We are still learning the job before we build.
+                        </p>
+                    </article>
+
+                    <article class="bg-slate-950 border border-slate-800 rounded-3xl p-8 hover:border-slate-600 transition-all duration-300">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-800 text-slate-300 border border-slate-700">Earlier work</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center mb-6">
+                            <i data-lucide="line-chart" class="w-6 h-6 text-brand-purple"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">PYL Invest</h3>
+                        <p class="text-slate-400 leading-relaxed text-sm">
+                            Earlier work: a planning sandbox that tied savings and investment choices to life events,
+                            so people could see trade-offs before they committed money. It is not the current flagship
+                            and is not offered as advice or a live brokerage.
+                        </p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="how" class="py-24 bg-slate-950 relative reveal">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">How we work</h2>
+                    <p class="text-slate-400">A small studio. Ship the useful thing. Say what is not ready.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
+                            <i data-lucide="hand" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">You stay in control</h3>
+                        <p class="text-slate-400 leading-relaxed">We build tools you run yourself. If a letter has to go to a bank, you send it in your name. We never become the middleman.</p>
+                    </div>
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center mb-6">
+                            <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Published paths only</h3>
+                        <p class="text-slate-400 leading-relaxed">When money or hardship is involved, we point to doors the bank or regulator already publishes. No invented units. No “we know someone.”</p>
+                    </div>
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
+                            <i data-lucide="eye" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Label the stage</h3>
+                        <p class="text-slate-400 leading-relaxed">Live, research, or earlier work. If it is not shipped, we say so. That is why Offshore is research and Right Door is the product we ask you to open.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contact" class="bg-slate-950 pt-24 pb-12 border-t border-slate-800 reveal">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-12">
+                <div class="max-w-md">
+                    <div class="flex items-center gap-3 mb-6">
+                        <i data-lucide="layout-grid" class="w-10 h-10 text-brand-teal"></i>
+                        <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">
+                            Plan Your Life
+                        </span>
+                    </div>
+                    <p class="text-slate-400 mb-8 leading-relaxed">
+                        Tools for people banks leave behind. Talk to Beto if you want to test Right Door,
+                        compare notes on Offshore research, or just say hello.
+                    </p>
+                </div>
+                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 w-full lg:w-auto min-w-[320px]">
+                    <h3 class="text-xl font-semibold text-white mb-6">Contact</h3>
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+                            <div class="font-bold text-brand-purple text-lg">BM</div>
+                        </div>
+                        <div>
+                            <p class="text-white font-medium text-lg">Beto Marinelli</p>
+                            <p class="text-brand-teal text-sm">Founder</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <a href="mailto:beto.marinelli@planyourlife.tech" class="flex items-center gap-3 text-slate-300 hover:text-brand-teal transition-colors group">
+                            <div class="p-2 bg-slate-800 rounded-lg group-hover:bg-slate-700 transition-colors">
+                                <i data-lucide="mail" class="w-5 h-5"></i>
+                            </div>
+                            <span>beto.marinelli@planyourlife.tech</span>
+                        </a>
+                        <a href="tel:+85263357616" class="flex items-center gap-3 text-slate-300 hover:text-brand-teal transition-colors group">
+                            <div class="p-2 bg-slate-800 rounded-lg group-hover:bg-slate-700 transition-colors">
+                                <i data-lucide="phone" class="w-5 h-5"></i>
+                            </div>
+                            <span>+852 6335 7616</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-20 pt-8 border-t border-slate-900 text-center text-slate-600 text-sm">
+                <p>&copy; <span id="year"></span> Plan Your Life. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) entry.target.classList.add('active');
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                header.classList.add('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
+                header.classList.remove('py-6');
+            } else {
+                header.classList.remove('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
+                header.classList.add('py-6');
+            }
+        });
+    </script>
+</body>
+</html>
