@@ -1,8 +1,11 @@
-# 正確的門 · Right Door
+# 正確的門 · Right Door · Sunday Pack
 
-A free Hong Kong consumer tool. Someone in financial difficulty prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
+A free Hong Kong consumer tool. Two on-device paths share one Safari page (PoC v0.2.0):
 
-This repository is the v1 proof of concept for the first 20 testers (job-loss / pre-default). It is not an App Store app, not a debt mill, and not a collector.
+1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
+2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
+
+It is not an App Store app, not a debt mill, and not a collector. The app **never emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link.
 
 ## Open on iPhone (no npm)
 
@@ -30,9 +33,15 @@ Banked Hong Kong borrowers **before write-off**, typically:
 - hours or pay were cut
 - they already know they cannot pay the next six months of instalments
 
-Not in this build: FDH flows, police/NGO triage, passport cases, money-lender-only cases, Alipay, chatbots, accounts, payments, bank APIs.
+**Sunday Pack** is for foreign domestic workers in Hong Kong who want to prepare for a counsellor (Enrich by default, HELP / Labour / consulate if the red-flag screen says so).
+
+Not in this build: money-lender-only bank packs, Alipay, chatbots, accounts, payments, bank APIs, cloud document vaults for Sunday Pack.
 
 ## What it does
+
+Home is a **chooser**. Pick Right Door or Sunday Pack. Privacy framing is on both paths.
+
+### Right Door
 
 On iPhone Safari (add to Home Screen):
 
@@ -49,9 +58,31 @@ On iPhone Safari (add to Home Screen):
 
 Nothing about identity, HKID, amounts, creditor names, photos, or PDFs is uploaded, stored, or collected. There is no account, login, OTP, or Apple/Google sign-in. Uninstall wipes it.
 
+### Sunday Pack
+
+Stored in a **separate IndexedDB key** from the Right Door vault (no photo annexes in v0).
+
+1. Privacy: stays on this phone until she shares; checkbox that the app does not talk to Enrich / banks / lenders for her
+2. Language: Tagalog / Bahasa Indonesia / English
+3. Red-flag triage **before** inventory (passport/coercion → 999 + consulate + HELP; loan shark → HELP; illegal agency fee → Labour FDH + consulate; none → continue to Enrich)
+4. Situation: nationality, months left on contract (optional), who knows about the debt, meeting goal
+5. Debt inventory: nickname, type, HKD bands, guarantor, still borrowing
+6. Remittance split: three percentages that sum to 100% (discussion aid only)
+7. Door suggestion + Enrich booking deep link (we do not submit the form)
+8. 1-page counsellor PDF, generated on the phone
+9. Done: open booking / bring the PDF; clear this pack
+
+Crisis screens use `tel:` and `https://wa.me/` only. A short pack can still be saved.
+
+PDF footer:
+
+> Prepared by the helper on her device · Plan Your Life / Right Door (Sunday Pack) · not affiliated with Enrich
+
+Plus: self-declared, not a credit report, not legal advice, not a request for Enrich to contact any lender.
+
 ## Product rules
 
-- We never contact a bank, lender, the police, or an NGO. Every step is user-triggered, in their name.
+- We never contact a bank, lender, Enrich, the police, or an NGO. Every step is user-triggered, in their name. Sunday Pack never emails Enrich for the helper.
 - Copy must never say “hidden department,” “secret channel,” “we know the bank,” or lean on legal jargon. The published door is IDRP or the bank’s own hardship / workout unit.
 - Free. No backend. No Typeform, Google Forms, Firebase Auth, or analytics SDKs that siphon form fields.
 - Documents and the pack live only in IndexedDB. Uninstall wipes data. The UI says so.
@@ -67,6 +98,27 @@ Nothing about identity, HKID, amounts, creditor names, photos, or PDFs is upload
 | HSBC unsecured only | HSBC’s published Debt Workout Unit / Collection Services path |
 | Citi only | CitiPhone + a script asking for restructuring / hardship / IDRP, not a consolidation loan. No invented Citi workout unit. |
 | Anyone else | Call the number on the statement; ask for hardship / IDRP, not the branch RM |
+
+## Sunday Pack door logic (deterministic)
+
+| Red flag | Door |
+| --- | --- |
+| Passport / contract held against will | HELP + 999 + consulate |
+| Loan shark / collector threats | HELP (999 if danger); Enrich secondary |
+| Illegal agency placement / training fee | Labour FDH hotline + consulate |
+| None of the above | Enrich Financial Consultation |
+
+Always listed as alternates: Caritas 18288, TWGH FDCC 2548 0803.
+
+### Sunday Pack sources actually opened
+
+- Enrich booking: [NeonCRM FHD registration](https://enrichhk.app.neoncrm.com/forms/fhd-registration)
+- Enrich WhatsApp EN/Tagalog +852 5981 3754 · Bahasa +852 5648 0990 — [contact](https://enrichhk.org/contact-enrich) / [resources](https://enrichhk.org/resources-domestic-workers)
+- HELP for Domestic Workers WhatsApp +852 5936 3780 — [contact](https://helpfordomesticworkers.org/contact/)
+- Labour Department FDH hotline 2157 9537 — [FDH contact](https://www.fdh.labour.gov.hk/en/contact_us.html)
+- Philippine Consulate switchboard 2823 8500 / after-hours 9155 4023 — [PCG directory](https://hongkongpcg.dfa.gov.ph/directory)
+- Indonesian Consulate +852 3651 0200 — [HELP resources](https://helpfordomesticworkers.org/get-help/useful-numbers-and-links/)
+- Caritas 18288 · TWGH FDCC 2548 0803
 
 ### Sources actually opened for this PoC
 
@@ -100,6 +152,8 @@ There is no server of your data. Vite only serves static files.
 
 Founder / testers with only an iPhone: after the Pages tap above, open **https://betomarine.github.io/debtrenegociation1/** in Safari, then Share → Add to Home Screen.
 
+Sunday Pack happy path: chooser → Sunday Pack → tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Then open Right Door from the chooser and confirm the bank pack still runs.
+
 Local preview (needs Node):
 
 1. Put the phone and the computer on the same Wi-Fi.
@@ -114,17 +168,18 @@ To wipe tester data: use “Erase everything on this phone” on the home screen
 ## Project layout
 
 ```
-src/app.js       screens and local state
-src/door.js      deterministic door + verified URLs
-src/letter.js    first-person letter from structured fields
-src/pdf.js       client-side PDF (system CJK fonts via canvas)
-src/db.js        IndexedDB only
-src/events.js    enum event log
-src/i18n.js      繁體中文 first, English toggle
+src/app.js            chooser + Right Door screens
+src/sunday/           Sunday Pack copy, door, PDF, screens
+src/door.js           Right Door deterministic door + verified URLs
+src/letter.js         first-person letter from structured fields
+src/pdf.js            Right Door client-side PDF (system CJK fonts via canvas)
+src/db.js             IndexedDB (`pack` vs `sundayPack` keys)
+src/events.js         enum event log
+src/i18n.js           繁體中文 first, English toggle (Right Door + chooser)
 ```
 
 Tap the version label five times for on-device counters.
 
 ## Out of scope
 
-FDH flows, police/NGO triage, Alipay, chatbots, accounts, payments, bank APIs, SEO, cloud admin dashboards, App Store distribution.
+Alipay, chatbots, accounts, payments, bank APIs, SEO, cloud admin dashboards, App Store distribution, Sunday Pack photo vaults, the app messaging Enrich or any lender.

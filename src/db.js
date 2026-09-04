@@ -58,6 +58,31 @@ export async function setLang(lang) {
   await setKv("lang", lang);
 }
 
+export async function getSundayPack() {
+  return getKv("sundayPack");
+}
+
+export async function saveSundayPack(pack) {
+  const next = { ...pack, updatedAt: Date.now() };
+  await setKv("sundayPack", next);
+  return next;
+}
+
+export async function getSundayLang() {
+  return (await getKv("sundayLang")) || "en";
+}
+
+export async function setSundayLang(lang) {
+  await setKv("sundayLang", lang);
+}
+
+export async function wipeSundayPack() {
+  const db = await openDb();
+  const tx = db.transaction("kv", "readwrite");
+  tx.objectStore("kv").delete("sundayPack");
+  await txDone(tx);
+}
+
 export async function addEvent(event) {
   const db = await openDb();
   const tx = db.transaction("events", "readwrite");

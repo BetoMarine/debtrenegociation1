@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STRINGS } from "./i18n.js";
+import { SUNDAY_STRINGS } from "./sunday/copy.js";
 
 const FORBIDDEN = [
   /hidden department/i,
@@ -8,7 +9,7 @@ const FORBIDDEN = [
   /legal jargon/i,
   /special recovery unit/i,
   /credit risk management/i,
-  /\bAUDITED\b/,
+  /\bis audited\b/i,
   /section 28/i,
   /隱藏部門/,
   /秘密渠道/,
@@ -24,7 +25,13 @@ function walk(value, acc = []) {
 
 describe("product copy", () => {
   it("never claims a hidden door or a relationship with the bank", () => {
-    const all = [...walk(STRINGS.zh), ...walk(STRINGS.en)].join("\n");
+    const all = [
+      ...walk(STRINGS.zh),
+      ...walk(STRINGS.en),
+      ...walk(SUNDAY_STRINGS.en),
+      ...walk(SUNDAY_STRINGS.tl),
+      ...walk(SUNDAY_STRINGS.id),
+    ].join("\n");
     for (const pattern of FORBIDDEN) {
       expect(all).not.toMatch(pattern);
     }
@@ -41,5 +48,18 @@ describe("product copy", () => {
     expect(STRINGS.en.privacyTitle).toMatch(/do not collect/i);
     expect(STRINGS.zh.privacyBody).toMatch(/不上傳/);
     expect(STRINGS.en.privacyBody).toMatch(/do not upload/i);
+  });
+
+  it("never claims the app emails Enrich or lenders for the helper", () => {
+    const all = [
+      ...walk(SUNDAY_STRINGS.en),
+      ...walk(SUNDAY_STRINGS.tl),
+      ...walk(SUNDAY_STRINGS.id),
+    ].join("\n");
+    expect(SUNDAY_STRINGS.en.weDoNotEmailEnrich).toMatch(/do not email Enrich/i);
+    expect(SUNDAY_STRINGS.tl.weDoNotEmailEnrich).toMatch(/Enrich/);
+    expect(SUNDAY_STRINGS.id.weDoNotEmailEnrich).toMatch(/Enrich/);
+    expect(all).not.toMatch(/we will email Enrich/i);
+    expect(all).not.toMatch(/we contact your lender/i);
   });
 });

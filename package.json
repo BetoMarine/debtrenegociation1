@@ -1,8 +1,8 @@
 {
   "name": "right-door",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Right Door (正確的門) — on-device HK hardship / IDRP pack for the first 20 testers",
+  "description": "Right Door (正確的門) and Sunday Pack — on-device HK hardship letter and FDW counsellor briefing",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

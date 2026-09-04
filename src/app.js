@@ -5,18 +5,27 @@ import {
   getAttachment,
   getLang,
   getPack,
+  getSundayLang,
+  getSundayPack,
   listEvents,
   newPack,
   putAttachment,
   savePack,
+  saveSundayPack,
   setLang,
+  setSundayLang as persistSundayLang,
   wipeAll,
+  wipeSundayPack,
 } from "./db.js";
 import { countEvents, makeEvent } from "./events.js";
 import { DOORS, recommendDoor } from "./door.js";
 import { DOCUMENT_DEFS, missingAttachments, normalizeDocuments } from "./docs.js";
 import { buildLetter, letterContext } from "./letter.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
+import { migrateSundayPack, newSundayPack, emptyDraftLoan, normalizeLoan } from "./sunday/model.js";
+import { buildSundayPdf } from "./sunday/pdf.js";
+import { st as sundayT } from "./sunday/copy.js";
+import { SUNDAY_SCREENS, nextSundayLang, renderSunday } from "./sunday/ui.js";
 
 const STATUSES = ["draft", "sent", "waiting", "accepted", "rejected", "gave_up"];
 const TYPES = ["hsbc", "hang_seng", "citi", "boc", "other", "money_lender"];
@@ -24,11 +33,15 @@ const REASONS = ["job_ended", "hours_cut", "will_miss", "already_missed"];
 
 let lang = "zh";
 let pack = null;
-let screen = "home";
+let sunday = null;
+let sundayLang = "en";
+let screen = "chooser";
 let versionTaps = 0;
 let draftCreditor = { nickname: "", type: "hsbc", amount: "", ref: "" };
+let draftLoan = emptyDraftLoan();
 let busy = false;
 let notice = "";
+let sundayMode = false;
 
 function migratePack(raw) {
   if (!raw) return raw;
@@ -59,7 +72,9 @@ function syncLetter() {
 
 export async function boot() {
   lang = await getLang();
+  sundayLang = await getSundayLang();
   pack = migratePack(await getPack());
+  sunday = migrateSundayPack(await getSundayPack(), sundayLang);
   await log("app_open");
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
@@ -77,8 +92,9 @@ function onHash() {
 
 function syncScreenFromHash() {
   const raw = (location.hash || "#/").replace(/^#\/?/, "");
-  const name = raw.split("?")[0] || "home";
+  const name = raw.split("?")[0] || "chooser";
   const allowed = new Set([
+    "chooser",
     "home",
     "reason",
     "creditors",
@@ -87,12 +103,15 @@ function syncScreenFromHash() {
     "documents",
     "pack",
     "counters",
+    ...SUNDAY_SCREENS,
   ]);
-  screen = allowed.has(name) ? name : "home";
+  screen = allowed.has(name) ? name : "chooser";
+  sundayMode = SUNDAY_SCREENS.includes(screen);
 }
 
 function go(name) {
   notice = "";
+  sundayMode = SUNDAY_SCREENS.includes(name);
   if (location.hash === `#/${name}`) {
     screen = name;
     render();
@@ -109,6 +128,189 @@ async function ensurePack() {
     pack = migratePack(pack);
   }
   return pack;
+}
+
+async function ensureSunday() {
+  if (!sunday) {
+    sunday = migrateSundayPack(newSundayPack(sundayLang), sundayLang);
+    sunday = await saveSundayPack(sunday);
+  } else {
+    sunday = migrateSundayPack(sunday, sundayLang);
+  }
+  return sunday;
+}
+
+function setNotice(value) {
+  notice = value;
+}
+
+async function persistSunday(nextScreen) {
+  await ensureSunday();
+  sunday.lang = sundayLang;
+  if (nextScreen) sunday.screen = nextScreen;
+  sunday.updatedAt = Date.now();
+  sunday = await saveSundayPack(sunday);
+  return sunday;
+}
+
+async function setSundayLanguage(code) {
+  sundayLang = code;
+  await persistSundayLang(code);
+  await ensureSunday();
+  sunday.lang = code;
+  sunday = await saveSundayPack(sunday);
+  render();
+}
+
+function navSunday(backTo, nextTo) {
+  const box = el(`<div class="nav"></div>`);
+  if (nextTo) {
+    box.append(
+      el(`<button class="btn btn-primary" data-go="${nextTo}" type="button">${escapeHtml(sundayT(sundayLang, "continue"))}</button>`),
+    );
+  }
+  box.append(
+    el(`<button class="btn btn-ghost" data-go="${backTo}" type="button">${escapeHtml(sundayT(sundayLang, "back"))}</button>`),
+  );
+  return box;
+}
+
+function sundayHost() {
+  return {
+    sunday,
+    sundayLang,
+    draftLoan,
+    busy,
+    el,
+    escapeHtml,
+    go,
+    render,
+    log,
+    setNotice,
+    persistSunday,
+    setSundayLang: setSundayLanguage,
+    shellSunday: (body) => {
+      sundayMode = true;
+      shell(body);
+    },
+    navSunday,
+    addSundayLoan,
+    removeSundayLoan,
+    handleSundayPdf,
+    clearSunday,
+  };
+}
+
+async function addSundayLoan() {
+  const nickname = String(draftLoan.nickname || "").trim();
+  if (!nickname) return;
+  await ensureSunday();
+  sunday.loans.push(
+    normalizeLoan({
+      ...draftLoan,
+      id: crypto.randomUUID(),
+      nickname,
+    }),
+  );
+  draftLoan = emptyDraftLoan();
+  sunday = await saveSundayPack(sunday);
+  render();
+}
+
+async function removeSundayLoan(index) {
+  sunday.loans.splice(index, 1);
+  sunday = await saveSundayPack(sunday);
+  render();
+}
+
+async function handleSundayPdf(mode) {
+  if (busy) return;
+  busy = true;
+  render();
+  try {
+    const blob = buildSundayPdf(sunday);
+    const file = new File([blob], "sunday-pack-briefing.pdf", { type: "application/pdf" });
+    if (mode === "share") {
+      await log("sunday_share_tapped");
+      if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+        await navigator.share({ files: [file], title: sundayT(sundayLang, "brand") });
+      } else {
+        downloadBlob(file);
+        notice = sundayT(sundayLang, "shareFail");
+      }
+    } else {
+      downloadBlob(file);
+    }
+  } catch {
+    notice = sundayT(sundayLang, "pdfError");
+  } finally {
+    busy = false;
+    render();
+  }
+}
+
+async function clearSunday() {
+  if (!confirm(sundayT(sundayLang, "clearConfirm"))) return;
+  await wipeSundayPack();
+  sunday = null;
+  draftLoan = emptyDraftLoan();
+  go("chooser");
+}
+
+async function startSunday() {
+  await ensureSunday();
+  await log("sunday_started");
+  const resume =
+    sunday.privacyAccepted && sunday.screen && SUNDAY_SCREENS.includes(sunday.screen)
+      ? sunday.screen
+      : "sunday-privacy";
+  go(resume);
+}
+
+function renderChooser() {
+  sundayMode = false;
+  const hasRd = pack && (pack.reason || pack.letter);
+  const hasSp = sunday && (sunday.privacyAccepted || (sunday.loans && sunday.loans.length) || sunday.flags?.length);
+  const body = el(`<div class="stack"></div>`);
+  body.append(
+    el(`<p class="kicker">${escapeHtml(s("chooserKicker"))}</p>`),
+    el(`<h1>${escapeHtml(s("chooserTitle"))}</h1>`),
+    el(`<p class="lede">${escapeHtml(s("chooserLead"))}</p>`),
+    el(`<div class="card privacy"><p>${escapeHtml(s("chooserPrivacy"))}</p></div>`),
+  );
+  if (!isStandalone()) {
+    body.append(
+      el(
+        `<div class="card"><strong>${escapeHtml(s("addHome"))}</strong><p class="tiny">${escapeHtml(s("addHomeHow"))}</p></div>`,
+      ),
+    );
+  }
+  const rd = el(`
+    <div class="card chooser-card stack">
+      <strong>${escapeHtml(s("chooserRdTitle"))}</strong>
+      <p>${escapeHtml(s("chooserRdBody"))}</p>
+      <button class="btn btn-primary" data-act="rd" type="button">${escapeHtml(hasRd ? s("resume") : s("chooserRdStart"))}</button>
+    </div>
+  `);
+  const sp = el(`
+    <div class="card chooser-card stack">
+      <strong>${escapeHtml(s("chooserSpTitle"))}</strong>
+      <p>${escapeHtml(s("chooserSpBody"))}</p>
+      <button class="btn btn-accent" data-act="sp" type="button">${escapeHtml(hasSp ? s("resume") : s("chooserSpStart"))}</button>
+    </div>
+  `);
+  body.append(rd, sp);
+  if (pack || sunday) {
+    body.append(el(`<button class="btn btn-ghost" data-act="wipe" type="button">${escapeHtml(s("wipe"))}</button>`));
+  }
+  if (sunday) {
+    body.append(el(`<button class="btn btn-ghost" data-act="wipe-sunday" type="button">${escapeHtml(s("chooserWipeSunday"))}</button>`));
+  }
+  shell(body);
+  body.querySelector("[data-act=rd]").addEventListener("click", () => go("home"));
+  body.querySelector("[data-act=sp]").addEventListener("click", startSunday);
+  body.querySelector("[data-act=wipe]")?.addEventListener("click", onWipe);
+  body.querySelector("[data-act=wipe-sunday]")?.addEventListener("click", clearSunday);
 }
 
 function s(key, vars) {
@@ -132,15 +334,18 @@ function escapeHtml(value) {
 function shell(body) {
   const root = document.getElementById("app");
   root.innerHTML = "";
+  const brand = sundayMode ? sundayT(sundayLang, "brand") : s("appName");
+  const langLabel = sundayMode ? sundayT(sundayLang, `nextLang.${sundayLang}`) : s("langToggle");
+  const footer = sundayMode ? sundayT(sundayLang, "localOnly") : s("localOnly");
   const node = el(`
     <div class="shell">
       <header class="top">
-        <div class="brand">${escapeHtml(s("appName"))}</div>
-        <button class="lang" type="button" data-act="lang">${escapeHtml(s("langToggle"))}</button>
+        <button class="brand" type="button" data-go="chooser">${escapeHtml(brand)}</button>
+        <button class="lang" type="button" data-act="lang">${escapeHtml(langLabel)}</button>
       </header>
       <main></main>
       <footer class="footer">
-        <p class="tiny">${escapeHtml(s("localOnly"))}</p>
+        <p class="tiny">${escapeHtml(footer)}</p>
         <button class="version" type="button" data-act="version">${escapeHtml(s("version"))}</button>
       </footer>
     </div>
@@ -152,6 +357,15 @@ function shell(body) {
   }
   root.append(node);
   bind(root);
+  document.documentElement.lang = sundayMode
+    ? sundayLang === "tl"
+      ? "tl"
+      : sundayLang === "id"
+        ? "id"
+        : "en"
+    : lang === "zh"
+      ? "zh-Hant-HK"
+      : "en";
 }
 
 function bind(root) {
@@ -163,6 +377,10 @@ function bind(root) {
 }
 
 async function toggleLang() {
+  if (sundayMode) {
+    await setSundayLanguage(nextSundayLang(sundayLang));
+    return;
+  }
   lang = lang === "zh" ? "en" : "zh";
   document.documentElement.lang = lang === "zh" ? "zh-Hant-HK" : "en";
   await setLang(lang);
@@ -183,8 +401,8 @@ function tapVersion() {
 }
 
 function render() {
-  notice = notice;
   const view = {
+    chooser: renderChooser,
     home: renderHome,
     reason: renderReason,
     creditors: renderCreditors,
@@ -194,7 +412,11 @@ function render() {
     pack: renderPack,
     counters: renderCounters,
   }[screen];
-  view();
+  if (view) {
+    view();
+  } else if (SUNDAY_SCREENS.includes(screen)) {
+    renderSunday(screen, sundayHost());
+  }
   window.scrollTo(0, 0);
 }
 
@@ -256,6 +478,7 @@ function renderHome() {
   actions.append(el(`<button class="btn btn-accent" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
   body.append(actions);
   body.append(el(`<p class="tiny">${escapeHtml(s("notFor"))}</p>`));
+  body.append(el(`<button class="btn btn-ghost" data-go="chooser" type="button">${escapeHtml(s("chooserChangePack"))}</button>`));
   if (pack) {
     body.append(el(`<button class="btn btn-ghost" data-act="wipe" type="button">${escapeHtml(s("wipe"))}</button>`));
   }
@@ -274,7 +497,9 @@ async function onWipe() {
   if (!confirm(s("wipeConfirm"))) return;
   await wipeAll();
   pack = null;
-  go("home");
+  sunday = null;
+  draftLoan = emptyDraftLoan();
+  go("chooser");
 }
 
 function renderReason() {

@@ -9,7 +9,7 @@ const zh = {
   save: "儲存在這部手機",
   done: "完成",
   optional: "可選",
-  version: "PoC v0.1.2",
+  version: "PoC v0.2.0",
   localOnly:
     "我們不收集資料。信件包、照片、身分證號碼和金額只留在這部手機。沒有帳號。卸除就清走。我們不會寄給銀行。",
 
@@ -35,6 +35,19 @@ const zh = {
     "債務重組通常會向信貸資料服務機構申報。這一刻要保住的，是避免六十日逾期、破產或撇帳，不是「乾淨」評分。",
   wipe: "清除這部手機上的全部資料",
   wipeConfirm: "確定清除？卸除一樣會清走。此動作不能還原。",
+
+  chooserKicker: "免費 · 只在這部手機 · 你自己帶走",
+  chooserTitle: "揀一條路。資料留在這部手機。",
+  chooserLead: "兩個工具都在你的 Safari 裏準備。我們不代你發電郵、WhatsApp 或打電話。",
+  chooserPrivacy: "信件包和 Sunday Pack 都只存在這部手機。沒有帳號。卸除就清走。",
+  chooserRdTitle: "正確的門 · 銀行困難還款",
+  chooserRdBody: "給在銀行有戶口、未撇帳的香港借款人。在手機寫困難還款／綜合債務紓緩計劃信件，由你自己寄出。",
+  chooserRdStart: "開始銀行信件包",
+  chooserSpTitle: "Sunday Pack · 外傭輔導準備",
+  chooserSpBody: "給在港外傭。在手機做分流、債務清單和匯款比例，產生一頁輔導簡報。你自己帶去。我們不會代你通知 Enrich。",
+  chooserSpStart: "開始 Sunday Pack",
+  chooserChangePack: "返回選擇",
+  chooserWipeSunday: "只清除 Sunday Pack",
 
   reasonTitle: "你為甚麼在這裏？",
   reasonHint: "選一項。不用寫故事給我們——資料不會離開這部手機。",
@@ -190,6 +203,11 @@ const zh = {
     door_chosen: "選定門路",
     share_tapped: "點了分享",
     status_tapped: "點了狀態",
+    sunday_started: "開始 Sunday Pack",
+    sunday_triage_done: "Sunday Pack 分流完成",
+    sunday_pack_created: "建立 Sunday Pack",
+    sunday_door_chosen: "Sunday Pack 選定門路",
+    sunday_share_tapped: "Sunday Pack 點了分享",
   },
 
   needName: "請先填你的姓名，信件才用得上。",
@@ -205,7 +223,7 @@ const en = {
   save: "Save on this phone",
   done: "Done",
   optional: "Optional",
-  version: "PoC v0.1.2",
+  version: "PoC v0.2.0",
   localOnly:
     "We do not collect your data. Pack, photos, HKID, and amounts stay on this phone. No account. Uninstall wipes it. We do not send this to a bank.",
 
@@ -231,6 +249,19 @@ const en = {
     "Restructuring is usually reported to credit agencies. The win is avoiding a 60-day default, bankruptcy, or write-off — not a clean score.",
   wipe: "Erase everything on this phone",
   wipeConfirm: "Erase all local data? Uninstalling does the same. This cannot be undone.",
+
+  chooserKicker: "Free · on this phone only · you take it",
+  chooserTitle: "Pick a path. It stays on this phone.",
+  chooserLead: "Both tools are prepared in your Safari. We do not email, WhatsApp, or call anyone for you.",
+  chooserPrivacy: "The hardship pack and Sunday Pack live only on this phone. No account. Uninstall wipes it.",
+  chooserRdTitle: "Right Door · bank hardship",
+  chooserRdBody: "For banked Hong Kong borrowers before write-off. Prepare a hardship / IDRP letter on this phone. You send it.",
+  chooserRdStart: "Start the bank pack",
+  chooserSpTitle: "Sunday Pack · FDW counsellor prep",
+  chooserSpBody: "For foreign domestic workers in Hong Kong. Screen, list debts, and split remittance into a 1-page counsellor brief. You bring it. We never email Enrich for you.",
+  chooserSpStart: "Start Sunday Pack",
+  chooserChangePack: "All packs",
+  chooserWipeSunday: "Clear Sunday Pack only",
 
   reasonTitle: "Why are you here?",
   reasonHint: "Pick one. Do not write us a story — nothing leaves this phone.",
@@ -386,6 +417,11 @@ const en = {
     door_chosen: "Door chosen",
     share_tapped: "Share tapped",
     status_tapped: "Status tapped",
+    sunday_started: "Sunday Pack started",
+    sunday_triage_done: "Sunday Pack triage done",
+    sunday_pack_created: "Sunday Pack created",
+    sunday_door_chosen: "Sunday Pack door chosen",
+    sunday_share_tapped: "Sunday Pack share tapped",
   },
 
   needName: "Add your name so the letter can be in your name.",

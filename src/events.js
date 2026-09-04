@@ -7,6 +7,11 @@ export const EVENT_TYPES = [
   "door_chosen",
   "share_tapped",
   "status_tapped",
+  "sunday_started",
+  "sunday_triage_done",
+  "sunday_pack_created",
+  "sunday_door_chosen",
+  "sunday_share_tapped",
 ];
 
 const ALLOWED = new Set(EVENT_TYPES);
