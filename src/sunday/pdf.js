@@ -37,9 +37,18 @@ export function briefingRows(pack) {
   const door = pack?.door || recommendSundayDoor(pack?.flags);
   const flags = new Set(pack?.flags || []);
   const flagPills = [
-    flags.has("passport") ? sPdf("pdf.flagBadPassport") : sPdf("pdf.flagOkPassport"),
-    flags.has("shark") ? sPdf("pdf.flagBadShark") : sPdf("pdf.flagOkShark"),
-    flags.has("agency") ? sPdf("pdf.flagBadAgency") : sPdf("pdf.flagOkAgency"),
+    {
+      text: flags.has("passport") ? sPdf("pdf.flagBadPassport") : sPdf("pdf.flagOkPassport"),
+      bad: flags.has("passport"),
+    },
+    {
+      text: flags.has("shark") ? sPdf("pdf.flagBadShark") : sPdf("pdf.flagOkShark"),
+      bad: flags.has("shark"),
+    },
+    {
+      text: flags.has("agency") ? sPdf("pdf.flagBadAgency") : sPdf("pdf.flagOkAgency"),
+      bad: flags.has("agency"),
+    },
   ];
   const loans = pack?.loans || [];
   const shown = loans.slice(0, 6);
@@ -207,8 +216,9 @@ export function buildSundayPdf(pack) {
 
   y = sectionHead(doc, sPdf("pdf.redFlags"), y);
   let px = MARGIN;
-  data.flagPills.forEach((text, i) => {
-    const bad = /held against|threats|illegal/i.test(text);
+  data.flagPills.forEach((pillData, i) => {
+    const text = pillData.text;
+    const bad = pillData.bad;
     const w = pill(doc, text, px, y, bad
       ? { bg: "#F8E8E6", fg: "#8A1C12", border: "#E8C4BE" }
       : { bg: "#E7F2EA", fg: "#1F4E3D", border: "#C5D9CC" });

@@ -37,6 +37,10 @@ describe("Sunday Pack PDF", () => {
     expect(rows.footerLegal).toMatch(/not a request for Enrich to contact any lender/);
     expect(rows.doorLines.join("\n")).toContain(ENRICH.booking);
     expect(JSON.stringify(rows)).not.toMatch(/EXAMPLE DATA ONLY/i);
+    expect(rows.bills).toBe(40);
+    expect(rows.allowance).toBe(35);
+    expect(rows.keep).toBe(25);
+    expect(rows.flagPills.every((p) => !p.bad)).toBe(true);
   });
 
   it("embeds those phrases in a one-page PDF blob", async () => {
@@ -47,6 +51,9 @@ describe("Sunday Pack PDF", () => {
     expect(asText).toContain("not affiliated with Enrich");
     expect(asText).toContain("not a credit report");
     expect(asText).toContain("fhd-registration");
+    expect(asText).toContain("40%");
+    expect(asText).toContain("35%");
+    expect(asText).toContain("25%");
     expect(asText).not.toContain("EXAMPLE DATA ONLY");
   });
 });

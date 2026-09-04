@@ -435,7 +435,7 @@ function renderSplit(host) {
   body.append(box);
   host.shellSunday(body);
 
-  const persist = async () => {
+  const persistMemory = () => {
     sunday.split = {
       bills: form.querySelector("#bills").value.replace(/[^\d]/g, "").slice(0, 3),
       allowance: form.querySelector("#allowance").value.replace(/[^\d]/g, "").slice(0, 3),
@@ -444,13 +444,12 @@ function renderSplit(host) {
     sunday.splitNote = form.querySelector("#note").value.slice(0, 200);
     const n = splitTotal(sunday.split);
     form.querySelector("#total").textContent = t(host, "splitTotal", { n: n == null ? "—" : String(n) });
-    await host.persistSunday("sunday-split");
   };
   ["bills", "allowance", "keep", "note"].forEach((id) => {
-    form.querySelector(`#${id}`).addEventListener("input", persist);
+    form.querySelector(`#${id}`).addEventListener("input", persistMemory);
   });
   next.addEventListener("click", async () => {
-    await persist();
+    persistMemory();
     if (!splitIsValid(sunday.split) && !hasCrisisFlags(sunday.flags)) {
       host.setNotice(t(host, "splitNeed"));
       host.render();
@@ -542,6 +541,7 @@ function renderReview(host) {
     <p><strong>${ex(t(host, "nationality"))}</strong> ${ex(sunday.nationality ? t(host, `nationalities.${sunday.nationality}`) : "—")}</p>
     <p><strong>${ex(t(host, "meetingGoal"))}</strong> ${ex((sunday.goals || []).map((g) => t(host, `goals.${g}`)).join(" · ") || "—")}</p>
     <p><strong>${ex(t(host, "debtsTitle"))}</strong> ${ex(t(host, "loansCount", { n: String((sunday.loans || []).length) }))}</p>
+    <p><strong>${ex(t(host, "splitTitle"))}</strong> ${ex(t(host, "splitTotal", { n: splitTotal(sunday.split) == null ? "—" : String(splitTotal(sunday.split)) }))}</p>
   </div>`));
   if (blocked) {
     body.append(el(`<div class="card warn"><p>${ex(t(host, "needLoanOrCrisis"))}</p></div>`));
