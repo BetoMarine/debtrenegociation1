@@ -63,7 +63,7 @@ export function briefingRows(pack) {
       still: label(lang, `stillOpts.${loan.stillBorrowing}`),
     })),
     extraLoans: extra,
-    loanCount: label(lang, "loansCount", { n: String(loans.length) }),
+    loanCount: loans.length === 1 ? "1 loan listed" : sPdf("loansCount", { n: String(loans.length) }),
     guarantorTag: hasGuarantor(loans) ? sPdf("hasGuarantor") : sPdf("noGuarantor"),
     bandsOnly: sPdf("bandsOnly"),
     bills: total == null ? null : Number(split.bills),

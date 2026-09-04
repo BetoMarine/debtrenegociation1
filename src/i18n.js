@@ -46,6 +46,7 @@ const zh = {
   chooserSpTitle: "Sunday Pack · 外傭輔導準備",
   chooserSpBody: "給在港外傭。在手機做分流、債務清單和匯款比例，產生一頁輔導簡報。你自己帶去。我們不會代你通知 Enrich。",
   chooserSpStart: "開始 Sunday Pack",
+  chooserSpResume: "繼續 Sunday Pack",
   chooserChangePack: "返回選擇",
   chooserWipeSunday: "只清除 Sunday Pack",
 
@@ -260,6 +261,7 @@ const en = {
   chooserSpTitle: "Sunday Pack · FDW counsellor prep",
   chooserSpBody: "For foreign domestic workers in Hong Kong. Screen, list debts, and split remittance into a 1-page counsellor brief. You bring it. We never email Enrich for you.",
   chooserSpStart: "Start Sunday Pack",
+  chooserSpResume: "Continue Sunday Pack",
   chooserChangePack: "All packs",
   chooserWipeSunday: "Clear Sunday Pack only",
 

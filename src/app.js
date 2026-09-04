@@ -296,7 +296,7 @@ function renderChooser() {
     <div class="card chooser-card stack">
       <strong>${escapeHtml(s("chooserSpTitle"))}</strong>
       <p>${escapeHtml(s("chooserSpBody"))}</p>
-      <button class="btn btn-accent" data-act="sp" type="button">${escapeHtml(hasSp ? s("resume") : s("chooserSpStart"))}</button>
+      <button class="btn btn-accent" data-act="sp" type="button">${escapeHtml(hasSp ? s("chooserSpResume") : s("chooserSpStart"))}</button>
     </div>
   `);
   body.append(rd, sp);
