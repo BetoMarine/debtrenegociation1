@@ -25,8 +25,22 @@ const en = {
   skip: "Skip remaining questions",
   remove: "Remove",
   optional: "Optional",
+  version: "PoC v0.3.0",
   localOnly:
     "This pack stays on this phone. No account. Uninstall wipes it. We never email Enrich, NGOs, banks, or lenders for you.",
+  otherTools: "Other tools from Plan Your Life · Right Door",
+  addHome: "Add to Home Screen",
+  addHomeHow:
+    "iPhone: open this Sunday Pack page in Safari → Share → Add to Home Screen. After the first load it works offline.",
+  countersTitle: "On-device counters (no personal data)",
+  countersHint: "Event names and times only. No names, amounts, lenders, or briefing text.",
+  eventLabels: {
+    sunday_started: "Sunday Pack started",
+    sunday_triage_done: "Sunday Pack triage done",
+    sunday_pack_created: "Sunday Pack created",
+    sunday_door_chosen: "Sunday Pack door chosen",
+    sunday_share_tapped: "Sunday Pack share tapped",
+  },
 
   privacyTitle: "This stays on this phone until you share it.",
   privacyLead:
@@ -207,7 +221,6 @@ const en = {
   doneCheck3: "You can clear this pack from the phone when you are done.",
   clearPack: "Clear this Sunday Pack",
   clearConfirm: "Clear the Sunday Pack on this phone? Right Door data is not touched. This cannot be undone.",
-  backChooser: "Back to pack chooser",
 
   pdf: {
     title: "Counsellor briefing — money pack",
@@ -269,8 +282,22 @@ const tl = {
   skip: "Laktawan ang natitirang tanong",
   remove: "Tanggalin",
   optional: "Opsyonal",
+  version: "PoC v0.3.0",
   localOnly:
     "Sa teleponong ito lang ang pack. Walang account. Mawawala kapag in-uninstall. Hindi kami mag-e-email sa Enrich, NGO, bangko, o lender para sa iyo.",
+  otherTools: "Iba pang tool mula sa Plan Your Life · Right Door",
+  addHome: "Idagdag sa Home Screen",
+  addHomeHow:
+    "iPhone: buksan ang Sunday Pack sa Safari → Share → Add to Home Screen. Pagkatapos ng unang load, gumagana offline.",
+  countersTitle: "Mga counter sa telepono (walang personal na data)",
+  countersHint: "Pangalan ng event at oras lang. Walang pangalan, halaga, lender, o teksto ng briefing.",
+  eventLabels: {
+    sunday_started: "Sinimulan ang Sunday Pack",
+    sunday_triage_done: "Tapos na ang Sunday Pack triage",
+    sunday_pack_created: "Nagawa ang Sunday Pack",
+    sunday_door_chosen: "Napili ang Sunday Pack door",
+    sunday_share_tapped: "Pinindot ang Sunday Pack share",
+  },
 
   privacyTitle: "Sa teleponong ito lang ito hanggang ikaw mismo ang magbahagi.",
   privacyLead:
@@ -451,7 +478,6 @@ const tl = {
   doneCheck3: "Pwede mong burahin ang pack sa telepono pagtapos.",
   clearPack: "Burahin ang Sunday Pack na ito",
   clearConfirm: "Burahin ang Sunday Pack sa teleponong ito? Hindi maaapektuhan ang Right Door. Hindi na ito mababawi.",
-  backChooser: "Bumalik sa pagpili ng pack",
 
   pdf: en.pdf,
   langNames: en.langNames,
@@ -475,8 +501,22 @@ const id = {
   skip: "Lewati sisa pertanyaan",
   remove: "Hapus",
   optional: "Opsional",
+  version: "PoC v0.3.0",
   localOnly:
     "Paket ini hanya di HP ini. Tidak ada akun. Hilang jika di-uninstall. Kami tidak pernah mengirim email ke Enrich, LSM, bank, atau pemberi pinjaman untuk Anda.",
+  otherTools: "Alat lain dari Plan Your Life · Right Door",
+  addHome: "Tambahkan ke Layar Utama",
+  addHomeHow:
+    "iPhone: buka Sunday Pack di Safari → Share → Add to Home Screen. Setelah muat pertama, bisa dipakai offline.",
+  countersTitle: "Penghitung di HP (tanpa data pribadi)",
+  countersHint: "Nama event dan waktu saja. Tidak ada nama, jumlah, pemberi pinjaman, atau teks briefing.",
+  eventLabels: {
+    sunday_started: "Sunday Pack dimulai",
+    sunday_triage_done: "Triage Sunday Pack selesai",
+    sunday_pack_created: "Sunday Pack dibuat",
+    sunday_door_chosen: "Pintu Sunday Pack dipilih",
+    sunday_share_tapped: "Sunday Pack share diketuk",
+  },
 
   privacyTitle: "Ini tetap di HP ini sampai Anda sendiri yang membagikan.",
   privacyLead:
@@ -657,7 +697,6 @@ const id = {
   doneCheck3: "Anda bisa menghapus paket ini dari HP setelah selesai.",
   clearPack: "Hapus Sunday Pack ini",
   clearConfirm: "Hapus Sunday Pack di HP ini? Data Right Door tidak diubah. Tidak bisa dibatalkan.",
-  backChooser: "Kembali ke pemilih paket",
 
   pdf: en.pdf,
   langNames: en.langNames,

@@ -80,6 +80,17 @@ export async function wipeSundayPack() {
   const db = await openDb();
   const tx = db.transaction("kv", "readwrite");
   tx.objectStore("kv").delete("sundayPack");
+  tx.objectStore("kv").delete("sundayLang");
+  await txDone(tx);
+}
+
+/** Clears the Right Door vault only. sundayPack / sundayLang stay put. */
+export async function wipeRightDoor() {
+  const db = await openDb();
+  const tx = db.transaction(["kv", "attachments"], "readwrite");
+  tx.objectStore("kv").delete("pack");
+  tx.objectStore("kv").delete("lang");
+  tx.objectStore("attachments").clear();
   await txDone(tx);
 }
 

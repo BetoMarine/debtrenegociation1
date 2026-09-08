@@ -1,16 +1,36 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
-  base: "./",
+const root = dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/debtrenegociation1/" : "/",
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(root, "index.html"),
+        sunday: resolve(root, "sunday/index.html"),
+      },
+    },
+  },
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "apple-touch-icon.png"],
+      includeAssets: [
+        "icons/icon-192.png",
+        "icons/icon-512.png",
+        "apple-touch-icon.png",
+        "sunday/icons/icon-192.png",
+        "sunday/icons/icon-512.png",
+        "sunday/apple-touch-icon.png",
+      ],
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
         navigateFallback: "index.html",
+        navigateFallbackDenylist: [/\/sunday(?:\/|$)/, /\/pyl(?:\/|$)/],
         runtimeCaching: [],
       },
     }),
@@ -18,4 +38,4 @@ export default defineConfig({
   test: {
     environment: "node",
   },
-});
+}));

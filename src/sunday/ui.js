@@ -86,6 +86,13 @@ function renderPrivacy(host) {
     el(`<p class="lede">${ex(t(host, "privacyLead"))}</p>`),
     el(`<div class="card privacy"><p>${ex(t(host, "privacyBody"))}</p></div>`),
   );
+  if (!host.isStandalone) {
+    body.append(
+      el(
+        `<div class="card"><strong>${ex(t(host, "addHome"))}</strong><p class="tiny">${ex(t(host, "addHomeHow"))}</p></div>`,
+      ),
+    );
+  }
   const check = el(`
     <label class="doc-head">
       <input class="check" type="checkbox" ${sunday.privacyAccepted ? "checked" : ""} />
@@ -95,7 +102,7 @@ function renderPrivacy(host) {
   body.append(check);
   const next = el(`<button class="btn btn-primary" type="button">${ex(t(host, "continue"))}</button>`);
   const nav = el(`<div class="nav"></div>`);
-  nav.append(next, el(`<button class="btn btn-ghost" data-go="chooser" type="button">${ex(t(host, "back"))}</button>`));
+  nav.append(next);
   body.append(nav);
   host.shellSunday(body);
   check.querySelector("input").addEventListener("change", async (e) => {
@@ -581,9 +588,8 @@ function renderDone(host) {
     el(`<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`),
   );
   const clear = el(`<button class="btn" type="button">${ex(t(host, "clearPack"))}</button>`);
-  const chooser = el(`<button class="btn btn-ghost" data-go="chooser" type="button">${ex(t(host, "backChooser"))}</button>`);
   const box = el(`<div class="nav"></div>`);
-  box.append(clear, chooser);
+  box.append(clear);
   body.append(box);
   host.shellSunday(body);
   clear.addEventListener("click", () => host.clearSunday());

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STRINGS } from "./i18n.js";
+import { productHref } from "./paths.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
 
 const FORBIDDEN = [
@@ -48,6 +49,14 @@ describe("product copy", () => {
     expect(STRINGS.en.privacyTitle).toMatch(/do not collect/i);
     expect(STRINGS.zh.privacyBody).toMatch(/不上傳/);
     expect(STRINGS.en.privacyBody).toMatch(/do not upload/i);
+  });
+
+  it("does not ship a first-page chooser and keeps products on separate URLs", () => {
+    expect(STRINGS.en.chooserTitle).toBeUndefined();
+    expect(STRINGS.zh.chooserTitle).toBeUndefined();
+    expect(SUNDAY_STRINGS.en.backChooser).toBeUndefined();
+    expect(productHref("right-door")).toBe("/");
+    expect(productHref("sunday")).toBe("/sunday/");
   });
 
   it("never claims the app emails Enrich or lenders for the helper", () => {

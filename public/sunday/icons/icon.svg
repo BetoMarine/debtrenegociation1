@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunday Pack">
+  <rect width="512" height="512" rx="96" fill="#F3EFE6"/>
+  <rect x="146" y="96" width="220" height="300" rx="16" fill="#1F4E3D"/>
+  <rect x="166" y="128" width="180" height="22" rx="6" fill="#F3EFE6"/>
+  <rect x="166" y="172" width="140" height="16" rx="6" fill="#F3EFE6"/>
+  <rect x="166" y="204" width="160" height="16" rx="6" fill="#F3EFE6"/>
+  <circle cx="318" cy="360" r="18" fill="#C45C26"/>
+</svg>

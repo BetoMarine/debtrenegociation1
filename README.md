@@ -1,45 +1,49 @@
 # 正確的門 · Right Door · Sunday Pack
 
-A free Hong Kong consumer tool. Two on-device paths share one Safari page (PoC v0.2.0):
+Two **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.3.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
 
-It is not an App Store app, not a debt mill, and not a collector. The app **never emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link.
+They are not App Store apps, not a debt mill, and not a collector. Neither app **emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link.
 
-## Open on iPhone (no npm)
+Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses the `sundayPack` IndexedDB key.
 
-Public HTTPS URL (production Vite build, static files only):
+## Public URLs (GitHub Pages)
 
-**https://betomarine.github.io/debtrenegociation1/**
+| Product | URL | Home-screen title |
+| --- | --- | --- |
+| **Right Door** (root — existing links keep working) | https://betomarine.github.io/debtrenegociation1/ | 正確的門 |
+| **Sunday Pack** | https://betomarine.github.io/debtrenegociation1/sunday/ | Sunday Pack |
 
-This agent pushed the `npm run build` output to the `gh-pages` branch and added `.github/workflows/pages.yml`. It **cannot** flip the Pages switch (GitHub API 403). Until you do that one tap, the URL is 404.
+Open each URL in **Safari**. Share → Add to Home Screen. You get two icons.
 
-On iPhone, use **Safari** (the GitHub app often hides repo Settings):
+A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
-1. Open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages) and sign in if asked.
+This repo’s workflow publishes `npm run build` to the `gh-pages` branch on each push to `main`. Completing a pack still does not POST names, HKID, amounts, or files — hosting is JS/CSS only.
+
+If the public URL is 404, turn on Pages once (Safari, not the GitHub app):
+
+1. Open [github.com/BetoMarine/debtrenegociation1/settings/pages](https://github.com/BetoMarine/debtrenegociation1/settings/pages).
 2. **Build and deployment** → **Source** → **Deploy from a branch**.
 3. **Branch:** `gh-pages` · **Folder:** `/ (root)`.
 4. **Save**. Wait about one minute.
-5. Open **https://betomarine.github.io/debtrenegociation1/** in Safari → Share → Add to Home Screen.
-
-After merge to `main`, the workflow rebuilds `gh-pages` on each push. Completing a pack still does not POST names, HKID, amounts, or files — hosting is JS/CSS only.
 
 ## Who this build is for
 
-Banked Hong Kong borrowers **before write-off**, typically:
+**Right Door** — banked Hong Kong borrowers **before write-off**, typically:
 
 - the job ended
 - hours or pay were cut
 - they already know they cannot pay the next six months of instalments
 
-**Sunday Pack** is for foreign domestic workers in Hong Kong who want to prepare for a counsellor (Enrich by default, HELP / Labour / consulate if the red-flag screen says so).
+**Sunday Pack** — foreign domestic workers in Hong Kong who want to prepare for a counsellor (Enrich by default, HELP / Labour / consulate if the red-flag screen says so).
 
 Not in this build: money-lender-only bank packs, Alipay, chatbots, accounts, payments, bank APIs, cloud document vaults for Sunday Pack.
 
 ## What it does
 
-Home is a **chooser**. Pick Right Door or Sunday Pack. Privacy framing is on both paths.
+Each URL opens that product’s privacy / start screen. No first-page chooser.
 
 ### Right Door
 
@@ -137,45 +141,61 @@ npm test
 npm run dev
 ```
 
-Then open the URL Vite prints (usually `http://localhost:5173`).
+Then open the URLs Vite prints:
 
-Production-like build (service worker, offline after first load):
+- Right Door: `http://localhost:5173/`
+- Sunday Pack: `http://localhost:5173/sunday/`
+
+Production-like build (service worker, offline after first load). The production `base` is `/debtrenegociation1/` so preview matches GitHub Pages:
 
 ```bash
 npm run build
 npm run preview
 ```
 
+- Right Door: `http://localhost:4173/debtrenegociation1/`
+- Sunday Pack: `http://localhost:4173/debtrenegociation1/sunday/`
+
 There is no server of your data. Vite only serves static files.
 
 ## How to test on a phone
 
-Founder / testers with only an iPhone: after the Pages tap above, open **https://betomarine.github.io/debtrenegociation1/** in Safari, then Share → Add to Home Screen.
+Founder / testers with only an iPhone: after Pages is on, open **each** URL in Safari, then Share → Add to Home Screen. Confirm two icons, two titles.
 
-Sunday Pack happy path: chooser → Sunday Pack → tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Then open Right Door from the chooser and confirm the bank pack still runs.
+**Right Door:** https://betomarine.github.io/debtrenegociation1/ → privacy/start (正確的門). No chooser. Walk the bank hardship / IDRP letter flow.
+
+**Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
+
+Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store).
 
 Local preview (needs Node):
 
 1. Put the phone and the computer on the same Wi-Fi.
 2. Run `npm run build && npm run preview -- --host`.
-3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL, e.g. `http://192.168.x.x:4173`.
-4. Share → Add to Home Screen.
+3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL plus the product path, e.g. `http://192.168.x.x:4173/debtrenegociation1/` and `http://192.168.x.x:4173/debtrenegociation1/sunday/`.
+4. Share → Add to Home Screen on each.
 5. Open the home-screen icon. Turn on Airplane Mode after the first load and finish a pack. PDF share / download should still work.
 6. In Safari Web Inspector → Network, completing a pack must not POST names, HKID, amounts, or files anywhere.
 
-To wipe tester data: use “Erase everything on this phone” on the home screen, or delete the home-screen icon / site data.
+To wipe tester data: use the erase / clear control on that product’s home or done screen, or delete the home-screen icon / site data. Wiping Right Door does not clear Sunday Pack, and the reverse.
+
+Old bookmarks that still use `#/sunday-privacy` (and other `sunday-*` hashes) on the **root** URL are redirected to `/sunday/`.
 
 ## Project layout
 
 ```
-src/app.js            chooser + Right Door screens
-src/sunday/           Sunday Pack copy, door, PDF, screens
-src/door.js           Right Door deterministic door + verified URLs
-src/letter.js         first-person letter from structured fields
-src/pdf.js            Right Door client-side PDF (system CJK fonts via canvas)
-src/db.js             IndexedDB (`pack` vs `sundayPack` keys)
-src/events.js         enum event log
-src/i18n.js           繁體中文 first, English toggle (Right Door + chooser)
+index.html              Right Door HTML + apple-mobile-web-app-title
+sunday/index.html       Sunday Pack HTML + its own title / manifest
+src/app.js              Right Door screens only
+src/sunday/             Sunday Pack app, copy, door, PDF, screens
+src/door.js             Right Door deterministic door + verified URLs
+src/letter.js           first-person letter from structured fields
+src/pdf.js              Right Door client-side PDF (system CJK fonts via canvas)
+src/db.js               IndexedDB (`pack` vs `sundayPack` keys)
+src/events.js           enum event log
+src/i18n.js             繁體中文 first, English toggle (Right Door)
+src/paths.js            public URLs for the two products
+pyl-preview/            Plan Your Life studio page (two nugget cards)
 ```
 
 Tap the version label five times for on-device counters.
