@@ -55,8 +55,8 @@ describe("product copy", () => {
     expect(STRINGS.en.chooserTitle).toBeUndefined();
     expect(STRINGS.zh.chooserTitle).toBeUndefined();
     expect(SUNDAY_STRINGS.en.backChooser).toBeUndefined();
-    expect(productHref("right-door")).toBe("/");
-    expect(productHref("sunday")).toBe("/sunday/");
+    expect(productHref("right-door")).toBe("./");
+    expect(productHref("sunday")).toBe("./sunday/");
   });
 
   it("never claims the app emails Enrich or lenders for the helper", () => {

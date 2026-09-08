@@ -146,15 +146,15 @@ Then open the URLs Vite prints:
 - Right Door: `http://localhost:5173/`
 - Sunday Pack: `http://localhost:5173/sunday/`
 
-Production-like build (service worker, offline after first load). The production `base` is `/debtrenegociation1/` so preview matches GitHub Pages:
+Production-like build (service worker, offline after first load). Asset paths are relative, so the same files work on GitHub Pages and on `vite preview`:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-- Right Door: `http://localhost:4173/debtrenegociation1/`
-- Sunday Pack: `http://localhost:4173/debtrenegociation1/sunday/`
+- Right Door: `http://localhost:4173/`
+- Sunday Pack: `http://localhost:4173/sunday/`
 
 There is no server of your data. Vite only serves static files.
 
@@ -172,7 +172,7 @@ Local preview (needs Node):
 
 1. Put the phone and the computer on the same Wi-Fi.
 2. Run `npm run build && npm run preview -- --host`.
-3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL plus the product path, e.g. `http://192.168.x.x:4173/debtrenegociation1/` and `http://192.168.x.x:4173/debtrenegociation1/sunday/`.
+3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL plus the product path, e.g. `http://192.168.x.x:4173/` and `http://192.168.x.x:4173/sunday/`.
 4. Share → Add to Home Screen on each.
 5. Open the home-screen icon. Turn on Airplane Mode after the first load and finish a pack. PDF share / download should still work.
 6. In Safari Web Inspector → Network, completing a pack must not POST names, HKID, amounts, or files anywhere.

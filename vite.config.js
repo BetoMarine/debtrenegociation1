@@ -5,8 +5,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/debtrenegociation1/" : "/",
+export default defineConfig({
+  appType: "mpa",
+  base: "./",
   build: {
     rollupOptions: {
       input: {
@@ -18,6 +19,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false,
       includeAssets: [
         "icons/icon-192.png",
         "icons/icon-512.png",
@@ -38,4 +40,4 @@ export default defineConfig(({ command }) => ({
   test: {
     environment: "node",
   },
-}));
+});
