@@ -15,6 +15,7 @@ Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses the `su
 | --- | --- | --- |
 | **Right Door** (root — existing links keep working) | https://betomarine.github.io/debtrenegociation1/ | 正確的門 |
 | **Sunday Pack** | https://betomarine.github.io/debtrenegociation1/sunday/ | Sunday Pack |
+| **Plan Your Life preview** (two equal Live cards) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
 
 Open each URL in **Safari**. Share → Add to Home Screen. You get two icons.
 
@@ -195,7 +196,8 @@ src/db.js               IndexedDB (`pack` vs `sundayPack` keys)
 src/events.js           enum event log
 src/i18n.js             繁體中文 first, English toggle (Right Door)
 src/paths.js            public URLs for the two products
-pyl-preview/            Plan Your Life studio page (two nugget cards)
+pyl-preview/            Plan Your Life studio page (source)
+public/pyl/             same page, published at /pyl/ on GitHub Pages
 ```
 
 Tap the version label five times for on-device counters.
