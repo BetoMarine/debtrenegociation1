@@ -9,7 +9,7 @@ const zh = {
   save: "儲存在這部手機",
   done: "完成",
   optional: "可選",
-  version: "PoC v0.3.0",
+  version: "PoC v0.4.0",
   localOnly:
     "我們不收集資料。信件包、照片、身分證號碼和金額只留在這部手機。沒有帳號。卸除就清走。我們不會寄給銀行。",
 
@@ -34,8 +34,10 @@ const zh = {
   creditHonesty:
     "債務重組通常會向信貸資料服務機構申報。這一刻要保住的，是避免六十日逾期、破產或撇帳，不是「乾淨」評分。",
   wipe: "清除這部手機上的正確的門資料",
-  wipeConfirm: "確定清除正確的門？Sunday Pack 不受影響。卸除一樣會清走。此動作不能還原。",
-  otherTools: "Plan Your Life 其他工具 · Sunday Pack",
+  wipeConfirm: "確定清除正確的門？Sunday Pack 和 Fortune Teller 不受影響。卸除一樣會清走。此動作不能還原。",
+  otherTools: "Plan Your Life 其他工具",
+  otherToolsSunday: "Sunday Pack",
+  otherToolsFortune: "Fortune Teller",
 
   reasonTitle: "你為甚麼在這裏？",
   reasonHint: "選一項。不用寫故事給我們——資料不會離開這部手機。",
@@ -211,7 +213,7 @@ const en = {
   save: "Save on this phone",
   done: "Done",
   optional: "Optional",
-  version: "PoC v0.3.0",
+  version: "PoC v0.4.0",
   localOnly:
     "We do not collect your data. Pack, photos, HKID, and amounts stay on this phone. No account. Uninstall wipes it. We do not send this to a bank.",
 
@@ -236,8 +238,10 @@ const en = {
   creditHonesty:
     "Restructuring is usually reported to credit agencies. The win is avoiding a 60-day default, bankruptcy, or write-off — not a clean score.",
   wipe: "Erase this Right Door pack",
-  wipeConfirm: "Erase Right Door data on this phone? Sunday Pack is not touched. Uninstalling does the same. This cannot be undone.",
-  otherTools: "Other tools from Plan Your Life · Sunday Pack",
+  wipeConfirm: "Erase Right Door data on this phone? Sunday Pack and Fortune Teller are not touched. Uninstalling does the same. This cannot be undone.",
+  otherTools: "Other tools from Plan Your Life",
+  otherToolsSunday: "Sunday Pack",
+  otherToolsFortune: "Fortune Teller",
 
   reasonTitle: "Why are you here?",
   reasonHint: "Pick one. Do not write us a story — nothing leaves this phone.",

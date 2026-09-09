@@ -25,10 +25,12 @@ const en = {
   skip: "Skip remaining questions",
   remove: "Remove",
   optional: "Optional",
-  version: "PoC v0.3.0",
+  version: "PoC v0.4.0",
   localOnly:
     "This pack stays on this phone. No account. Uninstall wipes it. We never email Enrich, NGOs, banks, or lenders for you.",
-  otherTools: "Other tools from Plan Your Life · Right Door",
+  otherTools: "Other tools from Plan Your Life",
+  otherToolsRight: "Right Door",
+  otherToolsFortune: "Fortune Teller",
   addHome: "Add to Home Screen",
   addHomeHow:
     "iPhone: open this Sunday Pack page in Safari → Share → Add to Home Screen. After the first load it works offline.",
@@ -282,10 +284,12 @@ const tl = {
   skip: "Laktawan ang natitirang tanong",
   remove: "Tanggalin",
   optional: "Opsyonal",
-  version: "PoC v0.3.0",
+  version: "PoC v0.4.0",
   localOnly:
     "Sa teleponong ito lang ang pack. Walang account. Mawawala kapag in-uninstall. Hindi kami mag-e-email sa Enrich, NGO, bangko, o lender para sa iyo.",
-  otherTools: "Iba pang tool mula sa Plan Your Life · Right Door",
+  otherTools: "Iba pang tool mula sa Plan Your Life",
+  otherToolsRight: "Right Door",
+  otherToolsFortune: "Fortune Teller",
   addHome: "Idagdag sa Home Screen",
   addHomeHow:
     "iPhone: buksan ang Sunday Pack sa Safari → Share → Add to Home Screen. Pagkatapos ng unang load, gumagana offline.",
@@ -501,10 +505,12 @@ const id = {
   skip: "Lewati sisa pertanyaan",
   remove: "Hapus",
   optional: "Opsional",
-  version: "PoC v0.3.0",
+  version: "PoC v0.4.0",
   localOnly:
     "Paket ini hanya di HP ini. Tidak ada akun. Hilang jika di-uninstall. Kami tidak pernah mengirim email ke Enrich, LSM, bank, atau pemberi pinjaman untuk Anda.",
-  otherTools: "Alat lain dari Plan Your Life · Right Door",
+  otherTools: "Alat lain dari Plan Your Life",
+  otherToolsRight: "Right Door",
+  otherToolsFortune: "Fortune Teller",
   addHome: "Tambahkan ke Layar Utama",
   addHomeHow:
     "iPhone: buka Sunday Pack di Safari → Share → Add to Home Screen. Setelah muat pertama, bisa dipakai offline.",

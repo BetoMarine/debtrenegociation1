@@ -12,6 +12,10 @@ export const EVENT_TYPES = [
   "sunday_pack_created",
   "sunday_door_chosen",
   "sunday_share_tapped",
+  "fortune_started",
+  "fortune_forecast_run",
+  "fortune_pdf",
+  "fortune_export",
 ];
 
 const ALLOWED = new Set(EVENT_TYPES);

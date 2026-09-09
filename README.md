@@ -1,13 +1,14 @@
-# 正確的門 · Right Door · Sunday Pack
+# 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Two **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.3.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.4.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
+3. **Fortune Teller** — living milestones vs a security net. An **owned Monte Carlo** engine runs in the browser. Not a retirement gadget. Envizage is out.
 
-They are not App Store apps, not a debt mill, and not a collector. Neither app **emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link.
+They are not App Store apps, not a debt mill, and not a collector. Neither hardship app **emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link. Fortune Teller does not sell a fund or execute a trade.
 
-Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses the `sundayPack` IndexedDB key.
+Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses `sundayPack`; Fortune Teller uses `fortunePlan` / `fortuneForecast`.
 
 ## Public URLs (GitHub Pages)
 
@@ -15,9 +16,10 @@ Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses the `su
 | --- | --- | --- |
 | **Right Door** (root — existing links keep working) | https://betomarine.github.io/debtrenegociation1/ | 正確的門 |
 | **Sunday Pack** | https://betomarine.github.io/debtrenegociation1/sunday/ | Sunday Pack |
-| **Plan Your Life preview** (two equal Live cards) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
+| **Fortune Teller** (stable path — do not rename) | https://betomarine.github.io/debtrenegociation1/fortune/ | Fortune Teller |
+| **Plan Your Life preview** (three equal Live cards) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
 
-Open each URL in **Safari**. Share → Add to Home Screen. You get two icons.
+Open each URL in **Safari**. Share → Add to Home Screen. You get three icons. The Fortune Teller URL is `/fortune/` (not `/fortune-teller/`). Keep it stable.
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
@@ -40,7 +42,9 @@ If the public URL is 404, turn on Pages once (Safari, not the GitHub app):
 
 **Sunday Pack** — foreign domestic workers in Hong Kong who want to prepare for a counsellor (Enrich by default, HELP / Labour / consulate if the red-flag screen says so).
 
-Not in this build: money-lender-only bank packs, Alipay, chatbots, accounts, payments, bank APIs, cloud document vaults for Sunday Pack.
+**Fortune Teller** — people in Hong Kong who want to see whether living goals (a wedding, a 50th, a car, a house, a custom micro-goal) can share the pot with a security net (emergency months / a future floor). Not “years to retirement” as the hero.
+
+Not in this build: money-lender-only bank packs, Alipay, chatbots, accounts, payments, bank APIs, cloud document vaults for Sunday Pack, Envizage, Finnhub live marks, custody/trading.
 
 ## What it does
 
@@ -77,9 +81,33 @@ Stored in a **separate IndexedDB key** from the Right Door vault (no photo annex
 8. 1-page counsellor PDF, generated on the phone
 9. Done: open booking / bring the PDF; clear this pack
 
-Crisis screens use `tel:` and `https://wa.me/` only. A short pack can still be saved.
+### Fortune Teller
 
-PDF footer:
+Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortuneUi`).
+
+1. Privacy / promise: living vs a security net; two dials always; plan stays on this phone
+2. Life theme (Young family / Peak career / Empty nest / Fresh start) seeds milestones + net; user edits freely
+3. Money-now bands: income, spending, savings, debts
+4. Board: Living % and Net % dials, drag-the-timeline, templates, crumbs
+5. Portfolio templates (benchmarks, not products): Steady / Balanced / Growth / Frontier — assumed μ/σ + “illustrative, not a fund we sell”
+6. Drag a milestone earlier/later → Monte Carlo re-runs → dials update
+7. Save-vs-borrow compare for one milestone
+8. One-page implementation sheet (PDF): plan summary + execute elsewhere with a licensed intermediary + not advice + not affiliated with HSBC
+9. Export JSON / clear this plan. Soft dismissible login tease only (no real auth)
+
+Client-side Monte Carlo: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
+
+**Absurd-input kill-test:** 0 income, 0 savings, a HK$15M+ house must hard-fail (dials wrecked, no green “you're set”). Covered by `src/fortune/engine.test.js`.
+
+Fortune Teller PDF footer:
+
+> Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale
+
+> Execute this plan elsewhere with a licensed intermediary. Fortune Teller does not hold money, sell funds, or give regulated advice. Not affiliated with HSBC.
+
+Crisis screens (Sunday Pack) use `tel:` and `https://wa.me/` only. A short pack can still be saved.
+
+Sunday Pack PDF footer:
 
 > Prepared by the helper on her device · Plan Your Life / Right Door (Sunday Pack) · not affiliated with Enrich
 
@@ -146,6 +174,7 @@ Then open the URLs Vite prints:
 
 - Right Door: `http://localhost:5173/`
 - Sunday Pack: `http://localhost:5173/sunday/`
+- Fortune Teller: `http://localhost:5173/fortune/`
 
 Production-like build (service worker, offline after first load). Asset paths are relative, so the same files work on GitHub Pages and on `vite preview`:
 
@@ -156,29 +185,32 @@ npm run preview
 
 - Right Door: `http://localhost:4173/`
 - Sunday Pack: `http://localhost:4173/sunday/`
+- Fortune Teller: `http://localhost:4173/fortune/`
 
 There is no server of your data. Vite only serves static files.
 
 ## How to test on a phone
 
-Founder / testers with only an iPhone: after Pages is on, open **each** URL in Safari, then Share → Add to Home Screen. Confirm two icons, two titles.
+Founder / testers with only an iPhone: after Pages is on, open **each** URL in Safari, then Share → Add to Home Screen. Confirm three icons, three titles.
 
 **Right Door:** https://betomarine.github.io/debtrenegociation1/ → privacy/start (正確的門). No chooser. Walk the bank hardship / IDRP letter flow.
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store).
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → living vs net (Fortune Teller). No chooser. Pick a theme → money bands → board. Drag a milestone; both dials must move. Switch Steady → Frontier; the projection must change. Open save-vs-borrow. Export the PDF and confirm the HSBC / not-advice footer. Kill-test: set income and savings to none, add a HK$15M house — dials wrecked, verdict is not a green “you're set”.
+
+Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store). `/pyl/` must show three Live cards.
 
 Local preview (needs Node):
 
 1. Put the phone and the computer on the same Wi-Fi.
 2. Run `npm run build && npm run preview -- --host`.
-3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL plus the product path, e.g. `http://192.168.x.x:4173/` and `http://192.168.x.x:4173/sunday/`.
+3. On **iPhone Safari** (not Chrome-in-app), open the printed Network URL plus the product path, e.g. `http://192.168.x.x:4173/`, `http://192.168.x.x:4173/sunday/`, and `http://192.168.x.x:4173/fortune/`.
 4. Share → Add to Home Screen on each.
 5. Open the home-screen icon. Turn on Airplane Mode after the first load and finish a pack. PDF share / download should still work.
 6. In Safari Web Inspector → Network, completing a pack must not POST names, HKID, amounts, or files anywhere.
 
-To wipe tester data: use the erase / clear control on that product’s home or done screen, or delete the home-screen icon / site data. Wiping Right Door does not clear Sunday Pack, and the reverse.
+To wipe tester data: use the erase / clear control on that product’s home or done screen, or delete the home-screen icon / site data. Wiping one product does not clear the other two.
 
 Old bookmarks that still use `#/sunday-privacy` (and other `sunday-*` hashes) on the **root** URL are redirected to `/sunday/`.
 
@@ -187,15 +219,17 @@ Old bookmarks that still use `#/sunday-privacy` (and other `sunday-*` hashes) on
 ```
 index.html              Right Door HTML + apple-mobile-web-app-title
 sunday/index.html       Sunday Pack HTML + its own title / manifest
+fortune/index.html      Fortune Teller HTML + its own title / manifest
 src/app.js              Right Door screens only
 src/sunday/             Sunday Pack app, copy, door, PDF, screens
+src/fortune/            Fortune Teller app, owned Monte Carlo engine, PDF
 src/door.js             Right Door deterministic door + verified URLs
 src/letter.js           first-person letter from structured fields
 src/pdf.js              Right Door client-side PDF (system CJK fonts via canvas)
-src/db.js               IndexedDB (`pack` vs `sundayPack` keys)
+src/db.js               IndexedDB (`pack` / `sundayPack` / `fortunePlan`)
 src/events.js           enum event log
 src/i18n.js             繁體中文 first, English toggle (Right Door)
-src/paths.js            public URLs for the two products
+src/paths.js            public URLs for the three products
 pyl-preview/            Plan Your Life studio page (source)
 public/pyl/             same page, published at /pyl/ on GitHub Pages
 ```
@@ -204,4 +238,4 @@ Tap the version label five times for on-device counters.
 
 ## Out of scope
 
-Alipay, chatbots, accounts, payments, bank APIs, SEO, cloud admin dashboards, App Store distribution, Sunday Pack photo vaults, the app messaging Enrich or any lender.
+Alipay, chatbots, accounts, payments, bank APIs, SEO, cloud admin dashboards, App Store distribution, Sunday Pack photo vaults, the app messaging Enrich or any lender, Envizage, Finnhub live marks, Fortune Teller custody/trading, Chinese copy for Fortune Teller (nice-to-have only).

@@ -84,6 +84,44 @@ export async function wipeSundayPack() {
   await txDone(tx);
 }
 
+export async function getFortunePlan() {
+  return getKv("fortunePlan");
+}
+
+export async function saveFortunePlan(plan) {
+  const next = { ...plan, updatedAt: Date.now() };
+  await setKv("fortunePlan", next);
+  return next;
+}
+
+export async function getFortuneForecast() {
+  return getKv("fortuneForecast");
+}
+
+export async function saveFortuneForecast(forecast) {
+  await setKv("fortuneForecast", forecast);
+  return forecast;
+}
+
+export async function getFortuneUi() {
+  return getKv("fortuneUi");
+}
+
+export async function saveFortuneUi(state) {
+  await setKv("fortuneUi", state);
+  return state;
+}
+
+/** Clears Fortune Teller only. Right Door and Sunday Pack stay put. */
+export async function wipeFortune() {
+  const db = await openDb();
+  const tx = db.transaction("kv", "readwrite");
+  tx.objectStore("kv").delete("fortunePlan");
+  tx.objectStore("kv").delete("fortuneForecast");
+  tx.objectStore("kv").delete("fortuneUi");
+  await txDone(tx);
+}
+
 /** Clears the Right Door vault only. sundayPack / sundayLang stay put. */
 export async function wipeRightDoor() {
   const db = await openDb();
