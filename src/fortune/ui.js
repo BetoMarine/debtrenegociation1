@@ -208,7 +208,7 @@ function renderBoard(host) {
   const horizon = forecast?.horizonMonths || 48;
   body.append(el(`<h2>${escapeHtml(t("timelineTitle"))}</h2>`));
   body.append(el(`<p class="hint">${escapeHtml(t("timelineHint"))}</p>`));
-  body.append(renderTimeline(plan, horizon, escapeHtml));
+  body.append(el(renderTimeline(plan, horizon, escapeHtml)));
 
   body.append(el(`<h2>${escapeHtml(t("goalsTitle"))}</h2>`));
   if (!plan.milestones.length) {
@@ -369,7 +369,7 @@ function renderGoalEdit(host) {
   const form = el(`<form class="stack" data-form="goal"></form>`);
   form.innerHTML = `
     <label class="field">${escapeHtml(t("goalName"))}
-      <input name="name" maxlength="80" required placeholder="${escapeHtml(t("goalNamePh"))}" value="${escapeHtml(draftGoal.name)}" />
+      <input name="name" maxlength="80" required placeholder="${escapeHtml(t("goalNamePh"))}" value="${escapeHtml(draftGoal.name)}" data-select-on-focus="1" />
     </label>
     <label class="field">${escapeHtml(t("goalAmount"))}
       <input name="amount" inputmode="numeric" required placeholder="80000" value="${escapeHtml(draftGoal.amount)}" />
@@ -395,6 +395,7 @@ function renderGoalEdit(host) {
   body.append(form);
   host.shellFortune(body);
   host.root.querySelector('[data-act="delete-goal"]')?.addEventListener("click", () => host.deleteGoal());
+  host.root.querySelector("[data-select-on-focus]")?.addEventListener("focus", (e) => e.target.select());
 }
 
 function renderNetEdit(host) {
