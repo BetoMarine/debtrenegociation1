@@ -1,8 +1,26 @@
 /** Life themes seed suggested living milestones + a security net. User can edit freely. */
 
-export const THEME_IDS = ["young_family", "peak_career", "empty_nest", "fresh_start"];
+export const THEME_IDS = ["rebuild", "young_family", "peak_career", "empty_nest", "fresh_start"];
 
 export const THEMES = {
+  rebuild: {
+    id: "rebuild",
+    label: "I need to rebuild",
+    blurb: "Things broke (debt, thin floor, or both). Fix the fire, put meat on the bone, then plan living goals.",
+    hero: true,
+    moneyBands: {
+      incomeBand: "30_50",
+      spendBand: "20_35",
+      savingsBand: "lt50",
+      debtsBand: "50_150",
+    },
+    milestones: [
+      { name: "Replace a worn-out phone", amount: 4000, months: 8 },
+      { name: "Skills course", amount: 12000, months: 14 },
+      { name: "Small family visit", amount: 18000, months: 18 },
+    ],
+    net: { emergencyMonths: 6, floorHkd: 120000 },
+  },
   young_family: {
     id: "young_family",
     label: "Young family",

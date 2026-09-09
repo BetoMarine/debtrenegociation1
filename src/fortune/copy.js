@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.5.0";
+export const APP_VERSION = "PoC v0.6.0";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -35,15 +35,17 @@ const en = {
     fortune_export: "Plan exported",
   },
 
-  startKicker: "Plan Your Life · living vs a security net",
-  startTitle: "Living goals vs a security net.",
+  startKicker: "Plan Your Life · fix → floor → living vs a net",
+  startTitle: "Fix the break. Build a floor. Then plan.",
   startLead:
-    "See whether the wedding, the 50th, the car, the house — and a floor you can stand on — can share the same pot.",
+    "Don't assume the pot is healthy. Diffuse debt if it's on fire, put meat on the bone, then see whether living goals and a security net can share what's left.",
+  startTip:
+    "The story: fix the fire → build the foundation → then living goals and mixes. Not a retirement clock. Not “you're set.”",
   startBody:
-    "This is not a retirement countdown and not a product we sell. Two dials, always: Living % and Net %. An owned Monte Carlo model runs on this phone. Illustrative only.",
+    "This is not a retirement countdown and not a product we sell. Phase 1 is the floor. Phase 2 is two dials — Living % and Net %. An owned Monte Carlo model runs on this phone. Illustrative only.",
   startNever:
     "Not regulated advice. Not affiliated with HSBC. Execute any real portfolio elsewhere with a licensed intermediary.",
-  startCta: "Pick a life theme",
+  startCta: "Start with “I need to rebuild”",
   resumeCta: "Open your plan",
 
   privacyTitle: "The plan stays on this phone.",
@@ -55,8 +57,14 @@ const en = {
   teaseHint: "Stub only. There is no login in this build.",
 
   themeTitle: "Where are you in life?",
-  themeHint: "A theme seeds suggested living goals and a security net. You can rewrite every line.",
+  themeHint:
+    "Start with rebuild if things broke. A theme only seeds living goals after the floor — you can rewrite every line.",
+  themeHeroTag: "The full story",
   themes: {
+    rebuild: {
+      label: "I need to rebuild",
+      blurb: "Things broke (debt, thin floor, or both). Fix the fire, put meat on the bone, then plan living goals.",
+    },
     young_family: { label: "Young family", blurb: "Kids, a first-home stretch, and a buffer still being built." },
     peak_career: {
       label: "Peak career",
@@ -78,6 +86,55 @@ const en = {
   spend: "Monthly spending",
   savings: "Savings / cash now",
   debts: "Debts still owed",
+
+  triageTitle: "Any fire in the house?",
+  triageHint:
+    "Heavy debt is not a Fortune Teller problem first. Diffuse it, then build a floor. Soft links only — we never write to a bank for you.",
+  debtHeat: {
+    none: { label: "No debt heat", blurb: "Nothing chasing you. Build the floor." },
+    paying: { label: "Some debt, paying on time", blurb: "Keep paying. Still put meat on the bone before big goals." },
+    heavy: {
+      label: "Heavy debt or missing payments",
+      blurb: "The fire comes first. Right Door can help you write to the published hardship door.",
+    },
+    fdw: { label: "FDW / helper debt stress", blurb: "Sunday Pack is the briefing for a counsellor. Bring it yourself." },
+  },
+  fireTitle: "Fix the fire first",
+  fireLead:
+    "A living-vs-net board will not save a plan that's still on fire. Open the hardship tool, then come back and stabilize.",
+  fireLeadFdw:
+    "If this is helper debt stress, start with Sunday Pack. Right Door is there if the banked-borrower letter is the better door.",
+  fireRightDoor: "Open Right Door",
+  fireSunday: "Open Sunday Pack",
+  fireContinue: "I've stabilized — continue to the floor",
+  fireHint: "Links only. We do not email a bank, Enrich, or a lender.",
+
+  stabilizeKicker: "Phase 1 · meat on the bone",
+  stabilizeTitle: "Build the floor first.",
+  stabilizeLead: "An emergency fund before living goals and mixes. Not a retirement clock. Not “you're set.”",
+  stabilizeMonths: "Months of spending to stand on",
+  stabilizeMonths3: "3 months",
+  stabilizeMonths6: "6 months",
+  stabilizeFloor: "HKD floor (optional extra)",
+  surplusLabel: "Monthly surplus (income − spend − debt service)",
+  surplusHint: "Debt service is a simple 3% of the balance (5% if heat is heavy). Sketch only.",
+  reachDate: "At this surplus, a {n}-month fund looks reachable around {when}.",
+  reachReady: "The floor is standing today. Phase 2 can open.",
+  reachStuck: "The floor is not moving — cut spend, raise income, or fix debt first.",
+  reachNeed: "Need {need} on the floor. Cash now {cash}.",
+  boneTitle: "Meat on the bone",
+  boneNow: "Funded today: about {n} months of spending",
+  boneMark: "{n} mo",
+  phase2Cta: "Start real planning (Phase 2)",
+  phase2Blocked: "Need the floor at your {n}-month / HKD target first. This is not a green light yet.",
+  phase2Anyway: "Plan anyway — I accept a thin floor",
+  phase2Warn:
+    "A thin floor means living goals and the net will fight. This is not “you're set.” Continue only if you know the pot is still building.",
+  phase2WarnGo: "I accept a thin floor — continue",
+  backTriage: "Back to debt heat",
+  backFloor: "Back to the floor",
+  backTheme: "Back to life theme",
+  phaseTag: "Phase 2 · living vs net",
 
   livingDial: "Living",
   netDial: "Net",

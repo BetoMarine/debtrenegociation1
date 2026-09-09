@@ -80,6 +80,12 @@ export function newFortunePlan() {
     id: "fortune-local",
     privacyAccepted: false,
     theme: null,
+    debtHeat: null,
+    phase2Unlocked: false,
+    phase2Override: false,
+    moneyCapturedAtStabilize: false,
+    thinFloorWarned: false,
+    stabilizeTargetMonths: 6,
     money: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -122,11 +128,23 @@ export function migrateFortunePlan(raw) {
   });
   const milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
   const net = raw.net || base.net;
+  const legacyPhase2 =
+    raw.phase2Unlocked == null &&
+    !!raw.privacyAccepted &&
+    THEME_IDS.includes(raw.theme) &&
+    (milestones.length > 0 || raw.screen === "board");
+  const targetMonths = Number(raw.stabilizeTargetMonths) === 3 ? 3 : 6;
   return {
     ...base,
     ...raw,
     money,
     milestones,
+    debtHeat: ["none", "paying", "heavy", "fdw"].includes(raw.debtHeat) ? raw.debtHeat : null,
+    phase2Unlocked: raw.phase2Unlocked === true || legacyPhase2,
+    phase2Override: !!raw.phase2Override,
+    moneyCapturedAtStabilize: !!raw.moneyCapturedAtStabilize,
+    thinFloorWarned: !!raw.thinFloorWarned,
+    stabilizeTargetMonths: targetMonths,
     net: {
       emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
       floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),
@@ -143,12 +161,13 @@ export function applyTheme(plan, themeId) {
   const theme = getTheme(themeId);
   if (!theme) return plan;
   const milestones = theme.milestones.map((m, i) => normalizeMilestone({ ...m, id: newId(`t${i}`) }, i));
+  const keepFloor = !!plan.moneyCapturedAtStabilize;
   return {
     ...plan,
     theme: theme.id,
-    money: { ...plan.money, ...theme.moneyBands },
+    money: keepFloor ? plan.money : { ...plan.money, ...theme.moneyBands },
     milestones,
-    net: { ...theme.net },
+    net: keepFloor ? { ...plan.net } : { ...theme.net },
     compareMilestoneId: milestones[0]?.id || null,
   };
 }

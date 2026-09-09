@@ -2,11 +2,20 @@ import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
 import { applyCoachAction, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
+import {
+  gateFortuneScreen,
+  isDebtHeat,
+  isPhase2Unlocked,
+  needsFireCard,
+  nextAfterStart,
+  stabilizeTargetMonths,
+} from "./stabilize.js";
 import { FORTUNE_SCREENS, dialTone, renderFortune } from "./ui.js";
 import {
   applyTheme,
   defaultUiState,
   emptyDraftGoal,
+  getTheme,
   migrateFortunePlan,
   migrateUiState,
   monthYearLabel,
@@ -59,7 +68,7 @@ export async function boot() {
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
   render();
-  if (plan.privacyAccepted && plan.theme) queueForecast({ persistEvent: false });
+  if (plan.privacyAccepted && (plan.theme || isPhase2Unlocked(plan))) queueForecast({ persistEvent: false });
 }
 
 async function log(type, extraEnum) {
@@ -72,10 +81,11 @@ function onHash() {
 }
 
 function defaultScreen() {
-  if (plan?.privacyAccepted && plan.theme && FORTUNE_SCREENS.includes(plan.screen)) {
-    return plan.screen === "start" ? "board" : plan.screen;
+  if (!plan?.privacyAccepted) return "start";
+  if (plan.screen && FORTUNE_SCREENS.includes(plan.screen) && plan.screen !== "start") {
+    return gateFortuneScreen(plan.screen, plan);
   }
-  return "start";
+  return nextAfterStart(plan);
 }
 
 function syncScreenFromHash() {
@@ -85,8 +95,12 @@ function syncScreenFromHash() {
     screen = defaultScreen();
     return;
   }
-  if (name === "counters" || FORTUNE_SCREENS.includes(name)) {
-    screen = name;
+  if (name === "counters") {
+    screen = "counters";
+    return;
+  }
+  if (FORTUNE_SCREENS.includes(name)) {
+    screen = gateFortuneScreen(name, plan);
     return;
   }
   screen = "start";
@@ -205,6 +219,12 @@ function host() {
     shellFortune: (body) => shell(body),
     acceptStart,
     pickTheme,
+    pickDebtHeat,
+    continueFromFire,
+    patchStabilize,
+    warnThinFloor,
+    unlockPhase2,
+    startNext: () => nextAfterStart(plan),
     saveMoney,
     editGoal,
     saveGoal,
@@ -231,9 +251,84 @@ async function acceptStart(next) {
 }
 
 async function pickTheme(id) {
+  if (!isPhase2Unlocked(plan)) {
+    plan.theme = id;
+    plan.milestones = [];
+    const theme = getTheme(id);
+    if (id === "rebuild" && theme && !plan.moneyCapturedAtStabilize) {
+      plan.money = { ...plan.money, ...theme.moneyBands };
+      plan.net = { ...theme.net };
+      plan.stabilizeTargetMonths = Number(theme.net.emergencyMonths) === 3 ? 3 : 6;
+    }
+    await persistPlan("triage");
+    go("triage");
+    return;
+  }
   plan = applyTheme(plan, id);
-  await persistPlan("money");
-  go("money");
+  const next = plan.moneyCapturedAtStabilize ? "board" : "money";
+  await persistPlan(next);
+  go(next);
+  if (next === "board") queueForecast();
+}
+
+async function pickDebtHeat(heat) {
+  plan.debtHeat = heat;
+  await persistPlan(needsFireCard(heat) ? "triage" : "stabilize");
+  if (needsFireCard(heat)) {
+    render({ keepScroll: true });
+    return;
+  }
+  go("stabilize");
+}
+
+async function continueFromFire() {
+  if (!isDebtHeat(plan.debtHeat)) {
+    go("triage");
+    return;
+  }
+  await persistPlan("stabilize");
+  go("stabilize");
+}
+
+async function patchStabilize(partial) {
+  if (partial.stabilizeTargetMonths) {
+    plan.stabilizeTargetMonths = partial.stabilizeTargetMonths === 3 ? 3 : 6;
+    plan.net = { ...plan.net, emergencyMonths: plan.stabilizeTargetMonths };
+  }
+  if (partial.money) {
+    plan.money = { ...plan.money, ...partial.money };
+    plan.moneyCapturedAtStabilize = true;
+  }
+  if (partial.floorHkd != null) {
+    plan.net = { ...plan.net, floorHkd: Math.max(0, Math.round(Number(partial.floorHkd) || 0)) };
+  }
+  await persistPlan("stabilize");
+  render({ keepScroll: true });
+}
+
+async function warnThinFloor() {
+  plan.thinFloorWarned = true;
+  await persistPlan("stabilize");
+  render({ keepScroll: true });
+}
+
+async function unlockPhase2({ override = false } = {}) {
+  const first = !isPhase2Unlocked(plan);
+  plan.moneyCapturedAtStabilize = true;
+  plan.phase2Unlocked = true;
+  if (override) plan.phase2Override = true;
+  plan.net = {
+    ...plan.net,
+    emergencyMonths: stabilizeTargetMonths(plan),
+  };
+  if (first && plan.theme) plan = applyTheme(plan, plan.theme);
+  await persistPlan(plan.theme ? "board" : "theme");
+  if (plan.theme) {
+    go("board");
+    queueForecast();
+  } else {
+    go("theme");
+  }
 }
 
 async function saveMoney(bands) {
@@ -489,7 +584,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.4.0",
+    version: "0.6.0",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,
