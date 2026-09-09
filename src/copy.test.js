@@ -67,8 +67,10 @@ describe("product copy", () => {
     expect(all).not.toMatch(/envizage/i);
     expect(FORTUNE_STRINGS.en.verdicts.shared).not.toMatch(/you'?re set/i);
     expect(FORTUNE_STRINGS.en.verdicts.wrecked).not.toMatch(/you'?re set/i);
-    expect(FORTUNE_STRINGS.en.startTitle).toMatch(/security net/i);
+    expect(FORTUNE_STRINGS.en.startTitle).toMatch(/floor/i);
+    expect(FORTUNE_STRINGS.en.startTip).toMatch(/fix the fire/i);
     expect(FORTUNE_STRINGS.en.startLead).not.toMatch(/years to retirement/i);
+    expect(FORTUNE_STRINGS.en.themes.rebuild.label).toMatch(/I need to rebuild/i);
     expect(all).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not regulated advice/i);
   });

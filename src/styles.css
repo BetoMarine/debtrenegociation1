@@ -618,3 +618,65 @@ html.fortune-root body {
 .ft-coach-actions {
   margin-top: 8px;
 }
+
+.ft-tip {
+  border-color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+
+.ft-theme-hero {
+  border-color: var(--ink);
+  border-width: 2px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(27, 22, 51, 0.08);
+}
+
+.ft-theme-hero .tag {
+  margin-bottom: 4px;
+}
+
+.ft-fire {
+  border-color: var(--ft-wreck);
+  box-shadow: inset 3px 0 0 var(--ft-wreck);
+}
+
+.ft-fire h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.ft-floor {
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+
+.ft-bone {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ft-bone-tick {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  background: #f3eee4;
+}
+
+.ft-bone-tick.on {
+  border-color: var(--ok);
+  background: #e7f3f1;
+  color: var(--ok);
+}
+
+.ft-month-picks {
+  margin-bottom: 4px;
+}
+
+.ft-stabilize .choice {
+  min-height: 48px;
+}
