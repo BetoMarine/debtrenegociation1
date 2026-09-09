@@ -1,4 +1,5 @@
 import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
+import { applyCoachAction, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
 import { FORTUNE_SCREENS, dialTone, renderFortune } from "./ui.js";
@@ -219,6 +220,7 @@ function host() {
     exportJson,
     clearPlan,
     bindTimeline,
+    applyCoach,
   };
 }
 
@@ -331,6 +333,27 @@ async function dismissCrumb() {
   render({ keepScroll: true });
 }
 
+async function applyCoach(key) {
+  const actions = coachActions(plan, forecast);
+  const action = actions.find((a) => a.key === key);
+  if (!action) return;
+  if (action.id === "edit-money") {
+    go("money");
+    return;
+  }
+  if (action.id === "edit-net") {
+    go("net-edit");
+    return;
+  }
+  const before = forecast ? { livingPct: forecast.livingPct, netPct: forecast.netPct } : { livingPct: 0, netPct: 0 };
+  plan = applyCoachAction(plan, action);
+  await persistPlan("board");
+  await runAndPersistForecast({ persistEvent: true, keepScroll: true });
+  const after = forecast || {};
+  crumb = coachCrumb(action, before, after, isEmptyPot(plan));
+  render({ keepScroll: true });
+}
+
 function showSaveBorrowCrumb() {
   if (shouldShowCrumb(ui, CRUMB_KEYS.saveBorrow)) {
     crumb = CRUMB_KEYS.saveBorrow;
@@ -413,7 +436,8 @@ function patchDials() {
   const verdict = root.querySelector(".ft-verdict");
   if (verdict) {
     verdict.className = `ft-verdict ${forecast.hardFail ? "wreck" : forecast.verdict}`;
-    verdict.textContent = ft(`verdicts.${forecast.verdict}`);
+    verdict.textContent =
+      forecast.hardFail || forecast.verdict === "wrecked" ? ft("coachTitle") : ft(`verdicts.${forecast.verdict}`);
   }
 }
 

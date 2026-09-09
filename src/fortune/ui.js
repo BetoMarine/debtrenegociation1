@@ -1,5 +1,11 @@
-import { CRUMB_KEYS, crumbText } from "./crumbs.js";
+import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
+import {
+  coachActions,
+  coachBreakLines,
+  isEmptyPot,
+  shouldShowCoach,
+} from "./coach.js";
 import {
   DEBT_BANDS,
   INCOME_BANDS,
@@ -63,7 +69,10 @@ function renderDials(host, { sticky } = {}) {
   const net = forecast?.netPct ?? 0;
   const hard = !!forecast?.hardFail;
   const verdict = forecast?.verdict || "stretched";
+  const coaching = shouldShowCoach(forecast);
   const wrap = sticky ? "ft-dials ft-dials-sticky" : "ft-dials";
+  const headline = coaching && (verdict === "wrecked" || hard) ? t("coachTitle") : t(`verdicts.${verdict}`);
+  const detail = coaching ? t("coachSub") : hard ? t("wreckedDetail") : t("notSet");
   return `
     <section class="${wrap}" aria-label="${escapeHtml(t("dialsKicker"))}">
       <p class="kicker">${escapeHtml(t("dialsKicker"))}</p>
@@ -71,8 +80,8 @@ function renderDials(host, { sticky } = {}) {
         ${dialMarkup("living", t("livingDial"), living, t("livingHint"), hard, escapeHtml)}
         ${dialMarkup("net", t("netDial"), net, t("netHint"), hard, escapeHtml)}
       </div>
-      <p class="ft-verdict ${hard ? "wreck" : verdict}">${escapeHtml(t(`verdicts.${verdict}`))}</p>
-      <p class="tiny">${escapeHtml(hard ? t("wreckedDetail") : t("notSet"))}</p>
+      <p class="ft-verdict ${hard ? "wreck" : verdict}">${escapeHtml(headline)}</p>
+      <p class="tiny">${escapeHtml(detail)}</p>
     </section>
   `;
 }
@@ -187,11 +196,41 @@ function renderTease(host) {
 
 function renderCrumb(host) {
   if (!host.crumb) return "";
+  const text = CRUMB_COPY[host.crumb] ? crumbText(host.crumb) : host.crumb;
   return `
     <div class="ft-crumb" role="status">
-      <p>${host.escapeHtml(crumbText(host.crumb))}</p>
+      <p>${host.escapeHtml(text)}</p>
       <button class="btn btn-ghost" type="button" data-act="dismiss-crumb">${host.escapeHtml(t("crumbClose"))}</button>
     </div>
+  `;
+}
+
+function renderCoach(host) {
+  const { plan, forecast, escapeHtml } = host;
+  if (!shouldShowCoach(forecast)) return "";
+  const empty = isEmptyPot(plan);
+  const title = forecast.hardFail || forecast.verdict === "wrecked" ? t("coachTitle") : t("coachTitleStretched");
+  const breaks = coachBreakLines(plan, forecast)
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  const actions = coachActions(plan, forecast)
+    .map((action) => {
+      const cls = action.kind === "primary" ? "btn btn-primary" : "btn";
+      return `<button class="${cls}" type="button" data-coach="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`;
+    })
+    .join("");
+  const emptyNote = empty ? `<p class="hint">${escapeHtml(t("coachEmpty"))}</p>` : "";
+  const keep = forecast.hardFail ? `<p class="tiny">${escapeHtml(t("coachKeepGoing"))}</p>` : "";
+  return `
+    <section class="card ft-coach" data-coach-card>
+      <p class="tag">${escapeHtml(t("coachBreaking"))}</p>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(t("coachSub"))}</p>
+      <ul class="ft-coach-breaks">${breaks}</ul>
+      ${emptyNote}
+      <div class="nav ft-coach-actions">${actions}</div>
+      ${keep}
+    </section>
   `;
 }
 
@@ -203,6 +242,7 @@ function renderBoard(host) {
   body.insertAdjacentHTML("beforeend", renderTease(host));
   body.insertAdjacentHTML("beforeend", renderDials(host, { sticky: true }));
   if (busy) body.append(el(`<p class="hint">${escapeHtml(t("running"))}</p>`));
+  body.insertAdjacentHTML("beforeend", renderCoach(host));
   body.insertAdjacentHTML("beforeend", renderCrumb(host));
 
   const horizon = forecast?.horizonMonths || 48;
@@ -350,6 +390,9 @@ function bindBoard(host) {
     host.setInflation(e.target.checked);
   });
   root.querySelector('[data-act="shuffle"]')?.addEventListener("click", () => host.shuffleSeed());
+  root.querySelectorAll("[data-coach]").forEach((btn) => {
+    btn.addEventListener("click", () => host.applyCoach(btn.dataset.coach));
+  });
   host.bindTimeline(root.querySelector("[data-timeline]"));
 }
 
@@ -507,5 +550,3 @@ function renderMore(host) {
   host.root.querySelector('[data-act="export"]')?.addEventListener("click", () => host.exportJson());
   host.root.querySelector('[data-act="clear"]')?.addEventListener("click", () => host.clearPlan());
 }
-
-export { CRUMB_KEYS };

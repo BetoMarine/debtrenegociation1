@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.4.0";
+export const APP_VERSION = "PoC v0.5.0";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -86,15 +86,24 @@ const en = {
   dialsKicker: "Two dials. Always.",
 
   verdicts: {
-    wrecked: "This plan does not hold.",
+    wrecked: "This plan does not hold — yet.",
     stretched: "Both sides are under pressure.",
     living_heavy: "Living is ahead. The net is thin.",
     net_heavy: "The net is safer. Living goals are at risk.",
     shared: "Living and the net can share the pot.",
   },
   wreckedDetail:
-    "The model cannot fund these living goals and still keep a floor. This is a hard fail — not a green light.",
+    "The model cannot fund these living goals and still keep a floor. Not a green light — here is a way to rebuild.",
   notSet: "This is never a “you're set” score. It is a sketch of trade-offs.",
+
+  coachTitle: "This plan does not hold — yet.",
+  coachTitleStretched: "Both sides are under pressure — here is a rebuild.",
+  coachSub: "Here's what to change so Living and the net can share the pot.",
+  coachBreaking: "What's breaking",
+  coachEmpty:
+    "Delaying a HK$15M-scale goal will not save a plan with no income and no savings. Add money-now bands first.",
+  coachKeepGoing: "Still wrecked. Keep rebuilding — this is not a dead end.",
+
 
   boardTitle: "Your board",
   timelineTitle: "Drag living goals earlier or later",

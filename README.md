@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.4.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.5.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -97,7 +97,7 @@ Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortun
 
 Client-side Monte Carlo: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
 
-**Absurd-input kill-test:** 0 income, 0 savings, a HK$15M+ house must hard-fail (dials wrecked, no green “you're set”). Covered by `src/fortune/engine.test.js`.
+**Absurd-input kill-test:** 0 income, 0 savings, a HK$15M+ house must hard-fail (dials wrecked, no green “you're set”). Covered by `src/fortune/engine.test.js`. A **Rebuild coach** under the dials stays on the board: honest “does not hold — yet,” what’s breaking, and one-tap delay / cut / money-band next steps so it is never a dead end.
 
 Fortune Teller PDF footer:
 
