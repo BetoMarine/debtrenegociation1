@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FORTUNE_STRINGS } from "./fortune/copy.js";
 import { STRINGS } from "./i18n.js";
 import { productHref } from "./paths.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
@@ -32,6 +33,7 @@ describe("product copy", () => {
       ...walk(SUNDAY_STRINGS.en),
       ...walk(SUNDAY_STRINGS.tl),
       ...walk(SUNDAY_STRINGS.id),
+      ...walk(FORTUNE_STRINGS.en),
     ].join("\n");
     for (const pattern of FORBIDDEN) {
       expect(all).not.toMatch(pattern);
@@ -57,6 +59,18 @@ describe("product copy", () => {
     expect(SUNDAY_STRINGS.en.backChooser).toBeUndefined();
     expect(productHref("right-door")).toBe("./");
     expect(productHref("sunday")).toBe("./sunday/");
+    expect(productHref("fortune")).toBe("./fortune/");
+  });
+
+  it("Fortune Teller never claims a set-for-life score or Envizage", () => {
+    const all = walk(FORTUNE_STRINGS.en).join("\n");
+    expect(all).not.toMatch(/envizage/i);
+    expect(FORTUNE_STRINGS.en.verdicts.shared).not.toMatch(/you'?re set/i);
+    expect(FORTUNE_STRINGS.en.verdicts.wrecked).not.toMatch(/you'?re set/i);
+    expect(FORTUNE_STRINGS.en.startTitle).toMatch(/security net/i);
+    expect(FORTUNE_STRINGS.en.startLead).not.toMatch(/years to retirement/i);
+    expect(all).toMatch(/not affiliated with HSBC/i);
+    expect(all).toMatch(/not regulated advice/i);
   });
 
   it("never claims the app emails Enrich or lenders for the helper", () => {

@@ -125,7 +125,11 @@ function shell(body) {
       <main></main>
       <footer class="footer">
         <p class="tiny">${escapeHtml(s("localOnly"))}</p>
-        <p class="tiny"><a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(s("otherTools"))}</a></p>
+        <p class="tiny">${escapeHtml(s("otherTools"))}<br/>
+          <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(s("otherToolsSunday"))}</a>
+          ·
+          <a class="link" href="${escapeHtml(productHref("fortune"))}">${escapeHtml(s("otherToolsFortune"))}</a>
+        </p>
         <button class="version" type="button" data-act="version">${escapeHtml(s("version"))}</button>
       </footer>
     </div>
