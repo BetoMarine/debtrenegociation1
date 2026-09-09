@@ -502,8 +502,8 @@ html.fortune-root body {
 
 .ft-timeline {
   position: relative;
-  min-height: 118px;
-  padding: 28px 8px 8px;
+  min-height: 148px;
+  padding: 8px 8px 8px;
   touch-action: none;
   user-select: none;
 }
@@ -512,7 +512,7 @@ html.fortune-root body {
   height: 6px;
   border-radius: 99px;
   background: linear-gradient(90deg, #1b1633, #c45c26 50%, #1b6b6b);
-  margin-top: 36px;
+  margin-top: 78px;
 }
 
 .ft-ticks {
@@ -528,7 +528,7 @@ html.fortune-root body {
   left: 8px;
   right: 8px;
   top: 0;
-  height: 64px;
+  height: 76px;
 }
 
 .ft-chip {
@@ -536,7 +536,8 @@ html.fortune-root body {
   transform: translateX(-50%);
   min-height: 44px;
   width: max-content;
-  max-width: 140px;
+  max-width: 132px;
+  z-index: 2;
   padding: 6px 10px;
   border-radius: 12px;
   border: 1px solid var(--ink);
@@ -548,6 +549,10 @@ html.fortune-root body {
   text-align: left;
   box-shadow: 0 4px 12px rgba(27, 22, 51, 0.08);
   touch-action: none;
+}
+
+.ft-chip:active {
+  z-index: 5;
 }
 
 .ft-chip em {

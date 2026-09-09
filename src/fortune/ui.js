@@ -313,9 +313,10 @@ function renderBoard(host) {
 function renderTimeline(plan, horizon, escapeHtml) {
   const months = Math.max(12, horizon);
   const chips = plan.milestones
-    .map((m) => {
+    .map((m, i) => {
       const pct = Math.min(96, Math.max(2, ((m.months - 1) / (months - 1)) * 100));
-      return `<button type="button" class="ft-chip" data-chip="${escapeHtml(m.id)}" style="left:${pct}%" aria-label="${escapeHtml(m.name)}">
+      const row = i % 2 === 0 ? 0 : 34;
+      return `<button type="button" class="ft-chip" data-chip="${escapeHtml(m.id)}" style="left:${pct}%;top:${row}px" aria-label="${escapeHtml(m.name)}">
         <span>${escapeHtml(m.name)}</span>
         <em>${escapeHtml(monthYearLabel(m.months))}</em>
       </button>`;
