@@ -849,6 +849,10 @@ html.fortune-root body {
   background: #fff;
 }
 
+.ft-looks-right {
+  margin-top: 8px;
+}
+
 .ft-theme-hero .tag {
   margin-bottom: 4px;
 }

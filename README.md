@@ -31,7 +31,7 @@ On each start / privacy screen:
 4. Legal lines still present in the compact footer / privacy card (on-device, you send it, not advice, not affiliated, we never contact lenders).
 5. Right Door: letter rules and required-upload gates unchanged.
 6. Sunday Pack: Enrich “not affiliated” footer + door links unchanged.
-7. Fortune Teller: rebuild card first; Step 1 is three today-cards; Step 2 is card-specific (fire links + floor for rebuild); Step 3 is a today→future timeline with % on each pin (Fix → Stabilize → Plan → Invest). Living↔Net, RD/Sunday fire links, and honest “does not hold — yet” still work.
+7. Fortune Teller: every open lands on Step 1 (Me today) after Privacy is accepted once. Returning visitors confirm with **Looks right — open my plan** (no auto-skip to the board). Rebuild card first; Step 2 is card-specific (fire links + floor for rebuild); Step 3 is a today→future path with a stage + % on each beat (Fix → Stabilize → Plan → Invest). Living↔Net, RD/Sunday fire links, and honest “does not hold — yet” still work.
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
@@ -98,12 +98,12 @@ Stored in a **separate IndexedDB key** from the Right Door vault (no photo annex
 Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortuneUi`). **Hero PoC story:** do not assume people start healthy. Main path is four screens:
 
 1. **Privacy** — three short bullets + Continue. Plan Your Life wordmark. Compact legal footer.
-2. **Step 1 · Where you are today** — exactly three tall cards. **I need to rebuild** is first / primary. **I'm steady**. **I want to grow**. Sparse copy. This is not a money form.
+2. **Step 1 · Where you are today** — exactly three tall cards. **I need to rebuild** is first / primary. **I'm steady**. **I want to grow**. Sparse copy. This is not a money form. **Every later open starts here** (Privacy is not shown again). If a plan already exists, a one-tap **Looks right — open my plan** goes to Step 3 — it does not auto-skip. Picking a card still walks Step 2.
 3. **Step 2 · Correct actions** — card-specific, not one form for everyone:
    - **Rebuild** → debt-on-fire triage. Heavy / helper heat shows Right Door (`../`) and Sunday Pack (`../sunday/`) links (FDW prefers Sunday Pack). Then floor-first: 3 or 6 months + four “me now” bands. Fixing is the first goal. One Continue to the board (a thin floor is allowed; honesty lives on Step 3).
    - **Steady** → light four-field snapshot, skippable, onto the board. No fire tooling.
    - **Grow** → add one living goal (or skip) onto the board. Rebuild still does **not** dump a HK$1.5M house.
-4. **Step 3 · Your new life** (home forever after) — Living % vs Security-net %, one-line “holds” / “does not hold — yet”, and a **today→future timeline** with circular pins. Each pin shows **chance it works**. Goals are tagged **Fix → Stabilize → Plan → Invest** (rebuild leads with Fix + emergency-fund, then modest Plan goals). Coach is one line + 1–3 chips. **Adjust** holds mixes, ~4.5% price-rise, shuffle, save-vs-borrow, PDF, export.
+4. **Step 3 · Your new life** — Living % vs Security-net %, one-line “holds” / “does not hold — yet”, and a **today→future path** with spaced beats. Each beat shows its **stage** and **chance it works**. Goals are tagged **Fix → Stabilize → Plan → Invest** (rebuild leads with Fix + emergency-fund, then modest Plan goals plus an Invest beat). Coach is one line + 1–3 chips. **Adjust** holds mixes, ~4.5% price-rise, shuffle, save-vs-borrow, PDF, export.
 
 Rebuild seeds a *modest* living pack (phone / course / small visit) plus a strong net. Client-side forecast: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
 
@@ -211,11 +211,12 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Full-story demo (iPhone Safari):**
 
-1. Open `/fortune/`. Privacy: three bullets + **Continue**.
+1. Open `/fortune/`. Privacy: three bullets + **Continue**. (Second open: skip Privacy, land on Step 1.)
 2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
 3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../`) and Sunday Pack (`../sunday/`) links. Set a 3- or 6-month floor + four me-now bands. Tap **See your new life**.
 4. **Step 3:** today→future path of spaced beats (not overlapping pins). Each beat shows its stage (Fix / Stabilize / Plan / Invest) plus a one-line **You're in …**. Rebuild includes an **Invest** beat (First growth pot). Living↔Net; percentages wait on “…” / last value — never a fake 0% flash. Coach chips if it does not hold.
-5. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
+5. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
+6. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 
 Other checks: drag a living pin; both dials move. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
 

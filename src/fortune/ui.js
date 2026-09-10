@@ -118,7 +118,7 @@ function dialMarkup(kind, label, pct, hint, hard, escapeHtml) {
 }
 
 function renderStart(host) {
-  const { el, escapeHtml, isStandalone, plan } = host;
+  const { el, escapeHtml, isStandalone } = host;
   const body = el(`<div class="stack"></div>`);
   body.append(el(`<p class="kicker">${escapeHtml(t("startKicker"))}</p>`));
   body.append(el(`<h1>${escapeHtml(t("startTitle"))}</h1>`));
@@ -132,11 +132,9 @@ function renderStart(host) {
   if (!isStandalone) {
     body.append(el(`<p class="tiny">${escapeHtml(t("addHome"))}: ${escapeHtml(t("addHomeHow"))}</p>`));
   }
-  const next = host.startNext();
-  const cta = plan?.privacyAccepted && (plan.boardReached || plan.phase2Unlocked || plan.theme) ? t("resumeCta") : t("startCta");
-  body.append(el(`<div class="nav"><button class="btn btn-primary" data-act="accept-start" type="button">${escapeHtml(cta)}</button></div>`));
+  body.append(el(`<div class="nav"><button class="btn btn-primary" data-act="accept-start" type="button">${escapeHtml(t("startCta"))}</button></div>`));
   host.shellFortune(body);
-  host.root.querySelector('[data-act="accept-start"]')?.addEventListener("click", () => host.acceptStart(next));
+  host.root.querySelector('[data-act="accept-start"]')?.addEventListener("click", () => host.acceptStart());
 }
 
 const THEME_ICONS = {
@@ -170,6 +168,13 @@ function renderWhere(host) {
     grid.append(btn);
   });
   body.append(grid);
+  if (host.canOpenPlan) {
+    const resume = el(
+      `<div class="nav ft-looks-right"><button class="btn btn-primary" type="button" data-act="open-plan">${escapeHtml(t("looksRightCta"))}</button></div>`,
+    );
+    resume.querySelector('[data-act="open-plan"]').addEventListener("click", () => host.openPlan());
+    body.append(resume);
+  }
   host.shellFortune(body);
 }
 

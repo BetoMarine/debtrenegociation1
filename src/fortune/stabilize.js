@@ -116,6 +116,11 @@ export function isBoardUnlocked(plan) {
   return !!(plan?.boardReached || plan?.phase2Unlocked || plan?.phase2Override);
 }
 
+/** Returning visitor with a board — Step 1 can offer “Looks right — open my plan”. */
+export function canOpenPlan(plan) {
+  return !!(plan?.theme && isBoardUnlocked(plan));
+}
+
 /** @deprecated Use isBoardUnlocked — kept so older tests/callers still compile. */
 export function isPhase2Unlocked(plan) {
   return isBoardUnlocked(plan);
@@ -136,15 +141,16 @@ export function canonicalScreen(name) {
   return name;
 }
 
+/** After privacy, every open lands on Step 1. Never auto-skip to the board. */
 export function nextAfterStart(plan) {
-  if (isBoardUnlocked(plan) && plan?.theme) return "board";
-  if (plan?.theme) return "next";
+  if (!plan?.privacyAccepted) return "start";
   return "where";
 }
 
 export function gateFortuneScreen(name, plan) {
-  if (!name || name === "start" || name === "counters") return name;
+  if (name === "counters") return name;
   if (!plan?.privacyAccepted) return "start";
+  if (!name || name === "start") return "where";
   const screen = canonicalScreen(name);
   if (STEP1.has(name) || screen === "where") return "where";
   if (!plan?.theme) return "where";

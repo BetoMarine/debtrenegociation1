@@ -46,7 +46,8 @@ const en = {
     "You act elsewhere — we never contact a bank.",
   ],
   startCta: "Continue",
-  resumeCta: "Open your plan",
+  resumeCta: "Continue",
+  looksRightCta: "Looks right — open my plan",
 
   privacyTitle: "On this phone only",
   privacyBody: "Uninstall wipes it. We do not upload your numbers.",

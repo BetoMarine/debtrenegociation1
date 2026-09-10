@@ -3,6 +3,7 @@ import { applyCoachAction, coachActions, coachCrumb, isEmptyPot } from "./coach.
 import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
 import {
+  canOpenPlan,
   gateFortuneScreen,
   isBoardUnlocked,
   nextAfterStart,
@@ -65,7 +66,7 @@ export async function boot() {
   await log("app_open");
   await log("fortune_started");
   window.addEventListener("hashchange", onHash);
-  syncScreenFromHash();
+  enterOnLaunch();
   render();
   if (plan.privacyAccepted && (plan.theme || isBoardUnlocked(plan))) queueForecast({ persistEvent: false });
 }
@@ -80,11 +81,16 @@ function onHash() {
 }
 
 function defaultScreen() {
-  if (!plan?.privacyAccepted) return "start";
-  if (plan.screen && FORTUNE_SCREENS.includes(plan.screen) && plan.screen !== "start") {
-    return gateFortuneScreen(plan.screen, plan);
-  }
   return nextAfterStart(plan);
+}
+
+/** Fresh open: Privacy once, then always Step 1. Ignore #/board and last screen. */
+function enterOnLaunch() {
+  screen = defaultScreen();
+  const want = screen === "start" ? "" : "#/where";
+  const next = `${location.pathname}${location.search}${want}`;
+  const here = `${location.pathname}${location.search}${location.hash || ""}`;
+  if (here !== next) history.replaceState(null, "", next || location.pathname);
 }
 
 function syncScreenFromHash() {
@@ -182,7 +188,7 @@ function shell(body) {
       <header class="top">
         <div class="brand-block">
           ${pylWordmarkHtml()}
-          <button class="brand" type="button" data-go="${isBoardUnlocked(plan) ? "board" : "start"}">${escapeHtml(ft("brand"))}</button>
+          <button class="brand" type="button" data-go="${plan?.privacyAccepted ? "where" : "start"}">${escapeHtml(ft("brand"))}</button>
         </div>
       </header>
       <main></main>
@@ -240,6 +246,8 @@ function host() {
     finishStep2,
     skipStep2,
     startNext: () => nextAfterStart(plan),
+    canOpenPlan: canOpenPlan(plan),
+    openPlan,
     saveMoney,
     editGoal,
     saveGoal,
@@ -259,10 +267,10 @@ function host() {
   };
 }
 
-async function acceptStart(next) {
+async function acceptStart() {
   plan.privacyAccepted = true;
-  await persistPlan(next);
-  go(next);
+  await persistPlan("where");
+  go("where");
 }
 
 async function pickTheme(id) {
@@ -272,6 +280,13 @@ async function pickTheme(id) {
   }
   await persistPlan("next");
   go("next");
+}
+
+async function openPlan() {
+  if (!canOpenPlan(plan)) return;
+  await persistPlan("board");
+  go("board");
+  queueForecast();
 }
 
 async function pickDebtHeat(heat) {

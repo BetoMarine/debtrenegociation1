@@ -6,6 +6,8 @@ import {
   fireLinkOrder,
   gateFortuneScreen,
   isBoardUnlocked,
+  canOpenPlan,
+  nextAfterStart,
   monthlySurplus,
   needsFireCard,
   prefersSunday,
@@ -103,6 +105,11 @@ describe("Floor math", () => {
     const reached = { ...thin, boardReached: true };
     expect(isBoardUnlocked(reached)).toBe(true);
     expect(gateFortuneScreen("board", reached)).toBe("board");
+    expect(gateFortuneScreen("start", reached)).toBe("where");
+    expect(canOpenPlan(reached)).toBe(true);
+    expect(canOpenPlan(thin)).toBe(false);
+    expect(nextAfterStart(reached)).toBe("where");
+    expect(nextAfterStart({ privacyAccepted: false })).toBe("start");
 
     const funded = {
       ...thin,

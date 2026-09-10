@@ -55,9 +55,11 @@ describe("Fortune Teller plan model", () => {
     const seeded = applyTheme(newFortunePlan(), "rebuild");
     expect(seeded.milestones.every((m) => m.amount < 50000)).toBe(true);
     const midStory = { ...newFortunePlan(), privacyAccepted: true, theme: "rebuild" };
-    expect(nextAfterStart(midStory)).toBe("next");
-    expect(nextAfterStart({ ...midStory, debtHeat: "heavy" })).toBe("next");
-    expect(nextAfterStart({ ...midStory, boardReached: true })).toBe("board");
+    expect(nextAfterStart(midStory)).toBe("where");
+    expect(nextAfterStart({ ...midStory, debtHeat: "heavy" })).toBe("where");
+    expect(nextAfterStart({ ...midStory, boardReached: true })).toBe("where");
+    expect(gateFortuneScreen("start", midStory)).toBe("where");
+    expect(gateFortuneScreen("board", { ...midStory, boardReached: true })).toBe("board");
   });
 
   it("maps leftover bands into spend so the pot contribution is the leftover", () => {
