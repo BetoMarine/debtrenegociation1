@@ -564,14 +564,14 @@ html.fortune-root body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   margin: 0 auto 4px;
   border-radius: 50%;
   border: 2px solid #fff;
   background: var(--pyl-teal);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
 }
@@ -693,8 +693,8 @@ html.fortune-root body {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 20px;
-  padding: 22px 16px 18px;
-  min-height: 240px;
+  padding: 18px 16px 16px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -748,6 +748,102 @@ html.fortune-root body {
 
 .ft-theme-hero .tag {
   margin-bottom: 4px;
+}
+
+.ft-bullets {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.ft-bullets li {
+  margin: 0 0 8px;
+}
+
+.ft-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ft-legend-item {
+  color: var(--muted);
+}
+
+.ft-legend-item.on {
+  color: var(--pyl-purple);
+}
+
+.ft-legend-arrow {
+  color: var(--line);
+  font-weight: 500;
+}
+
+.ft-pin-stage {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pyl-purple);
+  margin-bottom: 2px;
+}
+
+.ft-pin.stage-fix .ft-pin-stage {
+  color: var(--ft-wreck);
+}
+
+.ft-pin.stage-stabilize .ft-pin-stage {
+  color: var(--pyl-teal);
+}
+
+.ft-coach-line {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.ft-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ft-chip-btn {
+  min-height: 40px;
+  width: auto;
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ft-chip-btn.primary {
+  background: var(--pyl-cta);
+  color: #fff;
+  border-color: transparent;
+}
+
+.ft-ticks-top {
+  margin-bottom: 4px;
+}
+
+.ft-timeline {
+  min-height: 248px;
+}
+
+.ft-path {
+  margin-top: 88px;
+}
+
+.ft-chips {
+  height: 200px;
 }
 
 .ft-fire {

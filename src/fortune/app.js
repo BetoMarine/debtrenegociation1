@@ -4,9 +4,7 @@ import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
 import {
   gateFortuneScreen,
-  isDebtHeat,
-  isPhase2Unlocked,
-  needsFireCard,
+  isBoardUnlocked,
   nextAfterStart,
   stabilizeTargetMonths,
 } from "./stabilize.js";
@@ -15,7 +13,6 @@ import {
   applyTheme,
   defaultUiState,
   emptyDraftGoal,
-  getTheme,
   migrateFortunePlan,
   migrateUiState,
   monthYearLabel,
@@ -69,7 +66,7 @@ export async function boot() {
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
   render();
-  if (plan.privacyAccepted && (plan.theme || isPhase2Unlocked(plan))) queueForecast({ persistEvent: false });
+  if (plan.privacyAccepted && (plan.theme || isBoardUnlocked(plan))) queueForecast({ persistEvent: false });
 }
 
 async function log(type, extraEnum) {
@@ -109,6 +106,7 @@ function syncScreenFromHash() {
 
 function go(name) {
   notice = "";
+  if (name !== "counters") name = gateFortuneScreen(name, plan);
   if (name === "compare") showSaveBorrowCrumb();
   if (location.hash === `#/${name}`) {
     screen = name;
@@ -163,7 +161,7 @@ function shell(body) {
       <header class="top">
         <div class="brand-block">
           ${pylWordmarkHtml()}
-          <button class="brand" type="button" data-go="start">${escapeHtml(ft("brand"))}</button>
+          <button class="brand" type="button" data-go="${isBoardUnlocked(plan) ? "board" : "start"}">${escapeHtml(ft("brand"))}</button>
         </div>
       </header>
       <main></main>
@@ -225,10 +223,9 @@ function host() {
     acceptStart,
     pickTheme,
     pickDebtHeat,
-    continueFromFire,
     patchStabilize,
-    warnThinFloor,
-    unlockPhase2,
+    finishStep2,
+    skipStep2,
     startNext: () => nextAfterStart(plan),
     saveMoney,
     editGoal,
@@ -256,43 +253,18 @@ async function acceptStart(next) {
 }
 
 async function pickTheme(id) {
-  if (!isPhase2Unlocked(plan)) {
-    plan.theme = id;
-    plan.milestones = [];
-    const theme = getTheme(id);
-    if (id === "rebuild" && theme && !plan.moneyCapturedAtStabilize) {
-      plan.money = { ...plan.money, ...theme.moneyBands };
-      plan.net = { ...theme.net };
-      plan.stabilizeTargetMonths = Number(theme.net.emergencyMonths) === 3 ? 3 : 6;
-    }
-    await persistPlan("triage");
-    go("triage");
-    return;
-  }
   plan = applyTheme(plan, id);
-  const next = plan.moneyCapturedAtStabilize ? "board" : "money";
-  await persistPlan(next);
-  go(next);
-  if (next === "board") queueForecast();
+  if (id === "rebuild") {
+    plan.stabilizeTargetMonths = Number(plan.net?.emergencyMonths) === 3 ? 3 : 6;
+  }
+  await persistPlan("next");
+  go("next");
 }
 
 async function pickDebtHeat(heat) {
   plan.debtHeat = heat;
-  await persistPlan(needsFireCard(heat) ? "triage" : "stabilize");
-  if (needsFireCard(heat)) {
-    render({ keepScroll: true });
-    return;
-  }
-  go("stabilize");
-}
-
-async function continueFromFire() {
-  if (!isDebtHeat(plan.debtHeat)) {
-    go("triage");
-    return;
-  }
-  await persistPlan("stabilize");
-  go("stabilize");
+  await persistPlan("next");
+  render({ keepScroll: true });
 }
 
 async function patchStabilize(partial) {
@@ -307,33 +279,25 @@ async function patchStabilize(partial) {
   if (partial.floorHkd != null) {
     plan.net = { ...plan.net, floorHkd: Math.max(0, Math.round(Number(partial.floorHkd) || 0)) };
   }
-  await persistPlan("stabilize");
+  await persistPlan("next");
   render({ keepScroll: true });
 }
 
-async function warnThinFloor() {
-  plan.thinFloorWarned = true;
-  await persistPlan("stabilize");
-  render({ keepScroll: true });
-}
-
-async function unlockPhase2({ override = false } = {}) {
-  const first = !isPhase2Unlocked(plan);
+async function finishStep2() {
   plan.moneyCapturedAtStabilize = true;
+  plan.boardReached = true;
   plan.phase2Unlocked = true;
-  if (override) plan.phase2Override = true;
   plan.net = {
     ...plan.net,
     emergencyMonths: stabilizeTargetMonths(plan),
   };
-  if (first && plan.theme) plan = applyTheme(plan, plan.theme);
-  await persistPlan(plan.theme ? "board" : "theme");
-  if (plan.theme) {
-    go("board");
-    queueForecast();
-  } else {
-    go("theme");
-  }
+  await persistPlan("board");
+  go("board");
+  queueForecast();
+}
+
+async function skipStep2() {
+  await finishStep2();
 }
 
 async function saveMoney(bands) {
@@ -371,6 +335,8 @@ async function saveGoal(raw) {
   if (!plan.compareMilestoneId) plan.compareMilestoneId = next.id;
   editingGoalId = null;
   draftGoal = emptyDraftGoal();
+  plan.boardReached = true;
+  plan.phase2Unlocked = true;
   await persistPlan("board");
   go("board");
   queueForecast();
@@ -539,14 +505,22 @@ function patchDials() {
     verdict.textContent =
       forecast.hardFail || forecast.verdict === "wrecked" ? ft("coachTitle") : ft(`verdicts.${forecast.verdict}`);
   }
-  root.querySelectorAll("[data-chip]").forEach((chip) => {
-    const id = chip.dataset.chip;
-    const i = plan.milestones.findIndex((m) => m.id === id);
+  root.querySelectorAll("[data-chip], [data-static]").forEach((chip) => {
+    const id = chip.dataset.chip || chip.dataset.static;
     const pctEl = chip.querySelector(".ft-pin-pct");
-    if (pctEl && i >= 0 && forecast.milestonePct?.[i] != null) {
+    if (!pctEl) return;
+    if (id === "journey-floor" && forecast.netPct != null) {
+      const shown = Math.round(forecast.netPct);
+      pctEl.textContent = `${shown}%`;
+      chip.className = `ft-pin tone-${dialTone(forecast.netPct, forecast.hardFail)} stage-stabilize`;
+      return;
+    }
+    const i = plan.milestones.findIndex((m) => m.id === id);
+    if (i >= 0 && forecast.milestonePct?.[i] != null) {
       const shown = Math.round(forecast.milestonePct[i]);
       pctEl.textContent = `${shown}%`;
-      chip.className = `ft-pin tone-${dialTone(forecast.milestonePct[i], forecast.hardFail)}`;
+      const stage = plan.milestones[i].stage || "plan";
+      chip.className = `ft-pin tone-${dialTone(forecast.milestonePct[i], forecast.hardFail)} stage-${stage}`;
     }
   });
 }
@@ -599,7 +573,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.7.0",
+    version: "0.8.0",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

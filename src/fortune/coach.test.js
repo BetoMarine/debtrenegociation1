@@ -75,7 +75,7 @@ describe("Rebuild coach", () => {
     expect(afterDelay.hardFail).toBe(true);
     expect(afterDelay.youAreSet).toBe(false);
     const crumb = coachCrumb({ id: "delay", goalName: "New house" }, before, afterDelay, true);
-    expect(crumb).toMatch(/Delayed New house by a year/);
+    expect(crumb).toMatch(/Delayed New house 12 months/);
     expect(crumb).toMatch(/Income or savings has to rise/);
 
     const cut = applyCoachAction(plan, { id: "cut", goalId: "house" });

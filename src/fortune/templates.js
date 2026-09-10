@@ -56,5 +56,5 @@ export function getTemplate(id) {
 export function formatMuSigma(template) {
   const mu = ((template?.mu ?? 0) * 100).toFixed(1);
   const sig = ((template?.sigma ?? 0) * 100).toFixed(0);
-  return `Assumed mu ${mu}% / sigma ${sig}% a year`;
+  return `Assumed ${mu}% a year · ${sig}% swing`;
 }

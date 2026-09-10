@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { applyTheme, newFortunePlan, resolveMoney, THEME_IDS, THEMES, toEnginePlan } from "./model.js";
-import { nextAfterStart } from "./stabilize.js";
+import { nextAfterStart, gateFortuneScreen, isBoardUnlocked } from "./stabilize.js";
 
 describe("Fortune Teller plan model", () => {
   it("seeds a theme with editable living goals and a net", () => {
-    const plan = applyTheme(newFortunePlan(), "young_family");
-    expect(plan.theme).toBe("young_family");
+    const plan = applyTheme(newFortunePlan(), "steady");
+    expect(plan.theme).toBe("steady");
     expect(plan.milestones.length).toBeGreaterThan(0);
     expect(plan.net.emergencyMonths).toBeGreaterThan(0);
     expect(plan.net.floorHkd).toBeGreaterThan(0);
@@ -46,7 +46,7 @@ describe("Fortune Teller plan model", () => {
   });
 
   it("puts I need to rebuild first, with a modest seed pack, not a house fantasy", () => {
-    expect(THEME_IDS[0]).toBe("rebuild");
+    expect(THEME_IDS).toEqual(["rebuild", "steady", "grow"]);
     expect(THEMES.rebuild.label).toMatch(/rebuild/i);
     const amounts = THEMES.rebuild.milestones.map((m) => m.amount);
     expect(Math.max(...amounts)).toBeLessThan(50000);
@@ -55,8 +55,33 @@ describe("Fortune Teller plan model", () => {
     const seeded = applyTheme(newFortunePlan(), "rebuild");
     expect(seeded.milestones.every((m) => m.amount < 50000)).toBe(true);
     const midStory = { ...newFortunePlan(), privacyAccepted: true, theme: "rebuild" };
-    expect(nextAfterStart(midStory)).toBe("triage");
-    expect(nextAfterStart({ ...midStory, debtHeat: "heavy" })).toBe("stabilize");
-    expect(nextAfterStart({ ...midStory, phase2Unlocked: true })).toBe("board");
+    expect(nextAfterStart(midStory)).toBe("next");
+    expect(nextAfterStart({ ...midStory, debtHeat: "heavy" })).toBe("next");
+    expect(nextAfterStart({ ...midStory, boardReached: true })).toBe("board");
+  });
+
+  it("maps leftover bands into spend so the pot contribution is the leftover", () => {
+    const money = resolveMoney({
+      incomeBand: "30_50",
+      leftoverBand: "5_10",
+      savingsBand: "lt50",
+      debtsBand: "0",
+    });
+    expect(money.leftoverMonthly).toBe(7500);
+    expect(money.spendMonthly).toBe(money.incomeMonthly - money.leftoverMonthly);
+  });
+
+  it("migrates peak_career to grow without dropping custom goals", () => {
+    const engine = toEnginePlan({
+      ...newFortunePlan(),
+      theme: "peak_career",
+      privacyAccepted: true,
+      phase2Unlocked: true,
+      milestones: [{ id: "x", name: "Keep me", amount: 9000, months: 10 }],
+    });
+    expect(engine.theme).toBe("grow");
+    expect(engine.milestones[0].name).toBe("Keep me");
+    expect(isBoardUnlocked({ phase2Unlocked: true })).toBe(true);
+    expect(gateFortuneScreen("board", { privacyAccepted: true, theme: "grow", boardReached: true })).toBe("board");
   });
 });

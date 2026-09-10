@@ -5,7 +5,7 @@ import {
   canUnlockPhase2,
   fireLinkOrder,
   gateFortuneScreen,
-  isPhase2Unlocked,
+  isBoardUnlocked,
   monthlySurplus,
   needsFireCard,
   prefersSunday,
@@ -14,7 +14,7 @@ import {
 } from "./stabilize.js";
 import { shouldShowCoach } from "./coach.js";
 
-describe("Phase 1 triage", () => {
+describe("Rebuild fire triage", () => {
   it("shows Right Door then Sunday Pack on heavy / missing-payment heat", () => {
     expect(needsFireCard("heavy")).toBe(true);
     expect(needsFireCard("paying")).toBe(false);
@@ -29,7 +29,7 @@ describe("Phase 1 triage", () => {
   });
 });
 
-describe("Phase 1 stabilize", () => {
+describe("Floor math", () => {
   it("projects a reach date when surplus is positive", () => {
     const from = new Date(2026, 8, 9);
     const plan = {
@@ -76,9 +76,11 @@ describe("Phase 1 stabilize", () => {
     expect(monthlySurplus({ incomeMonthly: 20000, spendMonthly: 20000, debts: 0 }, "none")).toBe(0);
   });
 
-  it("unlocks Phase 2 after the floor threshold or an explicit thin-floor override", () => {
+  it("lets a thin floor onto the board after Step 2 — honesty lives on the timeline", () => {
     const thin = {
       ...newFortunePlan(),
+      privacyAccepted: true,
+      theme: "rebuild",
       stabilizeTargetMonths: 3,
       money: {
         incomeBand: "30_50",
@@ -93,10 +95,14 @@ describe("Phase 1 stabilize", () => {
       net: { emergencyMonths: 3, floorHkd: 0 },
     };
     expect(canUnlockPhase2(thin)).toBe(false);
-    expect(gateFortuneScreen("board", { ...thin, privacyAccepted: true, theme: "rebuild" })).toBe("triage");
-    expect(gateFortuneScreen("board", { ...thin, privacyAccepted: true, theme: "rebuild", debtHeat: "none" })).toBe(
-      "stabilize",
-    );
+    expect(gateFortuneScreen("board", thin)).toBe("next");
+    expect(gateFortuneScreen("where", thin)).toBe("where");
+    expect(gateFortuneScreen("theme", thin)).toBe("where");
+    expect(gateFortuneScreen("triage", thin)).toBe("next");
+
+    const reached = { ...thin, boardReached: true };
+    expect(isBoardUnlocked(reached)).toBe(true);
+    expect(gateFortuneScreen("board", reached)).toBe("board");
 
     const funded = {
       ...thin,
@@ -104,14 +110,9 @@ describe("Phase 1 stabilize", () => {
     };
     expect(stabilizeSnapshot(funded).ready).toBe(true);
     expect(canUnlockPhase2(funded)).toBe(true);
-
-    const override = { ...thin, privacyAccepted: true, theme: "rebuild", phase2Override: true };
-    expect(canUnlockPhase2(override)).toBe(true);
-    expect(isPhase2Unlocked(override)).toBe(true);
-    expect(gateFortuneScreen("board", override)).toBe("board");
   });
 
-  it("keeps the kill-test hard-fail and Rebuild coach in Phase 2", () => {
+  it("keeps the kill-test hard-fail and Rebuild coach on the board", () => {
     const forecast = runMonteCarlo(killTestInput(), { paths: 400, seed: 1 });
     expect(forecast.hardFail).toBe(true);
     expect(forecast.youAreSet).toBe(false);
@@ -120,15 +121,15 @@ describe("Phase 1 stabilize", () => {
       ...newFortunePlan(),
       ...killTestInput(),
       privacyAccepted: true,
-      phase2Unlocked: true,
+      boardReached: true,
       debtHeat: "none",
     };
     expect(gateFortuneScreen("board", unlocked)).toBe("board");
-    expect(isPhase2Unlocked(unlocked)).toBe(true);
+    expect(isBoardUnlocked(unlocked)).toBe(true);
   });
 });
 
-describe("Phase 2 theme after stabilize", () => {
+describe("Theme after money is captured", () => {
   it("does not overwrite money captured on the floor screen", () => {
     const plan = applyTheme(
       {
@@ -137,17 +138,17 @@ describe("Phase 2 theme after stabilize", () => {
         money: {
           incomeBand: "15_30",
           spendBand: "10_20",
+          leftoverBand: "lt5",
           savingsBand: "lt50",
           debtsBand: "0",
         },
         net: { emergencyMonths: 3, floorHkd: 80000 },
       },
-      "peak_career",
+      "grow",
     );
-    expect(plan.theme).toBe("peak_career");
+    expect(plan.theme).toBe("grow");
     expect(plan.money.incomeBand).toBe("15_30");
     expect(plan.net.floorHkd).toBe(80000);
     expect(plan.net.emergencyMonths).toBe(3);
-    expect(plan.milestones.length).toBeGreaterThan(0);
   });
 });

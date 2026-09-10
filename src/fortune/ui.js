@@ -1,24 +1,17 @@
 import { productHref } from "../paths.js";
 import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
-import {
-  coachActions,
-  coachBreakLines,
-  isEmptyPot,
-  shouldShowCoach,
-} from "./coach.js";
+import { boardCoachActions, isEmptyPot, shouldShowCoach } from "./coach.js";
+import { emphasizeStage, journeyItems } from "./journey.js";
 import {
   DEBT_BANDS,
   INCOME_BANDS,
+  LEFTOVER_BANDS,
   SAVINGS_BANDS,
-  SPEND_BANDS,
   THEME_IDS,
   THEMES,
-  bandById,
   hkd,
   monthYearLabel,
-  netNeedNow,
-  resolveMoney,
 } from "./model.js";
 import {
   DEBT_HEAT_IDS,
@@ -31,24 +24,29 @@ import { TEMPLATE_DISCLAIMER, TEMPLATE_IDS, TEMPLATES, formatMuSigma } from "./t
 
 export const FORTUNE_SCREENS = [
   "start",
-  "theme",
-  "triage",
-  "stabilize",
-  "money",
+  "where",
+  "next",
   "board",
   "goal-edit",
   "net-edit",
   "compare",
   "sheet",
   "more",
+  "adjust",
+  "money",
+  "theme",
+  "triage",
+  "stabilize",
 ];
 
 export function renderFortune(screen, host) {
   const view = {
     start: renderStart,
-    theme: renderTheme,
-    triage: renderTriage,
-    stabilize: renderStabilize,
+    where: renderWhere,
+    theme: renderWhere,
+    next: renderNext,
+    triage: renderNext,
+    stabilize: renderNext,
     money: renderMoney,
     board: renderBoard,
     "goal-edit": renderGoalEdit,
@@ -56,8 +54,9 @@ export function renderFortune(screen, host) {
     compare: renderCompare,
     sheet: renderSheet,
     more: renderMore,
+    adjust: renderAdjust,
   }[screen];
-  view(host);
+  (view || renderWhere)(host);
 }
 
 function t(key, vars) {
@@ -84,16 +83,13 @@ function renderDials(host, { sticky } = {}) {
   const coaching = shouldShowCoach(forecast);
   const wrap = sticky ? "ft-dials ft-dials-sticky" : "ft-dials";
   const headline = coaching && (verdict === "wrecked" || hard) ? t("coachTitle") : t(`verdicts.${verdict}`);
-  const detail = coaching ? t("coachSub") : hard ? t("wreckedDetail") : t("notSet");
   return `
     <section class="${wrap}" aria-label="${escapeHtml(t("dialsKicker"))}">
-      <p class="kicker">${escapeHtml(t("dialsKicker"))}</p>
       <div class="ft-dial-row">
         ${dialMarkup("living", t("livingDial"), living, t("livingHint"), hard, escapeHtml)}
         ${dialMarkup("net", t("netDial"), net, t("netHint"), hard, escapeHtml)}
       </div>
       <p class="ft-verdict ${hard ? "wreck" : verdict}">${escapeHtml(headline)}</p>
-      <p class="tiny">${escapeHtml(detail)}</p>
     </section>
   `;
 }
@@ -119,41 +115,39 @@ function renderStart(host) {
   body.append(el(`<p class="kicker">${escapeHtml(t("startKicker"))}</p>`));
   body.append(el(`<h1>${escapeHtml(t("startTitle"))}</h1>`));
   body.append(el(`<p class="lede">${escapeHtml(t("startLead"))}</p>`));
-  body.append(el(`<p class="hint">${escapeHtml(t("startTip"))}</p>`));
-  body.append(
-    el(`<div class="card privacy"><strong>${escapeHtml(t("privacyTitle"))}</strong><p>${escapeHtml(t("privacyBody"))}</p></div>`),
-  );
+  const bullets = t("startBullets") || [];
+  const list = el(`<div class="card privacy"><ul class="ft-bullets"></ul></div>`);
+  bullets.forEach((line) => {
+    list.querySelector("ul").append(el(`<li>${escapeHtml(line)}</li>`));
+  });
+  body.append(list);
   if (!isStandalone) {
-    body.append(
-      el(
-        `<div class="card"><p class="tag">${escapeHtml(t("addHome"))}</p><p class="hint">${escapeHtml(t("addHomeHow"))}</p></div>`,
-      ),
-    );
+    body.append(el(`<p class="tiny">${escapeHtml(t("addHome"))}: ${escapeHtml(t("addHomeHow"))}</p>`));
   }
   const next = host.startNext();
-  const cta = plan?.privacyAccepted && (plan.phase2Unlocked || plan.theme) ? t("resumeCta") : t("startCta");
+  const cta = plan?.privacyAccepted && (plan.boardReached || plan.phase2Unlocked || plan.theme) ? t("resumeCta") : t("startCta");
   body.append(el(`<div class="nav"><button class="btn btn-primary" data-act="accept-start" type="button">${escapeHtml(cta)}</button></div>`));
   host.shellFortune(body);
   host.root.querySelector('[data-act="accept-start"]')?.addEventListener("click", () => host.acceptStart(next));
 }
 
 const THEME_ICONS = {
-  rebuild: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="28" r="12"/><path d="M28 40h16v18H28z"/><path d="M24 52h24"/><path d="M36 16v-4"/></svg>`,
-  young_family: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="22" r="7"/><circle cx="48" cy="22" r="7"/><circle cx="36" cy="38" r="5"/><path d="M12 58c2-10 10-16 12-16s10 4 12 10"/><path d="M36 52c2-6 8-10 12-10s10 6 12 16"/></svg>`,
-  peak_career: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 52V36h12v16"/><path d="M32 52V24h12v28"/><path d="M48 52V16h12v36"/><path d="M12 56h48"/></svg>`,
-  empty_nest: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 34L36 16l24 18"/><path d="M20 32v24h32V32"/><path d="M30 56V42h12v14"/></svg>`,
-  fresh_start: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="28" r="10"/><path d="M36 12v4M36 40v4M20 28h4M48 28h4M24 16l3 3M45 37l3 3M24 40l3-3M45 19l3-3"/><path d="M14 56h44"/></svg>`,
+  rebuild: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="26" r="10"/><path d="M20 58c2-12 8-18 16-18s14 6 16 18"/><path d="M48 22l8-8M56 18v8h-8"/></svg>`,
+  steady: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 34L36 16l24 18"/><path d="M20 32v24h32V32"/><path d="M30 56V42h12v14"/></svg>`,
+  grow: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 52V36h12v16"/><path d="M32 52V24h12v28"/><path d="M48 52V16h12v36"/><path d="M12 56h48"/></svg>`,
 };
 
-function renderTheme(host) {
+function renderWhere(host) {
   const { el, escapeHtml, plan } = host;
-  const body = el(`<div class="stack"><h1>${escapeHtml(t("themeTitle"))}</h1><p class="hint">${escapeHtml(t("themeHint"))}</p></div>`);
+  const body = el(
+    `<div class="stack"><p class="kicker">${escapeHtml(t("whereKicker"))}</p><h1>${escapeHtml(t("whereTitle"))}</h1><p class="lede">${escapeHtml(t("whereLead"))}</p></div>`,
+  );
   const grid = el(`<div class="ft-life-grid"></div>`);
   THEME_IDS.forEach((id) => {
     const theme = THEMES[id];
     const hero = !!theme.hero || id === "rebuild";
-    const goals = (theme.milestones || [])
-      .map((m) => `<span class="ft-life-goal">${escapeHtml(m.name)}</span>`)
+    const chips = (theme.chips || [])
+      .map((c) => `<span class="ft-life-goal">${escapeHtml(c)}</span>`)
       .join("");
     const btn = el(
       `<button class="ft-life-card${plan.theme === id ? " selected" : ""}${hero ? " ft-theme-hero" : ""}" type="button" data-theme="${id}">
@@ -161,18 +155,13 @@ function renderTheme(host) {
         <span class="ft-life-icon" aria-hidden="true">${THEME_ICONS[id] || ""}</span>
         <strong>${escapeHtml(t(`themes.${id}.label`))}</strong>
         <span class="hint">${escapeHtml(t(`themes.${id}.blurb`))}</span>
-        <span class="ft-life-goals">${goals}</span>
+        <span class="ft-life-goals">${chips}</span>
       </button>`,
     );
     btn.addEventListener("click", () => host.pickTheme(id));
     grid.append(btn);
   });
   body.append(grid);
-  body.append(
-    el(
-      `<div class="nav"><button class="btn btn-ghost" data-go="start" type="button">${escapeHtml(t("back"))}</button></div>`,
-    ),
-  );
   host.shellFortune(body);
 }
 
@@ -187,26 +176,43 @@ function renderFireCard(heat, escapeHtml) {
     .join("");
   return `
     <section class="card ft-fire" data-fire>
-      <p class="tag">${escapeHtml(t("fireTitle"))}</p>
+      <p class="tag">${escapeHtml(t("stageFix"))}</p>
       <h2>${escapeHtml(t("fireTitle"))}</h2>
       <p>${escapeHtml(prefersSunday(heat) ? t("fireLeadFdw") : t("fireLead"))}</p>
       <div class="nav">${links}</div>
       <p class="tiny">${escapeHtml(t("fireHint"))}</p>
-      <button class="btn" type="button" data-act="fire-continue">${escapeHtml(t("fireContinue"))}</button>
     </section>
   `;
 }
 
-function renderTriage(host) {
+function moneyFields(plan, escapeHtml) {
+  return [
+    bandField("incomeBand", t("income"), INCOME_BANDS, plan.money.incomeBand, escapeHtml),
+    bandField("savingsBand", t("savings"), SAVINGS_BANDS, plan.money.savingsBand, escapeHtml),
+    bandField("debtsBand", t("debts"), DEBT_BANDS, plan.money.debtsBand, escapeHtml),
+    bandField("leftoverBand", t("leftover"), LEFTOVER_BANDS, plan.money.leftoverBand || "5_10", escapeHtml),
+  ].join("");
+}
+
+function renderNext(host) {
+  const theme = host.plan?.theme;
+  if (theme === "grow") return renderNextGrow(host);
+  if (theme === "steady") return renderNextSteady(host);
+  return renderNextRebuild(host);
+}
+
+function renderNextRebuild(host) {
   const { el, escapeHtml, plan } = host;
-  const body = el(
-    `<div class="stack"><h1>${escapeHtml(t("triageTitle"))}</h1><p class="hint">${escapeHtml(t("triageHint"))}</p></div>`,
-  );
+  const snap = stabilizeSnapshot(plan);
+  const body = el(`<div class="stack ft-next"></div>`);
+  body.append(el(`<p class="kicker">${escapeHtml(t("nextKicker"))}</p>`));
+  body.append(el(`<h1>${escapeHtml(t("nextRebuildTitle"))}</h1>`));
+  body.append(el(`<p class="lede">${escapeHtml(t("nextRebuildLead"))}</p>`));
+
   DEBT_HEAT_IDS.forEach((id) => {
     const btn = el(
       `<button class="${choiceClass(plan.debtHeat === id)}" type="button" data-heat="${id}">
         <strong>${escapeHtml(t(`debtHeat.${id}.label`))}</strong>
-        <span class="hint">${escapeHtml(t(`debtHeat.${id}.blurb`))}</span>
       </button>`,
     );
     btn.addEventListener("click", () => host.pickDebtHeat(id));
@@ -215,24 +221,7 @@ function renderTriage(host) {
   if (needsFireCard(plan.debtHeat)) {
     body.insertAdjacentHTML("beforeend", renderFireCard(plan.debtHeat, escapeHtml));
   }
-  body.append(
-    el(
-      `<div class="nav"><button class="btn btn-ghost" data-go="theme" type="button">${escapeHtml(t("backTheme"))}</button></div>`,
-    ),
-  );
-  host.shellFortune(body);
-  host.root.querySelector('[data-act="fire-continue"]')?.addEventListener("click", () => host.continueFromFire());
-}
 
-function renderStabilize(host) {
-  const { el, escapeHtml, plan } = host;
-  const snap = stabilizeSnapshot(plan);
-  const body = el(`<div class="stack ft-stabilize"></div>`);
-  body.append(el(`<p class="kicker">${escapeHtml(t("stabilizeKicker"))}</p>`));
-  body.append(el(`<h1>${escapeHtml(t("stabilizeTitle"))}</h1>`));
-  body.append(el(`<p class="lede">${escapeHtml(t("stabilizeLead"))}</p>`));
-
-  const form = el(`<form class="stack" data-form="stabilize"></form>`);
   const monthChoices = [3, 6]
     .map(
       (n) =>
@@ -241,96 +230,98 @@ function renderStabilize(host) {
         )}</button>`,
     )
     .join("");
+  const form = el(`<form class="stack" data-form="next-money"></form>`);
   form.innerHTML = `
-    <p class="tag">${escapeHtml(t("stabilizeMonths"))}</p>
+    <p class="tag">${escapeHtml(t("stageStabilize"))} · ${escapeHtml(t("floorLabel"))}</p>
     <div class="nav ft-month-picks">${monthChoices}</div>
-    <label class="field">${escapeHtml(t("stabilizeFloor"))}
-      <input name="floorHkd" inputmode="numeric" value="${escapeHtml(snap.floorHkd)}" />
-    </label>
-    ${bandField("incomeBand", t("income"), INCOME_BANDS, plan.money.incomeBand, escapeHtml)}
-    ${bandField("spendBand", t("spend"), SPEND_BANDS, plan.money.spendBand, escapeHtml)}
-    ${bandField("savingsBand", t("savings"), SAVINGS_BANDS, plan.money.savingsBand, escapeHtml)}
-    ${bandField("debtsBand", t("debts"), DEBT_BANDS, plan.money.debtsBand, escapeHtml)}
+    <p class="tag">${escapeHtml(t("moneyTitle"))}</p>
+    ${moneyFields(plan, escapeHtml)}
   `;
   body.append(form);
-
-  const fundedLabel = Number.isFinite(snap.fundedMonths)
-    ? snap.fundedMonths > 6
-      ? "6+"
-      : snap.fundedMonths.toFixed(1)
-    : "0";
-  const bones = snap.bones
-    .map(
-      (b) =>
-        `<span class="ft-bone-tick${b.hit ? " on" : ""}">${escapeHtml(t("boneMark", { n: String(b.mark) }))}</span>`,
-    )
-    .join("");
-  let reachText = t("reachStuck");
-  if (snap.reach.kind === "ready") reachText = t("reachReady");
-  else if (snap.reach.kind === "date") {
-    reachText = t("reachDate", { n: String(snap.targetMonths), when: snap.reach.label });
-  }
-  body.append(
-    el(`
-      <section class="card ft-floor">
-        <p class="tag">${escapeHtml(t("boneTitle"))}</p>
-        <p><strong>${escapeHtml(hkd(snap.surplus))}</strong> · ${escapeHtml(t("surplusLabel"))}</p>
-        <p class="tiny">${escapeHtml(t("surplusHint"))}</p>
-        <p>${escapeHtml(reachText)}</p>
-        <p class="tiny">${escapeHtml(t("reachNeed", { need: hkd(snap.need), cash: hkd(snap.money.savings) }))}</p>
-        <p>${escapeHtml(t("boneNow", { n: fundedLabel }))}</p>
-        <div class="ft-bone" aria-hidden="true">${bones}</div>
-      </section>
-    `),
-  );
-
-  const unlockDisabled = snap.ready ? "" : "disabled";
-  body.append(
-    el(`
-      <div class="nav">
-        <button class="btn btn-primary" type="button" data-act="unlock-phase2" ${unlockDisabled}>${escapeHtml(t("phase2Cta"))}</button>
-        ${snap.ready ? "" : `<p class="hint">${escapeHtml(t("phase2Blocked", { n: String(snap.targetMonths) }))}</p>`}
-        <button class="btn" type="button" data-act="thin-warn">${escapeHtml(t("phase2Anyway"))}</button>
-      </div>
-    `),
-  );
-  if (plan.thinFloorWarned) {
-    body.append(
-      el(`
-        <div class="card warn">
-          <p>${escapeHtml(t("phase2Warn"))}</p>
-          <button class="btn btn-accent" type="button" data-act="thin-go">${escapeHtml(t("phase2WarnGo"))}</button>
-        </div>
-      `),
-    );
-  }
+  const ctaClass = needsFireCard(plan.debtHeat) ? "btn" : "btn btn-primary";
   body.append(
     el(
-      `<div class="nav"><button class="btn btn-ghost" data-go="triage" type="button">${escapeHtml(t("backTriage"))}</button></div>`,
+      `<div class="nav"><button class="${ctaClass}" type="button" data-act="finish-step2">${escapeHtml(t("nextSeeLife"))}</button>
+      <button class="btn btn-ghost" data-go="where" type="button">${escapeHtml(t("backWhere"))}</button></div>`,
     ),
   );
-
   host.shellFortune(body);
-  form.querySelectorAll("[data-months]").forEach((btn) => {
-    btn.addEventListener("click", () => host.patchStabilize({ stabilizeTargetMonths: Number(btn.dataset.months) }));
+  bindNextMoney(host, form);
+  host.root.querySelector('[data-act="finish-step2"]')?.addEventListener("click", () => {
+    syncNextMoney(host, form);
+    host.finishStep2();
   });
-  const sync = () => {
+}
+
+function renderNextSteady(host) {
+  const { el, escapeHtml, plan } = host;
+  const body = el(`<div class="stack ft-next"></div>`);
+  body.append(el(`<p class="kicker">${escapeHtml(t("nextKicker"))}</p>`));
+  body.append(el(`<h1>${escapeHtml(t("nextSteadyTitle"))}</h1>`));
+  body.append(el(`<p class="lede">${escapeHtml(t("nextSteadyLead"))}</p>`));
+  const form = el(`<form class="stack" data-form="next-money">${moneyFields(plan, escapeHtml)}</form>`);
+  body.append(form);
+  body.append(
+    el(`<div class="nav">
+      <button class="btn btn-primary" type="button" data-act="finish-step2">${escapeHtml(t("nextSeeLife"))}</button>
+      <button class="btn btn-ghost" type="button" data-act="skip-step2">${escapeHtml(t("nextSkipBoard"))}</button>
+    </div>`),
+  );
+  host.shellFortune(body);
+  bindNextMoney(host, form);
+  host.root.querySelector('[data-act="finish-step2"]')?.addEventListener("click", () => {
+    syncNextMoney(host, form);
+    host.finishStep2();
+  });
+  host.root.querySelector('[data-act="skip-step2"]')?.addEventListener("click", () => host.skipStep2());
+}
+
+function renderNextGrow(host) {
+  const { el, escapeHtml, draftGoal } = host;
+  const body = el(`<div class="stack ft-next"></div>`);
+  body.append(el(`<p class="kicker">${escapeHtml(t("nextKicker"))}</p>`));
+  body.append(el(`<h1>${escapeHtml(t("nextGrowTitle"))}</h1>`));
+  body.append(el(`<p class="lede">${escapeHtml(t("nextGrowLead"))}</p>`));
+  const form = el(`<form class="stack" data-form="grow-goal"></form>`);
+  form.innerHTML = goalFields(draftGoal, escapeHtml, t("nextSeeLife"));
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
     const fd = new FormData(form);
-    host.patchStabilize({
-      money: {
-        incomeBand: String(fd.get("incomeBand")),
-        spendBand: String(fd.get("spendBand")),
-        savingsBand: String(fd.get("savingsBand")),
-        debtsBand: String(fd.get("debtsBand")),
-      },
-      floorHkd: Number(String(fd.get("floorHkd") || "").replace(/[^\d.]/g, "")) || 0,
+    host.saveGoal({
+      name: String(fd.get("name") || ""),
+      amount: String(fd.get("amount") || ""),
+      months: Number(fd.get("months")),
     });
-  };
-  form.addEventListener("change", sync);
-  form.querySelector('[name="floorHkd"]')?.addEventListener("blur", sync);
-  host.root.querySelector('[data-act="unlock-phase2"]')?.addEventListener("click", () => host.unlockPhase2());
-  host.root.querySelector('[data-act="thin-warn"]')?.addEventListener("click", () => host.warnThinFloor());
-  host.root.querySelector('[data-act="thin-go"]')?.addEventListener("click", () => host.unlockPhase2({ override: true }));
+  });
+  body.append(form);
+  body.append(
+    el(
+      `<div class="nav"><button class="btn btn-ghost" type="button" data-act="skip-step2">${escapeHtml(t("nextSkipBoard"))}</button></div>`,
+    ),
+  );
+  host.shellFortune(body);
+  host.root.querySelector('[data-act="skip-step2"]')?.addEventListener("click", () => host.skipStep2());
+}
+
+function bindNextMoney(host, form) {
+  form.querySelectorAll("[data-months]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      syncNextMoney(host, form);
+      host.patchStabilize({ stabilizeTargetMonths: Number(btn.dataset.months) });
+    });
+  });
+}
+
+function syncNextMoney(host, form) {
+  const fd = new FormData(form);
+  host.patchStabilize({
+    money: {
+      incomeBand: String(fd.get("incomeBand") || host.plan.money.incomeBand),
+      savingsBand: String(fd.get("savingsBand") || host.plan.money.savingsBand),
+      debtsBand: String(fd.get("debtsBand") || host.plan.money.debtsBand),
+      leftoverBand: String(fd.get("leftoverBand") || host.plan.money.leftoverBand || "5_10"),
+    },
+  });
 }
 
 function bandField(name, label, list, selected, escapeHtml) {
@@ -342,40 +333,23 @@ function bandField(name, label, list, selected, escapeHtml) {
 
 function renderMoney(host) {
   const { el, escapeHtml, plan } = host;
-  const body = el(`<div class="stack"><h1>${escapeHtml(t("moneyTitle"))}</h1><p class="hint">${escapeHtml(t("moneyHint"))}</p></div>`);
+  const body = el(`<div class="stack"><h1>${escapeHtml(t("moneyTitle"))}</h1></div>`);
   const form = el(`<form class="stack" data-form="money"></form>`);
-  form.innerHTML = [
-    bandField("incomeBand", t("income"), INCOME_BANDS, plan.money.incomeBand, escapeHtml),
-    bandField("spendBand", t("spend"), SPEND_BANDS, plan.money.spendBand, escapeHtml),
-    bandField("savingsBand", t("savings"), SAVINGS_BANDS, plan.money.savingsBand, escapeHtml),
-    bandField("debtsBand", t("debts"), DEBT_BANDS, plan.money.debtsBand, escapeHtml),
-    `<div class="nav"><button class="btn btn-primary" type="submit">${escapeHtml(t("continue"))}</button>
-     <button class="btn btn-ghost" data-go="${plan.phase2Unlocked || plan.phase2Override ? "board" : "theme"}" type="button">${escapeHtml(t("back"))}</button></div>`,
-  ].join("");
+  form.innerHTML = `${moneyFields(plan, escapeHtml)}
+    <div class="nav"><button class="btn btn-primary" type="submit">${escapeHtml(t("continue"))}</button>
+     <button class="btn btn-ghost" data-go="board" type="button">${escapeHtml(t("back"))}</button></div>`;
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     host.saveMoney({
       incomeBand: String(fd.get("incomeBand")),
-      spendBand: String(fd.get("spendBand")),
       savingsBand: String(fd.get("savingsBand")),
       debtsBand: String(fd.get("debtsBand")),
+      leftoverBand: String(fd.get("leftoverBand")),
     });
   });
   body.append(form);
   host.shellFortune(body);
-}
-
-function renderTease(host) {
-  if (host.ui.loginTeaseDismissed) return "";
-  const { escapeHtml } = host;
-  return `
-    <div class="ft-tease" role="status">
-      <p>${escapeHtml(t("teaseText"))}</p>
-      <p class="tiny">${escapeHtml(t("teaseHint"))}</p>
-      <button class="btn btn-ghost" type="button" data-act="dismiss-tease">${escapeHtml(t("teaseDismiss"))}</button>
-    </div>
-  `;
 }
 
 function renderCrumb(host) {
@@ -394,143 +368,49 @@ function renderCoach(host) {
   if (!shouldShowCoach(forecast)) return "";
   const empty = isEmptyPot(plan);
   const title = forecast.hardFail || forecast.verdict === "wrecked" ? t("coachTitle") : t("coachTitleStretched");
-  const breaks = coachBreakLines(plan, forecast)
-    .map((line) => `<li>${escapeHtml(line)}</li>`)
-    .join("");
-  const actions = coachActions(plan, forecast)
+  const line = empty ? t("coachEmpty") : t("coachSub");
+  const actions = boardCoachActions(plan, forecast)
     .map((action) => {
-      const cls = action.kind === "primary" ? "btn btn-primary" : "btn";
+      const cls = action.kind === "primary" ? "ft-chip-btn primary" : "ft-chip-btn";
       return `<button class="${cls}" type="button" data-coach="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`;
     })
     .join("");
-  const emptyNote = empty ? `<p class="hint">${escapeHtml(t("coachEmpty"))}</p>` : "";
-  const keep = forecast.hardFail ? `<p class="tiny">${escapeHtml(t("coachKeepGoing"))}</p>` : "";
   return `
     <section class="card ft-coach" data-coach-card>
-      <p class="tag">${escapeHtml(t("coachBreaking"))}</p>
-      <h2>${escapeHtml(title)}</h2>
-      <p>${escapeHtml(t("coachSub"))}</p>
-      <ul class="ft-coach-breaks">${breaks}</ul>
-      ${emptyNote}
-      <div class="nav ft-coach-actions">${actions}</div>
-      ${keep}
+      <p class="ft-coach-line"><strong>${escapeHtml(title)}</strong> ${escapeHtml(line)}</p>
+      <div class="ft-coach-actions">${actions}</div>
     </section>
   `;
 }
 
 function renderBoard(host) {
   const { el, escapeHtml, plan, forecast, busy } = host;
-  const money = resolveMoney(plan.money);
-  const template = TEMPLATES[plan.templateId] || TEMPLATES.balanced;
   const body = el(`<div class="stack ft-board"></div>`);
-  body.append(el(`<p class="kicker">${escapeHtml(t("phaseTag"))}</p>`));
-  body.insertAdjacentHTML("beforeend", renderTease(host));
+  body.append(el(`<p class="kicker">${escapeHtml(t("boardKicker"))}</p>`));
+  body.append(el(`<h1>${escapeHtml(t("boardTitle"))}</h1>`));
   body.insertAdjacentHTML("beforeend", renderDials(host, { sticky: true }));
   if (busy) body.append(el(`<p class="hint">${escapeHtml(t("running"))}</p>`));
   body.insertAdjacentHTML("beforeend", renderCoach(host));
   body.insertAdjacentHTML("beforeend", renderCrumb(host));
 
   const horizon = forecast?.horizonMonths || 48;
-  body.append(el(`<h2>${escapeHtml(t("timelineTitle"))}</h2>`));
-  body.append(el(`<p class="hint">${escapeHtml(t("timelineHint"))}</p>`));
+  const active = emphasizeStage(plan);
+  body.append(
+    el(`<div class="ft-legend" aria-label="${escapeHtml(t("timelineTitle"))}">
+      ${["fix", "stabilize", "plan", "invest"]
+        .map((s) => {
+          const label = t(`stage${s[0].toUpperCase()}${s.slice(1)}`);
+          return `<span class="ft-legend-item${active === s ? " on" : ""}">${escapeHtml(label)}</span>`;
+        })
+        .join("<span class=\"ft-legend-arrow\" aria-hidden=\"true\">→</span>")}
+    </div>`),
+  );
+  body.append(el(`<p class="tiny">${escapeHtml(t("timelineHint"))}</p>`));
   body.append(el(renderTimeline(plan, forecast, horizon, escapeHtml)));
 
-  body.append(el(`<h2>${escapeHtml(t("goalsTitle"))}</h2>`));
-  if (!plan.milestones.length) {
-    body.append(el(`<p class="hint">${escapeHtml(t("goalsEmpty"))}</p>`));
-  }
-  plan.milestones.forEach((m, i) => {
-    const pct = forecast?.milestonePct?.[i];
-    const card = el(`
-      <div class="card ft-goal">
-        <div class="creditor">
-          <div>
-            <strong>${escapeHtml(m.name)}</strong>
-            <p class="tiny">${escapeHtml(hkd(m.amount))} · ${escapeHtml(monthYearLabel(m.months))}${
-              pct != null ? ` · ${Math.round(pct)}%` : ""
-            }</p>
-          </div>
-          <button class="btn btn-ghost" type="button" data-edit-goal="${escapeHtml(m.id)}">${escapeHtml(t("edit"))}</button>
-        </div>
-      </div>
-    `);
-    body.append(card);
-  });
-  body.append(el(`<button class="btn" type="button" data-act="add-goal">${escapeHtml(t("add"))}</button>`));
-
-  const need = netNeedNow(plan);
-  body.append(
-    el(`
-      <div class="card">
-        <p class="tag">${escapeHtml(t("netTitle"))}</p>
-        <p>${escapeHtml(t("netLead"))}</p>
-        <p>${escapeHtml(
-          t("netSummary", {
-            months: String(plan.net.emergencyMonths),
-            floor: hkd(plan.net.floorHkd),
-            need: hkd(need),
-          }),
-        )}</p>
-        <button class="btn btn-ghost" type="button" data-go="net-edit">${escapeHtml(t("edit"))}</button>
-      </div>
-    `),
-  );
-
-  body.append(el(`<h2>${escapeHtml(t("templateTitle"))}</h2>`));
-  body.append(el(`<p class="hint">${escapeHtml(t("templatesHint"))}</p>`));
-  TEMPLATE_IDS.forEach((id) => {
-    const tmpl = TEMPLATES[id];
-    const btn = el(`
-      <button class="${choiceClass(plan.templateId === id)} ft-template" type="button" data-template="${id}">
-        <strong>${escapeHtml(tmpl.label)}</strong>
-        <span class="hint">${escapeHtml(formatMuSigma(tmpl))}</span>
-        <span class="hint">${escapeHtml(tmpl.mix)}</span>
-        <span class="tiny">${escapeHtml(TEMPLATE_DISCLAIMER)}</span>
-      </button>
-    `);
-    body.append(btn);
-  });
-
-  const infl = el(`
-    <label class="ft-check">
-      <input type="checkbox" data-act="inflation" ${plan.inflationOn ? "checked" : ""} />
-      <span>${escapeHtml(t("inflationLabel"))}</span>
-    </label>
-  `);
-  body.append(infl);
-
-  if (forecast) {
-    body.append(
-      el(
-        `<p class="tiny">${escapeHtml(t("medianPot"))}: ${escapeHtml(hkd(forecast.medianWealth))}<br/>${escapeHtml(
-          t("pathsLine", { n: String(forecast.paths), seed: String(forecast.seed) }),
-        )}</p>`,
-      ),
-    );
-  }
-
-  body.append(
-    el(`
-      <div class="card">
-        <p class="tiny">${escapeHtml(t("income"))}: ${escapeHtml(bandById(INCOME_BANDS, plan.money.incomeBand).label)}</p>
-        <p class="tiny">${escapeHtml(t("spend"))}: ${escapeHtml(bandById(SPEND_BANDS, plan.money.spendBand).label)}</p>
-        <p class="tiny">${escapeHtml(t("savings"))}: ${escapeHtml(hkd(money.savings))} · ${escapeHtml(t("debts"))}: ${escapeHtml(hkd(money.debts))}</p>
-        <button class="btn btn-ghost" data-go="money" type="button">${escapeHtml(t("edit"))}</button>
-      </div>
-    `),
-  );
-
-  body.append(
-    el(`
-      <div class="nav">
-        <button class="btn btn-primary" data-go="compare" type="button">${escapeHtml(t("compareCta"))}</button>
-        <button class="btn" data-go="sheet" type="button">${escapeHtml(t("sheetCta"))}</button>
-        <button class="btn btn-ghost" data-go="more" type="button">${escapeHtml(t("moreCta"))}</button>
-        <button class="btn btn-ghost" data-go="stabilize" type="button">${escapeHtml(t("backFloor"))}</button>
-        <button class="btn btn-ghost" data-act="shuffle" type="button">${escapeHtml(t("shuffle"))}</button>
-      </div>
-    `),
-  );
+  const addCls = shouldShowCoach(forecast) ? "btn" : "btn btn-primary";
+  body.append(el(`<button class="${addCls}" type="button" data-act="add-goal">${escapeHtml(t("addGoalCta"))}</button>`));
+  body.append(el(`<button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("adjustCta"))}</button>`));
 
   host.shellFortune(body);
   bindBoard(host);
@@ -538,36 +418,46 @@ function renderBoard(host) {
 
 function renderTimeline(plan, forecast, horizon, escapeHtml) {
   const months = Math.max(12, horizon);
-  const chips = plan.milestones
-    .map((m, i) => {
-      const left = Math.min(96, Math.max(2, ((m.months - 1) / (months - 1)) * 100));
-      const row = i % 2 === 0 ? 8 : 78;
-      const raw = forecast?.milestonePct?.[i];
-      const shown = raw != null ? `${Math.round(raw)}%` : "—";
-      const tone = dialTone(raw ?? 0, !!forecast?.hardFail);
-      return `<button type="button" class="ft-pin tone-${tone}" data-chip="${escapeHtml(m.id)}" style="left:${left}%;top:${row}px" aria-label="${escapeHtml(m.name)} ${shown}">
+  const items = journeyItems(plan, forecast);
+  const chips = items
+    .map((item, i) => {
+      const left = Math.min(94, Math.max(4, ((item.months - 1) / (months - 1)) * 100));
+      const rows = [8, 112, 60];
+      const row = rows[i % 3];
+      const shown = item.pct == null ? "—" : `${item.pct}%`;
+      const tone = item.pct == null ? "mid" : dialTone(item.pct, !!forecast?.hardFail);
+      const stage = t(`stage${item.stage[0].toUpperCase()}${item.stage.slice(1)}`);
+      const shortName = item.name.length > 16 ? `${item.name.slice(0, 15)}…` : item.name;
+      const drag = item.draggable ? `data-chip="${escapeHtml(item.id)}"` : `data-static="${escapeHtml(item.id)}"`;
+      return `<button type="button" class="ft-pin tone-${tone} stage-${item.stage}" ${drag} style="left:${left}%;top:${row}px" aria-label="${escapeHtml(item.name)} ${shown}">
         <span class="ft-pin-dot ft-pin-pct">${shown}</span>
-        <span class="ft-pin-name">${escapeHtml(m.name)}</span>
-        <em>${escapeHtml(monthYearLabel(m.months))}</em>
+        <span class="ft-pin-stage">${escapeHtml(stage)}</span>
+        <span class="ft-pin-name">${escapeHtml(shortName)}</span>
+        <em>${escapeHtml(monthYearLabel(item.months))}</em>
       </button>`;
     })
     .join("");
   return `
     <div class="ft-timeline" data-timeline data-horizon="${months}">
+      <div class="ft-ticks ft-ticks-top">
+        <span>Today</span>
+        <span>${escapeHtml(monthYearLabel(Math.round(months / 2)))}</span>
+        <span>${escapeHtml(monthYearLabel(months))}</span>
+      </div>
       <svg class="ft-path" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 30 C 18 30 28 18 48 16 S 78 22 100 10" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M0 32 C 22 32 30 18 50 16 S 78 22 100 8" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M0 32 C 22 32 30 18 50 16 S 78 22 100 8 V 40 H 0 Z" fill="url(#ft-path-fill)" opacity="0.35"/>
         <defs>
           <linearGradient id="ft-path-stroke" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stop-color="#7e22ce"/>
             <stop offset="100%" stop-color="#06b6d4"/>
           </linearGradient>
+          <linearGradient id="ft-path-fill" x1="0" y1="0" x2="0" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#06b6d4"/>
+            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+          </linearGradient>
         </defs>
       </svg>
-      <div class="ft-ticks">
-        <span>Now</span>
-        <span>${escapeHtml(monthYearLabel(Math.round(months / 2)))}</span>
-        <span>${escapeHtml(monthYearLabel(months))}</span>
-      </div>
       <div class="ft-chips">${chips}</div>
     </div>
   `;
@@ -575,19 +465,11 @@ function renderTimeline(plan, forecast, horizon, escapeHtml) {
 
 function bindBoard(host) {
   const root = host.root;
-  root.querySelector('[data-act="dismiss-tease"]')?.addEventListener("click", () => host.dismissTease());
   root.querySelector('[data-act="dismiss-crumb"]')?.addEventListener("click", () => host.dismissCrumb());
   root.querySelector('[data-act="add-goal"]')?.addEventListener("click", () => host.editGoal(null));
   root.querySelectorAll("[data-edit-goal]").forEach((btn) => {
     btn.addEventListener("click", () => host.editGoal(btn.dataset.editGoal));
   });
-  root.querySelectorAll("[data-template]").forEach((btn) => {
-    btn.addEventListener("click", () => host.pickTemplate(btn.dataset.template));
-  });
-  root.querySelector('[data-act="inflation"]')?.addEventListener("change", (e) => {
-    host.setInflation(e.target.checked);
-  });
-  root.querySelector('[data-act="shuffle"]')?.addEventListener("click", () => host.shuffleSeed());
   root.querySelectorAll("[data-coach]").forEach((btn) => {
     btn.addEventListener("click", () => host.applyCoach(btn.dataset.coach));
   });
@@ -602,6 +484,23 @@ function monthOptions(selectedMonths, escapeHtml) {
     opts.push(`<option value="${i}" ${Number(selectedMonths) === i ? "selected" : ""}>${escapeHtml(label)}</option>`);
   }
   return opts.join("");
+}
+
+function goalFields(draftGoal, escapeHtml, submitLabel) {
+  return `
+    <label class="field">${escapeHtml(t("goalName"))}
+      <input name="name" maxlength="80" required placeholder="${escapeHtml(t("goalNamePh"))}" value="${escapeHtml(draftGoal.name)}" data-select-on-focus="1" />
+    </label>
+    <label class="field">${escapeHtml(t("goalAmount"))}
+      <input name="amount" inputmode="numeric" required placeholder="80000" value="${escapeHtml(draftGoal.amount)}" />
+    </label>
+    <label class="field">${escapeHtml(t("goalWhen"))}
+      <select name="months">${monthOptions(draftGoal.months || 12, escapeHtml)}</select>
+    </label>
+    <div class="nav">
+      <button class="btn btn-primary" type="submit">${escapeHtml(submitLabel)}</button>
+    </div>
+  `;
 }
 
 function renderGoalEdit(host) {
@@ -655,7 +554,7 @@ function renderNetEdit(host) {
     </label>
     <div class="nav">
       <button class="btn btn-primary" type="submit">${escapeHtml(t("saveNet"))}</button>
-      <button class="btn btn-ghost" data-go="board" type="button">${escapeHtml(t("back"))}</button>
+      <button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("back"))}</button>
     </div>
   `;
   form.addEventListener("submit", (e) => {
@@ -712,7 +611,7 @@ function renderCompare(host) {
     body.append(el(`<p class="tiny">${escapeHtml(t("borrowAprNote"))}</p>`));
   }
   body.append(
-    el(`<div class="nav"><button class="btn btn-ghost" data-go="board" type="button">${escapeHtml(t("back"))}</button></div>`),
+    el(`<div class="nav"><button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("back"))}</button></div>`),
   );
   host.shellFortune(body);
   host.root.querySelector('[data-act="dismiss-crumb"]')?.addEventListener("click", () => host.dismissCrumb());
@@ -728,7 +627,7 @@ function renderSheet(host) {
       <div class="nav">
         <button class="btn btn-primary" data-act="pdf-share" type="button" ${busy ? "disabled" : ""}>${escapeHtml(t("sheetShare"))}</button>
         <button class="btn" data-act="pdf-dl" type="button" ${busy ? "disabled" : ""}>${escapeHtml(t("sheetDownload"))}</button>
-        <button class="btn btn-ghost" data-go="board" type="button">${escapeHtml(t("back"))}</button>
+        <button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("back"))}</button>
       </div>
     `),
   );
@@ -743,8 +642,67 @@ function renderMore(host) {
   body.append(el(`<button class="btn btn-primary" data-act="export" type="button">${escapeHtml(t("exportJson"))}</button>`));
   body.append(el(`<button class="btn btn-accent" data-act="clear" type="button">${escapeHtml(t("clear"))}</button>`));
   body.append(el(`<p class="hint">${escapeHtml(t("compliance"))}</p>`));
-  body.append(el(`<div class="nav"><button class="btn btn-ghost" data-go="board" type="button">${escapeHtml(t("back"))}</button></div>`));
+  body.append(el(`<div class="nav"><button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("back"))}</button></div>`));
   host.shellFortune(body);
   host.root.querySelector('[data-act="export"]')?.addEventListener("click", () => host.exportJson());
   host.root.querySelector('[data-act="clear"]')?.addEventListener("click", () => host.clearPlan());
+}
+
+function renderAdjust(host) {
+  const { el, escapeHtml, plan, forecast } = host;
+  const body = el(
+    `<div class="stack ft-adjust"><p class="kicker">${escapeHtml(t("adjustCta"))}</p><h1>${escapeHtml(t("adjustTitle"))}</h1><p class="lede">${escapeHtml(t("adjustLead"))}</p></div>`,
+  );
+  body.append(el(`<p class="tag">${escapeHtml(t("templateTitle"))}</p>`));
+  body.append(el(`<p class="tiny">${escapeHtml(t("templatesHint"))}</p>`));
+  TEMPLATE_IDS.forEach((id) => {
+    const tmpl = TEMPLATES[id];
+    const btn = el(`
+      <button class="${choiceClass(plan.templateId === id)} ft-template" type="button" data-template="${id}">
+        <strong>${escapeHtml(tmpl.label)}</strong>
+        <span class="hint">${escapeHtml(formatMuSigma(tmpl))}</span>
+        <span class="hint">${escapeHtml(tmpl.mix)}</span>
+        <span class="tiny">${escapeHtml(TEMPLATE_DISCLAIMER)}</span>
+      </button>
+    `);
+    body.append(btn);
+  });
+  body.append(
+    el(`
+    <label class="ft-check">
+      <input type="checkbox" data-act="inflation" ${plan.inflationOn ? "checked" : ""} />
+      <span>${escapeHtml(t("inflationLabel"))}</span>
+    </label>
+  `),
+  );
+  if (forecast) {
+    body.append(
+      el(
+        `<p class="tiny">${escapeHtml(t("medianPot"))}: ${escapeHtml(hkd(forecast.medianWealth))}<br/>${escapeHtml(
+          t("pathsLine", { n: String(forecast.paths), seed: String(forecast.seed) }),
+        )}</p>`,
+      ),
+    );
+  }
+  body.append(
+    el(`
+      <div class="nav">
+        <button class="btn" data-go="money" type="button">${escapeHtml(t("moneyTitle"))}</button>
+        <button class="btn" data-go="net-edit" type="button">${escapeHtml(t("netTitle"))}</button>
+        <button class="btn" data-go="compare" type="button">${escapeHtml(t("compareCta"))}</button>
+        <button class="btn" data-go="sheet" type="button">${escapeHtml(t("sheetCta"))}</button>
+        <button class="btn" data-go="more" type="button">${escapeHtml(t("moreCta"))}</button>
+        <button class="btn btn-ghost" data-act="shuffle" type="button">${escapeHtml(t("shuffle"))}</button>
+        <button class="btn btn-primary" data-go="board" type="button">${escapeHtml(t("done"))}</button>
+      </div>
+    `),
+  );
+  host.shellFortune(body);
+  body.querySelectorAll("[data-template]").forEach((btn) => {
+    btn.addEventListener("click", () => host.pickTemplate(btn.dataset.template));
+  });
+  body.querySelector('[data-act="inflation"]')?.addEventListener("change", (e) => {
+    host.setInflation(e.target.checked);
+  });
+  body.querySelector('[data-act="shuffle"]')?.addEventListener("click", () => host.shuffleSeed());
 }

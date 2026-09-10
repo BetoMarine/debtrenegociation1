@@ -7,7 +7,7 @@ import { buildFortunePdf, sheetRows } from "./pdf.js";
 const samplePlan = {
   ...newFortunePlan(),
   privacyAccepted: true,
-  theme: "peak_career",
+  theme: "grow",
   money: { incomeBand: "80_120", spendBand: "35_50", savingsBand: "400_800", debtsBand: "0" },
   milestones: [
     { id: "w50", name: "Wife's 50th", amount: 80000, months: 24 },

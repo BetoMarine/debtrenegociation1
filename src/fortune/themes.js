@@ -1,96 +1,77 @@
-/** Life themes seed suggested living milestones + a security net. User can edit freely. */
+/** Three “where you are today” cards. Each seeds a floor + suggested living goals. */
 
-export const THEME_IDS = ["rebuild", "young_family", "peak_career", "empty_nest", "fresh_start"];
+export const THEME_IDS = ["rebuild", "steady", "grow"];
+
+export const LEGACY_THEME_MAP = {
+  young_family: "steady",
+  empty_nest: "steady",
+  peak_career: "grow",
+  fresh_start: "rebuild",
+};
 
 export const THEMES = {
   rebuild: {
     id: "rebuild",
     label: "I need to rebuild",
-    blurb: "Fix the fire, then a floor, then modest goals.",
+    blurb: "Fix first. Then a floor.",
     hero: true,
+    chips: ["Fix", "Floor", "Modest goals"],
     moneyBands: {
       incomeBand: "30_50",
       spendBand: "20_35",
+      leftoverBand: "5_10",
       savingsBand: "lt50",
       debtsBand: "50_150",
     },
     milestones: [
-      { name: "Replace a worn-out phone", amount: 4000, months: 8 },
-      { name: "Skills course", amount: 12000, months: 14 },
-      { name: "Small family visit", amount: 18000, months: 18 },
+      { name: "Replace a worn-out phone", amount: 4000, months: 8, stage: "plan" },
+      { name: "Skills course", amount: 12000, months: 14, stage: "plan" },
+      { name: "Small family visit", amount: 18000, months: 18, stage: "plan" },
     ],
     net: { emergencyMonths: 6, floorHkd: 120000 },
   },
-  young_family: {
-    id: "young_family",
-    label: "Young family",
-    blurb: "Kids, a first home, a buffer.",
+  steady: {
+    id: "steady",
+    label: "I'm steady",
+    blurb: "Hold the floor. Then plan.",
+    chips: ["Floor", "Buffer", "Next goal"],
     moneyBands: {
       incomeBand: "50_80",
       spendBand: "20_35",
+      leftoverBand: "10_20",
       savingsBand: "150_400",
       debtsBand: "50_150",
     },
     milestones: [
-      { name: "Family trip", amount: 45000, months: 12 },
-      { name: "Daughter's school deposit", amount: 80000, months: 18 },
-      { name: "New car", amount: 180000, months: 36 },
+      { name: "Family trip", amount: 45000, months: 12, stage: "plan" },
+      { name: "School deposit", amount: 80000, months: 18, stage: "plan" },
+      { name: "New car", amount: 180000, months: 36, stage: "plan" },
     ],
     net: { emergencyMonths: 6, floorHkd: 150000 },
   },
-  peak_career: {
-    id: "peak_career",
-    label: "Peak career",
-    blurb: "High earn. What you keep vs spend.",
+  grow: {
+    id: "grow",
+    label: "I want to grow",
+    blurb: "Pin a goal. Watch the path.",
+    chips: ["A goal", "The path", "Chance it works"],
     moneyBands: {
       incomeBand: "80_120",
       spendBand: "35_50",
+      leftoverBand: "20_40",
       savingsBand: "400_800",
       debtsBand: "150_400",
     },
-    milestones: [
-      { name: "Wife's 50th", amount: 80000, months: 24 },
-      { name: "New house down payment", amount: 1500000, months: 48 },
-      { name: "Daughter's wedding", amount: 250000, months: 84 },
-    ],
-    net: { emergencyMonths: 9, floorHkd: 400000 },
-  },
-  empty_nest: {
-    id: "empty_nest",
-    label: "Empty nest",
-    blurb: "Quieter house. Stronger floor.",
-    moneyBands: {
-      incomeBand: "30_50",
-      spendBand: "20_35",
-      savingsBand: "800_2m",
-      debtsBand: "0",
-    },
-    milestones: [
-      { name: "Long trip together", amount: 120000, months: 12 },
-      { name: "Kitchen remodel", amount: 200000, months: 18 },
-      { name: "Help with a grandchild", amount: 100000, months: 36 },
-    ],
-    net: { emergencyMonths: 12, floorHkd: 600000 },
-  },
-  fresh_start: {
-    id: "fresh_start",
-    label: "Fresh start",
-    blurb: "Reset. Smaller goals, a real floor.",
-    moneyBands: {
-      incomeBand: "15_30",
-      spendBand: "10_20",
-      savingsBand: "lt50",
-      debtsBand: "50_150",
-    },
-    milestones: [
-      { name: "Career course", amount: 30000, months: 6 },
-      { name: "Emergency catch-up (extra)", amount: 50000, months: 8 },
-      { name: "Move deposit", amount: 80000, months: 14 },
-    ],
-    net: { emergencyMonths: 4, floorHkd: 80000 },
+    milestones: [],
+    net: { emergencyMonths: 6, floorHkd: 250000 },
   },
 };
 
+export function canonicalThemeId(id) {
+  if (THEME_IDS.includes(id)) return id;
+  return LEGACY_THEME_MAP[id] || null;
+}
+
 export function getTheme(id) {
-  return THEMES[id] || null;
+  const canonical = canonicalThemeId(id);
+  return canonical ? THEMES[canonical] : null;
 }

@@ -11,7 +11,7 @@
 import { CASH_BENCHMARK, getTemplate } from "./templates.js";
 
 export const DEFAULT_PATHS = 1000;
-export const DEFAULT_INFLATION = 0.025;
+export const DEFAULT_INFLATION = 0.045;
 export const DEFAULT_SEED = 20260909;
 export const MAX_HORIZON = 240;
 export const DEFAULT_BORROW_APR = 0.065;
@@ -86,7 +86,7 @@ function percentile(values, p) {
 
 export function killTestInput() {
   return {
-    theme: "peak_career",
+    theme: "grow",
     money: {
       incomeMonthly: 0,
       spendMonthly: 25000,
