@@ -148,6 +148,14 @@ function renderWhere(host) {
   const body = el(
     `<div class="stack"><p class="kicker">${escapeHtml(t("whereKicker"))}</p><h1>${escapeHtml(t("whereTitle"))}</h1><p class="lede">${escapeHtml(t("whereLead"))}</p></div>`,
   );
+  if (host.canOpenPlan) {
+    const resume = el(
+      `<div class="nav ft-looks-right"><button class="btn btn-primary" type="button" data-act="open-plan">${escapeHtml(t("looksRightCta"))}</button></div>`,
+    );
+    resume.querySelector('[data-act="open-plan"]').addEventListener("click", () => host.openPlan());
+    body.append(resume);
+    body.append(el(`<p class="tiny">${escapeHtml(t("whereOrChange"))}</p>`));
+  }
   const grid = el(`<div class="ft-life-grid"></div>`);
   THEME_IDS.forEach((id) => {
     const theme = THEMES[id];
@@ -168,13 +176,6 @@ function renderWhere(host) {
     grid.append(btn);
   });
   body.append(grid);
-  if (host.canOpenPlan) {
-    const resume = el(
-      `<div class="nav ft-looks-right"><button class="btn btn-primary" type="button" data-act="open-plan">${escapeHtml(t("looksRightCta"))}</button></div>`,
-    );
-    resume.querySelector('[data-act="open-plan"]').addEventListener("click", () => host.openPlan());
-    body.append(resume);
-  }
   host.shellFortune(body);
 }
 

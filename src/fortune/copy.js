@@ -48,6 +48,7 @@ const en = {
   startCta: "Continue",
   resumeCta: "Continue",
   looksRightCta: "Looks right — open my plan",
+  whereOrChange: "Or change today",
 
   privacyTitle: "On this phone only",
   privacyBody: "Uninstall wipes it. We do not upload your numbers.",

@@ -535,14 +535,13 @@ html.fortune-root body {
 
 .ft-timeline {
   position: relative;
-  padding: 8px 4px 12px;
+  padding: 8px 2px 12px;
   touch-action: none;
   user-select: none;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 
 .ft-path-kicker {
@@ -564,8 +563,8 @@ html.fortune-root body {
 .ft-path {
   display: block;
   width: 100%;
-  min-width: calc(var(--ft-beats, 4) * 76px);
-  height: 28px;
+  min-width: 0;
+  height: 22px;
   margin: 4px 0 2px;
   color: var(--pyl-teal);
 }
@@ -580,9 +579,9 @@ html.fortune-root body {
 
 .ft-beats {
   display: grid;
-  grid-template-columns: repeat(var(--ft-beats, 4), minmax(72px, 1fr));
-  gap: 8px;
-  min-width: calc(var(--ft-beats, 4) * 76px);
+  grid-template-columns: repeat(var(--ft-beats, 4), minmax(0, 1fr));
+  gap: 6px 2px;
+  min-width: 0;
   align-items: start;
 }
 
@@ -590,15 +589,16 @@ html.fortune-root body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   min-height: 44px;
+  min-width: 0;
   width: 100%;
-  padding: 0 2px;
+  padding: 0 1px;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
   text-align: center;
   touch-action: none;
@@ -609,15 +609,16 @@ html.fortune-root body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid #fff;
   background: var(--pyl-teal);
   color: #fff;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
+  flex: 0 0 auto;
 }
 
 .ft-beat.tone-today .ft-beat-dot {
@@ -851,6 +852,7 @@ html.fortune-root body {
 
 .ft-looks-right {
   margin-top: 8px;
+  margin-bottom: 0;
 }
 
 .ft-theme-hero .tag {

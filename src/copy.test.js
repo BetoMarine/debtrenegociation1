@@ -98,6 +98,7 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.themes.grow.label).toMatch(/grow/i);
     expect(FORTUNE_STRINGS.en.looksRightCta).toMatch(/Looks right/i);
     expect(FORTUNE_STRINGS.en.looksRightCta).toMatch(/open my plan/i);
+    expect(FORTUNE_STRINGS.en.whereOrChange).toMatch(/change today/i);
     expect(FORTUNE_STRINGS.en.footerCompact).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not regulated advice/i);
