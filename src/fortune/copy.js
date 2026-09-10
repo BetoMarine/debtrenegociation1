@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.6.0";
+export const APP_VERSION = "PoC v0.7.0";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -8,6 +8,7 @@ export const PDF_FOOTER_LEGAL =
 
 const en = {
   brand: "Fortune Teller",
+  pylStudio: "Plan Your Life",
   version: APP_VERSION,
   continue: "Continue",
   back: "Back",
@@ -35,48 +36,45 @@ const en = {
     fortune_export: "Plan exported",
   },
 
-  startKicker: "Plan Your Life · fix → floor → living vs a net",
-  startTitle: "Fix the break. Build a floor. Then plan.",
-  startLead:
-    "Don't assume the pot is healthy. Diffuse debt if it's on fire, put meat on the bone, then see whether living goals and a security net can share what's left.",
-  startTip:
-    "The story: fix the fire → build the foundation → then living goals and mixes. Not a retirement clock. Not “you're set.”",
+  startKicker: "Plan Your Life",
+  startTitle: "Fix. Floor. Then goals.",
+  startLead: "Don't assume the pot is healthy. Fix first, then plan.",
+  startTip: "Fix the fire → build the floor → then living goals. Not a retirement clock. Not “you're set.”",
   startBody:
-    "This is not a retirement countdown and not a product we sell. Phase 1 is the floor. Phase 2 is two dials — Living % and Net %. An owned Monte Carlo model runs on this phone. Illustrative only.",
+    "Not a retirement countdown. Not a product we sell. Phase 1 is the floor. Phase 2 is Living % and Net %. Illustrative only.",
   startNever:
     "Not regulated advice. Not affiliated with HSBC. Execute any real portfolio elsewhere with a licensed intermediary.",
   startCta: "Start with “I need to rebuild”",
   resumeCta: "Open your plan",
 
-  privacyTitle: "The plan stays on this phone.",
+  privacyTitle: "Stays on this phone.",
   privacyBody:
-    "Milestones, bands, and the last forecast are stored in IndexedDB on this device. We do not create an account. There is no live market feed in this PoC. Uninstalling wipes the plan.",
+    "Plan and forecast stay in IndexedDB here. No account. No live market feed. Uninstall wipes it.",
 
   teaseText: "New portfolio valuations — log in to see impact",
   teaseDismiss: "Not now",
   teaseHint: "Stub only. There is no login in this build.",
 
-  themeTitle: "Where are you in life?",
-  themeHint:
-    "Start with rebuild if things broke. A theme only seeds living goals after the floor — you can rewrite every line.",
-  themeHeroTag: "The full story",
+  themeTitle: "Your chapter",
+  themeHint: "Pick one. You can rewrite every goal later.",
+  themeHeroTag: "Start here",
   themes: {
     rebuild: {
       label: "I need to rebuild",
-      blurb: "Things broke (debt, thin floor, or both). Fix the fire, put meat on the bone, then plan living goals.",
+      blurb: "Fix the fire, then a floor, then modest goals.",
     },
-    young_family: { label: "Young family", blurb: "Kids, a first-home stretch, and a buffer still being built." },
+    young_family: { label: "Young family", blurb: "Kids, a first home, a buffer." },
     peak_career: {
       label: "Peak career",
-      blurb: "Earning power is high. What you spend it on — and what you keep — is the question.",
+      blurb: "High earn. What you keep vs spend.",
     },
     empty_nest: {
       label: "Empty nest",
-      blurb: "The house is quieter. Living goals get more personal. The floor matters more.",
+      blurb: "Quieter house. Stronger floor.",
     },
     fresh_start: {
       label: "Fresh start",
-      blurb: "Reset the board. Smaller living goals, a real emergency floor, room to grow.",
+      blurb: "Reset. Smaller goals, a real floor.",
     },
   },
 
@@ -87,31 +85,28 @@ const en = {
   savings: "Savings / cash now",
   debts: "Debts still owed",
 
-  triageTitle: "Any fire in the house?",
-  triageHint:
-    "Heavy debt is not a Fortune Teller problem first. Diffuse it, then build a floor. Soft links only — we never write to a bank for you.",
+  triageTitle: "Any fire?",
+  triageHint: "Heavy debt first — then a floor. Links only. We never write to a bank for you.",
   debtHeat: {
-    none: { label: "No debt heat", blurb: "Nothing chasing you. Build the floor." },
-    paying: { label: "Some debt, paying on time", blurb: "Keep paying. Still put meat on the bone before big goals." },
+    none: { label: "No debt heat", blurb: "Build the floor." },
+    paying: { label: "Paying on time", blurb: "Keep paying. Floor first." },
     heavy: {
       label: "Heavy debt or missing payments",
-      blurb: "The fire comes first. Right Door can help you write to the published hardship door.",
+      blurb: "Fire first. Right Door writes the hardship letter.",
     },
-    fdw: { label: "FDW / helper debt stress", blurb: "Sunday Pack is the briefing for a counsellor. Bring it yourself." },
+    fdw: { label: "FDW / helper debt stress", blurb: "Sunday Pack — you bring the briefing." },
   },
   fireTitle: "Fix the fire first",
-  fireLead:
-    "A living-vs-net board will not save a plan that's still on fire. Open the hardship tool, then come back and stabilize.",
-  fireLeadFdw:
-    "If this is helper debt stress, start with Sunday Pack. Right Door is there if the banked-borrower letter is the better door.",
+  fireLead: "A living-vs-net board will not save a plan on fire. Open the hardship tool, then come back.",
+  fireLeadFdw: "Helper debt? Start with Sunday Pack. Right Door if the bank letter is the better door.",
   fireRightDoor: "Open Right Door",
   fireSunday: "Open Sunday Pack",
   fireContinue: "I've stabilized — continue to the floor",
   fireHint: "Links only. We do not email a bank, Enrich, or a lender.",
 
-  stabilizeKicker: "Phase 1 · meat on the bone",
+  stabilizeKicker: "Phase 1 · the floor",
   stabilizeTitle: "Build the floor first.",
-  stabilizeLead: "An emergency fund before living goals and mixes. Not a retirement clock. Not “you're set.”",
+  stabilizeLead: "Emergency months before living goals. Not a retirement clock. Not “you're set.”",
   stabilizeMonths: "Months of spending to stand on",
   stabilizeMonths3: "3 months",
   stabilizeMonths6: "6 months",
@@ -163,8 +158,8 @@ const en = {
 
 
   boardTitle: "Your board",
-  timelineTitle: "Drag living goals earlier or later",
-  timelineHint: "Slide a chip. The model re-runs. Watch both dials.",
+  timelineTitle: "Goals on the path",
+  timelineHint: "Drag a pin. % is that goal’s success. Watch both dials.",
   goalsTitle: "Living milestones",
   goalsEmpty: "Add a wedding, a 50th, a car, a house, or a custom micro-goal.",
   netTitle: "Security net",

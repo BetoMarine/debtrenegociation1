@@ -1,0 +1,50 @@
+/* Plan Your Life shared tokens — imported by all three nuggets via styles.css */
+:root {
+  --pyl-purple: #7e22ce;
+  --pyl-teal: #06b6d4;
+  --pyl-cta: linear-gradient(90deg, #7e22ce 0%, #06b6d4 100%);
+  --pyl-ink: #141414;
+  --pyl-muted: #5a5a56;
+  --pyl-bg: #fafafa;
+  --pyl-card: #ffffff;
+  --pyl-line: #e8e6e1;
+  --pyl-ok: #0f766e;
+}
+
+.pyl-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pyl-ink);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.pyl-mark {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.pyl-wordmark-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--pyl-cta);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pyl-wordmark.footer {
+  margin-bottom: 10px;
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}

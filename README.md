@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.6.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.7.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -20,6 +20,18 @@ Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses `sunday
 | **Plan Your Life preview** (three equal Live cards) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
 
 Open each URL in **Safari**. Share → Add to Home Screen. You get three icons. The Fortune Teller URL is `/fortune/` (not `/fortune-teller/`). Keep it stable.
+
+### Brand check (iPhone Safari)
+
+On each start / privacy screen:
+
+1. Small **Plan Your Life** wordmark (purple/teal mark + text) in the header and footer.
+2. Light white/off-white canvas — not the dark marketing page.
+3. Primary button is purple→teal (or reads as a brand CTA). Secondary actions can be teal.
+4. Legal lines still present in the compact footer / privacy card (on-device, you send it, not advice, not affiliated, we never contact lenders).
+5. Right Door: letter rules and required-upload gates unchanged.
+6. Sunday Pack: Enrich “not affiliated” footer + door links unchanged.
+7. Fortune Teller: rebuild first; theme cards are tall/white with goal chips; timeline pins show % success; Phase 1/2, coach, kill-test, Living↔Net, RD/Sunday fire links still work.
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
@@ -198,7 +210,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.6.0). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.7.0). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
@@ -242,6 +254,8 @@ src/db.js               IndexedDB (`pack` / `sundayPack` / `fortunePlan`)
 src/events.js           enum event log
 src/i18n.js             繁體中文 first, English toggle (Right Door)
 src/paths.js            public URLs for the three products
+src/pyl-brand.css       shared PYL tokens (`--pyl-purple`, `--pyl-teal`) imported by all three
+src/pyl-brand.js        shared Plan Your Life wordmark
 pyl-preview/            Plan Your Life studio page (source)
 public/pyl/             same page, published at /pyl/ on GitHub Pages
 ```

@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FORTUNE_STRINGS } from "./fortune/copy.js";
 import { STRINGS } from "./i18n.js";
 import { productHref } from "./paths.js";
+import { PYL_NAME } from "./pyl-brand.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
 
 const FORBIDDEN = [
@@ -60,6 +62,21 @@ describe("product copy", () => {
     expect(productHref("right-door")).toBe("./");
     expect(productHref("sunday")).toBe("./sunday/");
     expect(productHref("fortune")).toBe("./fortune/");
+  });
+
+  it("shares Plan Your Life tokens and a wordmark string across all three products", () => {
+    const css = readFileSync(new URL("./pyl-brand.css", import.meta.url), "utf8");
+    expect(css).toMatch(/--pyl-purple:\s*#7e22ce/);
+    expect(css).toMatch(/--pyl-teal:\s*#06b6d4/);
+    expect(PYL_NAME).toBe("Plan Your Life");
+    expect(STRINGS.en.pylStudio).toBe("Plan Your Life");
+    expect(STRINGS.zh.pylStudio).toBe("Plan Your Life");
+    expect(SUNDAY_STRINGS.en.pylStudio).toBe("Plan Your Life");
+    expect(SUNDAY_STRINGS.tl.pylStudio).toBe("Plan Your Life");
+    expect(SUNDAY_STRINGS.id.pylStudio).toBe("Plan Your Life");
+    expect(FORTUNE_STRINGS.en.pylStudio).toBe("Plan Your Life");
+    expect(FORTUNE_STRINGS.en.compliance).toMatch(/not affiliated with HSBC/i);
+    expect(SUNDAY_STRINGS.en.pdf.footerOrg).toMatch(/not affiliated with Enrich/i);
   });
 
   it("Fortune Teller never claims a set-for-life score or Envizage", () => {

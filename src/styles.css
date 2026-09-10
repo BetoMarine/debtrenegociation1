@@ -1,12 +1,14 @@
+@import "./pyl-brand.css";
+
 :root {
-  --bg: #fafaf8;
-  --ink: #141414;
-  --muted: #5a5a56;
-  --line: #e6e4de;
-  --card: #ffffff;
-  --accent: #b42318;
+  --bg: var(--pyl-bg);
+  --ink: var(--pyl-ink);
+  --muted: var(--pyl-muted);
+  --line: var(--pyl-line);
+  --card: var(--pyl-card);
+  --accent: var(--pyl-purple);
   --accent-ink: #ffffff;
-  --ok: #1f4e3d;
+  --ok: var(--pyl-ok);
   --radius: 16px;
   --tap: 52px;
   --font: "PingFang TC", "PingFang HK", "Noto Sans TC", "Hiragino Sans GB",
@@ -63,7 +65,7 @@ body {
   color: inherit;
   font: inherit;
   padding: 0;
-  min-height: 40px;
+  min-height: 28px;
   text-align: left;
 }
 
@@ -125,8 +127,8 @@ p,
 }
 
 .card.privacy {
-  border-color: var(--ink);
-  box-shadow: inset 3px 0 0 var(--ink);
+  border-color: var(--pyl-purple);
+  box-shadow: inset 3px 0 0 var(--pyl-purple);
 }
 
 .card.privacy p {
@@ -149,22 +151,22 @@ p,
 
 .choice.selected,
 .status.selected {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  border-color: var(--pyl-purple);
+  box-shadow: inset 0 0 0 1px var(--pyl-purple);
 }
 
 .btn-primary {
-  background: var(--ink);
+  background: var(--pyl-cta);
   color: #fff;
-  border-color: var(--ink);
+  border-color: transparent;
   text-align: center;
   font-weight: 600;
 }
 
 .btn-accent {
-  background: var(--accent);
+  background: var(--pyl-teal);
   color: var(--accent-ink);
-  border-color: var(--accent);
+  border-color: var(--pyl-teal);
   text-align: center;
   font-weight: 600;
 }
@@ -266,7 +268,7 @@ textarea.short {
   height: 28px;
   min-width: 28px;
   margin-top: 2px;
-  accent-color: var(--ink);
+  accent-color: var(--pyl-purple);
 }
 
 .thumb {
@@ -359,8 +361,8 @@ textarea:focus-visible {
 }
 
 .cta-box {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  border-color: var(--pyl-purple);
+  box-shadow: inset 0 0 0 1px var(--pyl-purple);
 }
 
 a.btn.ext {
@@ -377,22 +379,22 @@ a.btn.ext.btn-primary {
 
 html.fortune-root,
 html.fortune-root body {
-  background: #f6f0e4;
-  color: #1b1633;
+  background: var(--pyl-bg);
+  color: var(--pyl-ink);
 }
 
 .fortune {
-  --bg: #f6f0e4;
-  --ink: #1b1633;
-  --muted: #5c5670;
-  --line: #e4dcc8;
-  --card: #fffbf4;
-  --accent: #c45c26;
-  --accent-ink: #fffbf4;
-  --ok: #1b6b6b;
-  --ft-living: #c45c26;
-  --ft-net: #1b6b6b;
-  --ft-wreck: #8f2a22;
+  --bg: var(--pyl-bg);
+  --ink: var(--pyl-ink);
+  --muted: var(--pyl-muted);
+  --line: var(--pyl-line);
+  --card: var(--pyl-card);
+  --accent: var(--pyl-purple);
+  --accent-ink: #ffffff;
+  --ok: var(--pyl-teal);
+  --ft-living: var(--pyl-purple);
+  --ft-net: var(--pyl-teal);
+  --ft-wreck: #b42318;
 }
 
 .fortune .choice {
@@ -403,7 +405,7 @@ html.fortune-root body {
 }
 
 .fortune .choice.selected {
-  border-color: var(--ink);
+  border-color: var(--pyl-purple);
   background: #fff;
 }
 
@@ -442,7 +444,7 @@ html.fortune-root body {
   height: 108px;
   margin: 0 auto 8px;
   border-radius: 50%;
-  background: conic-gradient(var(--tone, var(--ft-living)) calc(var(--pct) * 1%), #eadfcb 0);
+  background: conic-gradient(var(--tone, var(--ft-living)) calc(var(--pct) * 1%), #eee 0);
   -webkit-mask: radial-gradient(farthest-side, transparent 62%, #000 63%);
   mask: radial-gradient(farthest-side, transparent 62%, #000 63%);
 }
@@ -502,64 +504,114 @@ html.fortune-root body {
 
 .ft-timeline {
   position: relative;
-  min-height: 148px;
-  padding: 8px 8px 8px;
+  min-height: 196px;
+  padding: 8px 4px 4px;
   touch-action: none;
   user-select: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.ft-path {
+  display: block;
+  width: 100%;
+  height: 88px;
+  margin-top: 56px;
 }
 
 .ft-rail {
-  height: 6px;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #1b1633, #c45c26 50%, #1b6b6b);
-  margin-top: 78px;
+  display: none;
 }
 
 .ft-ticks {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 4px;
+  padding: 0 4px;
   font-size: 12px;
   color: var(--muted);
 }
 
 .ft-chips {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  left: 10px;
+  right: 10px;
   top: 0;
-  height: 76px;
+  height: 150px;
 }
 
-.ft-chip {
+.ft-chip,
+.ft-pin {
   position: absolute;
   transform: translateX(-50%);
   min-height: 44px;
   width: max-content;
-  max-width: 132px;
+  max-width: 108px;
   z-index: 2;
-  padding: 6px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--ink);
-  background: #fff;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.2;
-  text-align: left;
-  box-shadow: 0 4px 12px rgba(27, 22, 51, 0.08);
+  text-align: center;
   touch-action: none;
 }
 
-.ft-chip:active {
+.ft-pin-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 4px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--pyl-teal);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
+}
+
+.ft-pin.tone-wreck .ft-pin-dot,
+.ft-pin.tone-low .ft-pin-dot {
+  background: var(--ft-wreck);
+  box-shadow: 0 2px 8px rgba(180, 35, 24, 0.22);
+}
+
+.ft-pin.tone-mid .ft-pin-dot {
+  background: #b8860b;
+  box-shadow: 0 2px 8px rgba(184, 134, 11, 0.22);
+}
+
+.ft-pin.tone-ok .ft-pin-dot {
+  background: var(--pyl-teal);
+}
+
+.ft-chip:active,
+.ft-pin:active {
   z-index: 5;
 }
 
-.ft-chip em {
+.ft-chip em,
+.ft-pin em {
   display: block;
   font-style: normal;
   color: var(--muted);
+  font-size: 10px;
+}
+
+.ft-pin-name {
+  display: block;
+  font-weight: 600;
   font-size: 11px;
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ft-tease,
@@ -571,9 +623,9 @@ html.fortune-root body {
 }
 
 .ft-tease {
-  background: #f3eefc;
+  background: color-mix(in srgb, var(--pyl-purple) 8%, #fff);
   border-style: solid;
-  border-color: #c8b8e6;
+  border-color: color-mix(in srgb, var(--pyl-purple) 28%, #fff);
 }
 
 .ft-template {
@@ -591,7 +643,7 @@ html.fortune-root body {
   width: 22px;
   height: 22px;
   min-height: 22px;
-  accent-color: var(--ink);
+  accent-color: var(--pyl-purple);
 }
 
 .ft-compare {
@@ -625,10 +677,73 @@ html.fortune-root body {
 }
 
 .ft-theme-hero {
-  border-color: var(--ink);
+  border-color: var(--pyl-purple);
   border-width: 2px;
   background: #fff;
-  box-shadow: 0 6px 16px rgba(27, 22, 51, 0.08);
+  box-shadow: 0 6px 16px rgba(126, 34, 206, 0.08);
+}
+
+.ft-life-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ft-life-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 22px 16px 18px;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+
+.ft-life-card.selected,
+.ft-life-card.ft-theme-hero {
+  border-color: var(--pyl-purple);
+  box-shadow: 0 0 0 1px var(--pyl-purple), 0 8px 24px rgba(126, 34, 206, 0.08);
+}
+
+.ft-life-icon {
+  width: 72px;
+  height: 72px;
+  color: var(--ink);
+}
+
+.ft-life-icon svg {
+  width: 72px;
+  height: 72px;
+  display: block;
+}
+
+.ft-life-card strong {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.ft-life-goals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.ft-life-goal {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: #fff;
 }
 
 .ft-theme-hero .tag {
@@ -664,13 +779,13 @@ html.fortune-root body {
   font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-  background: #f3eee4;
+  background: #f4f4f5;
 }
 
 .ft-bone-tick.on {
-  border-color: var(--ok);
-  background: #e7f3f1;
-  color: var(--ok);
+  border-color: var(--pyl-teal);
+  background: color-mix(in srgb, var(--pyl-teal) 12%, #fff);
+  color: var(--pyl-ok);
 }
 
 .ft-month-picks {

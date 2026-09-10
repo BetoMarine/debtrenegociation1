@@ -18,6 +18,7 @@ import { DOORS, recommendDoor } from "./door.js";
 import { DOCUMENT_DEFS, missingAttachments, normalizeDocuments } from "./docs.js";
 import { buildLetter, letterContext } from "./letter.js";
 import { productHref, SUNDAY_HASH_PREFIX } from "./paths.js";
+import { pylWordmarkHtml } from "./pyl-brand.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
 
 const STATUSES = ["draft", "sent", "waiting", "accepted", "rejected", "gave_up"];
@@ -119,12 +120,19 @@ function shell(body) {
   const node = el(`
     <div class="shell">
       <header class="top">
-        <button class="brand" type="button" data-go="home">${escapeHtml(s("appName"))}</button>
+        <div class="brand-block">
+          ${pylWordmarkHtml()}
+          <button class="brand" type="button" data-go="home">${escapeHtml(s("appName"))}</button>
+        </div>
         <button class="lang" type="button" data-act="lang">${escapeHtml(s("langToggle"))}</button>
       </header>
       <main></main>
       <footer class="footer">
+        ${pylWordmarkHtml({ footer: true })}
         <p class="tiny">${escapeHtml(s("localOnly"))}</p>
+        <p class="tiny">${escapeHtml(s("promiseNever"))}</p>
+        <p class="tiny">${escapeHtml(s("creditHonesty"))}</p>
+        <p class="tiny">${escapeHtml(s("notFor"))}</p>
         <p class="tiny">${escapeHtml(s("otherTools"))}<br/>
           <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(s("otherToolsSunday"))}</a>
           ·
@@ -211,9 +219,6 @@ function renderHome() {
     el(
       `<div class="card privacy"><strong>${escapeHtml(s("privacyTitle"))}</strong><p>${escapeHtml(s("privacyBody"))}</p></div>`,
     ),
-    el(`<p>${escapeHtml(s("promiseBody"))}</p>`),
-    el(`<p>${escapeHtml(s("promiseNever"))}</p>`),
-    el(`<p class="card warn">${escapeHtml(s("creditHonesty"))}</p>`),
   );
   if (showReminder) {
     body.append(
@@ -237,7 +242,6 @@ function renderHome() {
   }
   actions.append(el(`<button class="btn btn-accent" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
   body.append(actions);
-  body.append(el(`<p class="tiny">${escapeHtml(s("notFor"))}</p>`));
   if (pack) {
     body.append(el(`<button class="btn btn-ghost" data-act="wipe" type="button">${escapeHtml(s("wipe"))}</button>`));
   }

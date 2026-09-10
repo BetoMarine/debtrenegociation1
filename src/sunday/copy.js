@@ -25,7 +25,8 @@ const en = {
   skip: "Skip remaining questions",
   remove: "Remove",
   optional: "Optional",
-  version: "PoC v0.6.0",
+  version: "PoC v0.7.0",
+  pylStudio: "Plan Your Life",
   localOnly:
     "This pack stays on this phone. No account. Uninstall wipes it. We never email Enrich, NGOs, banks, or lenders for you.",
   otherTools: "Other tools from Plan Your Life",
@@ -44,20 +45,18 @@ const en = {
     sunday_share_tapped: "Sunday Pack share tapped",
   },
 
-  privacyTitle: "This stays on this phone until you share it.",
-  privacyLead:
-    "Sunday Pack is a briefing you prepare for a counsellor. You own every number. You bring the page yourself.",
+  privacyTitle: "On this phone until you share it.",
+  privacyLead: "A 1-page briefing you prepare. You bring it.",
   privacyBody:
-    "Nothing is uploaded. We do not create an account. We do not email Enrich, HELP, the Labour Department, a bank, or a lender. Deep links only open when you tap them.",
+    "Nothing is uploaded. No account. We do not email Enrich, HELP, Labour, a bank, or a lender. Links open only when you tap.",
   privacyCheck: "I understand: this app does not talk to Enrich, banks, or lenders for me.",
   privacyNeed: "Tick the box to continue. We will not contact anyone on your behalf.",
 
-  languageTitle: "Choose a language",
-  languageHint: "You can change this later. English is used if a line is missing.",
+  languageTitle: "Language",
+  languageHint: "You can change this later.",
 
-  triageTitle: "Red flags — check this first",
-  triageHint:
-    "Tick anything that is true today. If you are in danger, call 999 yourself. We never message anyone for you.",
+  triageTitle: "Check this first",
+  triageHint: "Tick anything true today. In danger? Call 999 yourself. We never message anyone for you.",
   flags: {
     passport: "My passport or contract is being held against my will",
     shark: "A loan shark or collector is threatening me",
@@ -284,7 +283,8 @@ const tl = {
   skip: "Laktawan ang natitirang tanong",
   remove: "Tanggalin",
   optional: "Opsyonal",
-  version: "PoC v0.6.0",
+  version: "PoC v0.7.0",
+  pylStudio: "Plan Your Life",
   localOnly:
     "Sa teleponong ito lang ang pack. Walang account. Mawawala kapag in-uninstall. Hindi kami mag-e-email sa Enrich, NGO, bangko, o lender para sa iyo.",
   otherTools: "Iba pang tool mula sa Plan Your Life",
@@ -303,20 +303,18 @@ const tl = {
     sunday_share_tapped: "Pinindot ang Sunday Pack share",
   },
 
-  privacyTitle: "Sa teleponong ito lang ito hanggang ikaw mismo ang magbahagi.",
-  privacyLead:
-    "Ang Sunday Pack ay briefing para sa counsellor. Iyo ang bawat numero. Ikaw ang magdadala ng pahina.",
+  privacyTitle: "Sa telepono lang hanggang ikaw ang magbahagi.",
+  privacyLead: "1-page briefing. Ikaw ang magdadala.",
   privacyBody:
-    "Walang ina-upload. Walang account. Hindi kami mag-e-email sa Enrich, HELP, Labour Department, bangko, o lender. Magbubukas lang ang link kapag pinindot mo.",
+    "Walang ina-upload. Walang account. Hindi kami mag-e-email sa Enrich, HELP, Labour, bangko, o lender. Link lang kapag pinindot mo.",
   privacyCheck: "Naiintindihan ko: hindi kausap ng app ang Enrich, bangko, o lender para sa akin.",
   privacyNeed: "I-tick ang kahon para magpatuloy. Hindi kami kukuha ng tawag o email para sa iyo.",
 
-  languageTitle: "Pumili ng wika",
-  languageHint: "Pwede mo itong palitan mamaya. English ang gagamitin kung kulang ang linya.",
+  languageTitle: "Wika",
+  languageHint: "Pwede mong palitan mamaya.",
 
-  triageTitle: "Red flags — suriin muna ito",
-  triageHint:
-    "I-tick kung totoo ngayon. Kung delikado, ikaw mismo tumawag sa 999. Hindi kami magmemensahe para sa iyo.",
+  triageTitle: "Suriin muna ito",
+  triageHint: "I-tick kung totoo ngayon. Delikado? Ikaw tumawag sa 999. Hindi kami magmemensahe para sa iyo.",
   flags: {
     passport: "Kinukuha / hinahawakan ang passport o kontrata laban sa kalooban ko",
     shark: "May loan shark o collector na nagbabanta sa akin",
@@ -505,7 +503,8 @@ const id = {
   skip: "Lewati sisa pertanyaan",
   remove: "Hapus",
   optional: "Opsional",
-  version: "PoC v0.6.0",
+  version: "PoC v0.7.0",
+  pylStudio: "Plan Your Life",
   localOnly:
     "Paket ini hanya di HP ini. Tidak ada akun. Hilang jika di-uninstall. Kami tidak pernah mengirim email ke Enrich, LSM, bank, atau pemberi pinjaman untuk Anda.",
   otherTools: "Alat lain dari Plan Your Life",
@@ -524,20 +523,18 @@ const id = {
     sunday_share_tapped: "Sunday Pack share diketuk",
   },
 
-  privacyTitle: "Ini tetap di HP ini sampai Anda sendiri yang membagikan.",
-  privacyLead:
-    "Sunday Pack adalah briefing untuk konselor. Setiap angka milik Anda. Anda yang membawa halamannya.",
+  privacyTitle: "Di HP ini sampai Anda yang membagikan.",
+  privacyLead: "Briefing 1 halaman. Anda yang membawa.",
   privacyBody:
-    "Tidak ada yang diunggah. Tidak ada akun. Kami tidak mengirim email ke Enrich, HELP, Labour Department, bank, atau pemberi pinjaman. Tautan hanya terbuka jika Anda mengetuknya.",
+    "Tidak diunggah. Tidak ada akun. Kami tidak mengirim email ke Enrich, HELP, Labour, bank, atau pemberi pinjaman. Tautan hanya jika Anda ketuk.",
   privacyCheck: "Saya paham: aplikasi ini tidak menghubungi Enrich, bank, atau pemberi pinjaman untuk saya.",
   privacyNeed: "Centang kotak untuk lanjut. Kami tidak akan menghubungi siapa pun atas nama Anda.",
 
-  languageTitle: "Pilih bahasa",
-  languageHint: "Bisa diganti nanti. Inggris dipakai jika ada baris yang belum ada.",
+  languageTitle: "Bahasa",
+  languageHint: "Bisa diganti nanti.",
 
-  triageTitle: "Red flags — periksa ini dulu",
-  triageHint:
-    "Centang yang benar hari ini. Jika bahaya, Anda sendiri yang menelepon 999. Kami tidak pernah mengirim pesan untuk Anda.",
+  triageTitle: "Periksa ini dulu",
+  triageHint: "Centang yang benar hari ini. Bahaya? Anda sendiri telepon 999. Kami tidak mengirim pesan untuk Anda.",
   flags: {
     passport: "Paspor atau kontrak saya ditahan tanpa izin saya",
     shark: "Rentenir atau penagih mengancam saya",

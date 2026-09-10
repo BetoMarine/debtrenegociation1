@@ -39,6 +39,7 @@ import {
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
+import { pylWordmarkHtml } from "../pyl-brand.js";
 
 const FORTUNE_EVENT_TYPES = ["fortune_started", "fortune_forecast_run", "fortune_pdf", "fortune_export"];
 
@@ -160,10 +161,14 @@ function shell(body) {
   const node = el(`
     <div class="shell fortune">
       <header class="top">
-        <button class="brand" type="button" data-go="start">${escapeHtml(ft("brand"))}</button>
+        <div class="brand-block">
+          ${pylWordmarkHtml()}
+          <button class="brand" type="button" data-go="start">${escapeHtml(ft("brand"))}</button>
+        </div>
       </header>
       <main></main>
       <footer class="footer">
+        ${pylWordmarkHtml({ footer: true })}
         <p class="tiny">${escapeHtml(ft("localOnly"))}</p>
         <p class="tiny">${escapeHtml(ft("otherToolsLabel"))}<br/>
           <a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
@@ -534,6 +539,16 @@ function patchDials() {
     verdict.textContent =
       forecast.hardFail || forecast.verdict === "wrecked" ? ft("coachTitle") : ft(`verdicts.${forecast.verdict}`);
   }
+  root.querySelectorAll("[data-chip]").forEach((chip) => {
+    const id = chip.dataset.chip;
+    const i = plan.milestones.findIndex((m) => m.id === id);
+    const pctEl = chip.querySelector(".ft-pin-pct");
+    if (pctEl && i >= 0 && forecast.milestonePct?.[i] != null) {
+      const shown = Math.round(forecast.milestonePct[i]);
+      pctEl.textContent = `${shown}%`;
+      chip.className = `ft-pin tone-${dialTone(forecast.milestonePct[i], forecast.hardFail)}`;
+    }
+  });
 }
 
 async function maybeDragCrumb() {
@@ -584,7 +599,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.6.0",
+    version: "0.7.0",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

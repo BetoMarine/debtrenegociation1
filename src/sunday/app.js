@@ -12,6 +12,7 @@ import {
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
+import { pylWordmarkHtml } from "../pyl-brand.js";
 import { emptyDraftLoan, migrateSundayPack, newSundayPack, normalizeLoan } from "./model.js";
 import { buildSundayPdf } from "./pdf.js";
 
@@ -222,12 +223,17 @@ function shell(body) {
   const node = el(`
     <div class="shell">
       <header class="top">
-        <button class="brand" type="button" data-go="sunday-privacy">${escapeHtml(s("brand"))}</button>
+        <div class="brand-block">
+          ${pylWordmarkHtml()}
+          <button class="brand" type="button" data-go="sunday-privacy">${escapeHtml(s("brand"))}</button>
+        </div>
         <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
       </header>
       <main></main>
       <footer class="footer">
+        ${pylWordmarkHtml({ footer: true })}
         <p class="tiny">${escapeHtml(s("localOnly"))}</p>
+        <p class="tiny">${escapeHtml(s("weDoNotEmailEnrich"))}</p>
         <p class="tiny">${escapeHtml(s("otherTools"))}<br/>
           <a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(s("otherToolsRight"))}</a>
           ·

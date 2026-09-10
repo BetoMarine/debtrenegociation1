@@ -119,12 +119,10 @@ function renderStart(host) {
   body.append(el(`<p class="kicker">${escapeHtml(t("startKicker"))}</p>`));
   body.append(el(`<h1>${escapeHtml(t("startTitle"))}</h1>`));
   body.append(el(`<p class="lede">${escapeHtml(t("startLead"))}</p>`));
-  body.append(el(`<div class="card ft-tip"><p class="tag">${escapeHtml(t("themeHeroTag"))}</p><p>${escapeHtml(t("startTip"))}</p></div>`));
+  body.append(el(`<p class="hint">${escapeHtml(t("startTip"))}</p>`));
   body.append(
-    el(`<div class="card privacy"><p>${escapeHtml(t("privacyTitle"))}</p><p>${escapeHtml(t("privacyBody"))}</p></div>`),
+    el(`<div class="card privacy"><strong>${escapeHtml(t("privacyTitle"))}</strong><p>${escapeHtml(t("privacyBody"))}</p></div>`),
   );
-  body.append(el(`<p>${escapeHtml(t("startBody"))}</p>`));
-  body.append(el(`<p class="hint">${escapeHtml(t("startNever"))}</p>`));
   if (!isStandalone) {
     body.append(
       el(
@@ -139,22 +137,37 @@ function renderStart(host) {
   host.root.querySelector('[data-act="accept-start"]')?.addEventListener("click", () => host.acceptStart(next));
 }
 
+const THEME_ICONS = {
+  rebuild: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="28" r="12"/><path d="M28 40h16v18H28z"/><path d="M24 52h24"/><path d="M36 16v-4"/></svg>`,
+  young_family: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="22" r="7"/><circle cx="48" cy="22" r="7"/><circle cx="36" cy="38" r="5"/><path d="M12 58c2-10 10-16 12-16s10 4 12 10"/><path d="M36 52c2-6 8-10 12-10s10 6 12 16"/></svg>`,
+  peak_career: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 52V36h12v16"/><path d="M32 52V24h12v28"/><path d="M48 52V16h12v36"/><path d="M12 56h48"/></svg>`,
+  empty_nest: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 34L36 16l24 18"/><path d="M20 32v24h32V32"/><path d="M30 56V42h12v14"/></svg>`,
+  fresh_start: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="28" r="10"/><path d="M36 12v4M36 40v4M20 28h4M48 28h4M24 16l3 3M45 37l3 3M24 40l3-3M45 19l3-3"/><path d="M14 56h44"/></svg>`,
+};
+
 function renderTheme(host) {
   const { el, escapeHtml, plan } = host;
   const body = el(`<div class="stack"><h1>${escapeHtml(t("themeTitle"))}</h1><p class="hint">${escapeHtml(t("themeHint"))}</p></div>`);
+  const grid = el(`<div class="ft-life-grid"></div>`);
   THEME_IDS.forEach((id) => {
     const theme = THEMES[id];
     const hero = !!theme.hero || id === "rebuild";
+    const goals = (theme.milestones || [])
+      .map((m) => `<span class="ft-life-goal">${escapeHtml(m.name)}</span>`)
+      .join("");
     const btn = el(
-      `<button class="${choiceClass(plan.theme === id)}${hero ? " ft-theme-hero" : ""}" type="button" data-theme="${id}">
+      `<button class="ft-life-card${plan.theme === id ? " selected" : ""}${hero ? " ft-theme-hero" : ""}" type="button" data-theme="${id}">
         ${hero ? `<span class="tag">${escapeHtml(t("themeHeroTag"))}</span>` : ""}
+        <span class="ft-life-icon" aria-hidden="true">${THEME_ICONS[id] || ""}</span>
         <strong>${escapeHtml(t(`themes.${id}.label`))}</strong>
         <span class="hint">${escapeHtml(t(`themes.${id}.blurb`))}</span>
+        <span class="ft-life-goals">${goals}</span>
       </button>`,
     );
     btn.addEventListener("click", () => host.pickTheme(id));
-    body.append(btn);
+    grid.append(btn);
   });
+  body.append(grid);
   body.append(
     el(
       `<div class="nav"><button class="btn btn-ghost" data-go="start" type="button">${escapeHtml(t("back"))}</button></div>`,
@@ -420,7 +433,7 @@ function renderBoard(host) {
   const horizon = forecast?.horizonMonths || 48;
   body.append(el(`<h2>${escapeHtml(t("timelineTitle"))}</h2>`));
   body.append(el(`<p class="hint">${escapeHtml(t("timelineHint"))}</p>`));
-  body.append(el(renderTimeline(plan, horizon, escapeHtml)));
+  body.append(el(renderTimeline(plan, forecast, horizon, escapeHtml)));
 
   body.append(el(`<h2>${escapeHtml(t("goalsTitle"))}</h2>`));
   if (!plan.milestones.length) {
@@ -523,21 +536,33 @@ function renderBoard(host) {
   bindBoard(host);
 }
 
-function renderTimeline(plan, horizon, escapeHtml) {
+function renderTimeline(plan, forecast, horizon, escapeHtml) {
   const months = Math.max(12, horizon);
   const chips = plan.milestones
     .map((m, i) => {
-      const pct = Math.min(96, Math.max(2, ((m.months - 1) / (months - 1)) * 100));
-      const row = i % 2 === 0 ? 0 : 34;
-      return `<button type="button" class="ft-chip" data-chip="${escapeHtml(m.id)}" style="left:${pct}%;top:${row}px" aria-label="${escapeHtml(m.name)}">
-        <span>${escapeHtml(m.name)}</span>
+      const left = Math.min(96, Math.max(2, ((m.months - 1) / (months - 1)) * 100));
+      const row = i % 2 === 0 ? 8 : 78;
+      const raw = forecast?.milestonePct?.[i];
+      const shown = raw != null ? `${Math.round(raw)}%` : "—";
+      const tone = dialTone(raw ?? 0, !!forecast?.hardFail);
+      return `<button type="button" class="ft-pin tone-${tone}" data-chip="${escapeHtml(m.id)}" style="left:${left}%;top:${row}px" aria-label="${escapeHtml(m.name)} ${shown}">
+        <span class="ft-pin-dot ft-pin-pct">${shown}</span>
+        <span class="ft-pin-name">${escapeHtml(m.name)}</span>
         <em>${escapeHtml(monthYearLabel(m.months))}</em>
       </button>`;
     })
     .join("");
   return `
     <div class="ft-timeline" data-timeline data-horizon="${months}">
-      <div class="ft-rail"></div>
+      <svg class="ft-path" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 30 C 18 30 28 18 48 16 S 78 22 100 10" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="ft-path-stroke" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7e22ce"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
+          </linearGradient>
+        </defs>
+      </svg>
       <div class="ft-ticks">
         <span>Now</span>
         <span>${escapeHtml(monthYearLabel(Math.round(months / 2)))}</span>

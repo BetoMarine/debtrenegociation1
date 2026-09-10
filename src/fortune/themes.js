@@ -6,7 +6,7 @@ export const THEMES = {
   rebuild: {
     id: "rebuild",
     label: "I need to rebuild",
-    blurb: "Things broke (debt, thin floor, or both). Fix the fire, put meat on the bone, then plan living goals.",
+    blurb: "Fix the fire, then a floor, then modest goals.",
     hero: true,
     moneyBands: {
       incomeBand: "30_50",
@@ -24,7 +24,7 @@ export const THEMES = {
   young_family: {
     id: "young_family",
     label: "Young family",
-    blurb: "Kids, a first-home stretch, and a buffer that is still being built.",
+    blurb: "Kids, a first home, a buffer.",
     moneyBands: {
       incomeBand: "50_80",
       spendBand: "20_35",
@@ -41,7 +41,7 @@ export const THEMES = {
   peak_career: {
     id: "peak_career",
     label: "Peak career",
-    blurb: "Earning power is high. The question is what you spend it on — and what you keep.",
+    blurb: "High earn. What you keep vs spend.",
     moneyBands: {
       incomeBand: "80_120",
       spendBand: "35_50",
@@ -58,7 +58,7 @@ export const THEMES = {
   empty_nest: {
     id: "empty_nest",
     label: "Empty nest",
-    blurb: "The house is quieter. Living goals get more personal. The floor matters more.",
+    blurb: "Quieter house. Stronger floor.",
     moneyBands: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -75,7 +75,7 @@ export const THEMES = {
   fresh_start: {
     id: "fresh_start",
     label: "Fresh start",
-    blurb: "Reset the board. Smaller living goals, a real emergency floor, room to grow.",
+    blurb: "Reset. Smaller goals, a real floor.",
     moneyBands: {
       incomeBand: "15_30",
       spendBand: "10_20",

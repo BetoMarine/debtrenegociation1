@@ -81,7 +81,7 @@ function renderPrivacy(host) {
   const { el, escapeHtml: ex, sunday } = host;
   const body = el(`<div class="stack"></div>`);
   body.append(
-    el(`<p class="kicker">Sunday Pack</p>`),
+    el(`<p class="kicker">${ex(t(host, "pylStudio"))}</p>`),
     el(`<h1>${ex(t(host, "privacyTitle"))}</h1>`),
     el(`<p class="lede">${ex(t(host, "privacyLead"))}</p>`),
     el(`<div class="card privacy"><p>${ex(t(host, "privacyBody"))}</p></div>`),
