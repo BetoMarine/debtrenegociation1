@@ -421,16 +421,18 @@ function renderTimeline(plan, forecast, horizon, escapeHtml) {
   const items = journeyItems(plan, forecast);
   const chips = items
     .map((item, i) => {
-      const left = Math.min(96, Math.max(2, ((item.months - 1) / (months - 1)) * 100));
-      const row = i % 2 === 0 ? 6 : 92;
+      const left = Math.min(94, Math.max(4, ((item.months - 1) / (months - 1)) * 100));
+      const rows = [8, 112, 60];
+      const row = rows[i % 3];
       const shown = item.pct == null ? "—" : `${item.pct}%`;
       const tone = item.pct == null ? "mid" : dialTone(item.pct, !!forecast?.hardFail);
       const stage = t(`stage${item.stage[0].toUpperCase()}${item.stage.slice(1)}`);
+      const shortName = item.name.length > 16 ? `${item.name.slice(0, 15)}…` : item.name;
       const drag = item.draggable ? `data-chip="${escapeHtml(item.id)}"` : `data-static="${escapeHtml(item.id)}"`;
       return `<button type="button" class="ft-pin tone-${tone} stage-${item.stage}" ${drag} style="left:${left}%;top:${row}px" aria-label="${escapeHtml(item.name)} ${shown}">
         <span class="ft-pin-dot ft-pin-pct">${shown}</span>
         <span class="ft-pin-stage">${escapeHtml(stage)}</span>
-        <span class="ft-pin-name">${escapeHtml(item.name)}</span>
+        <span class="ft-pin-name">${escapeHtml(shortName)}</span>
         <em>${escapeHtml(monthYearLabel(item.months))}</em>
       </button>`;
     })

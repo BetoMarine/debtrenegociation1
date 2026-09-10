@@ -41,8 +41,7 @@ export function journeyItems(plan, forecast, from = new Date()) {
     });
   }
 
-  const reachMonths = snap.reach?.kind === "date" ? snap.reach.months : null;
-  const floorMonths = Math.max(1, Math.min(48, reachMonths || snap.targetMonths || 6));
+  const floorMonths = Math.max(2, Math.min(24, snap.targetMonths || 6));
   const fundedPct =
     snap.need > 0 ? Math.max(0, Math.min(100, Math.round((snap.money.savings / snap.need) * 100))) : 100;
   const stabilizePct = forecast?.netPct != null ? Math.round(forecast.netPct) : fundedPct;

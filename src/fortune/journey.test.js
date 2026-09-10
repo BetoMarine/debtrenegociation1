@@ -23,6 +23,8 @@ describe("Step 3 journey path", () => {
     expect(living.every((i) => i.pct != null)).toBe(true);
     const floor = items.find((i) => i.stage === "stabilize");
     expect(floor.pct).toBe(22);
+    expect(floor.months).toBe(6);
+    expect(floor.months).toBeLessThan(living[0].months);
     expect(emphasizeStage(plan)).toBe("fix");
   });
 

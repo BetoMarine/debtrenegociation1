@@ -564,14 +564,14 @@ html.fortune-root body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   margin: 0 auto 4px;
   border-radius: 50%;
   border: 2px solid #fff;
   background: var(--pyl-teal);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
 }
@@ -693,8 +693,8 @@ html.fortune-root body {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 20px;
-  padding: 22px 16px 18px;
-  min-height: 240px;
+  padding: 18px 16px 16px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -835,15 +835,15 @@ html.fortune-root body {
 }
 
 .ft-timeline {
-  min-height: 220px;
+  min-height: 248px;
 }
 
 .ft-path {
-  margin-top: 72px;
+  margin-top: 88px;
 }
 
 .ft-chips {
-  height: 170px;
+  height: 200px;
 }
 
 .ft-fire {
