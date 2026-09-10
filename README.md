@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.8.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.8.1). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -207,14 +207,14 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.8.0). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.8.1). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
 1. Open `/fortune/`. Privacy: three bullets + **Continue**.
 2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
 3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../`) and Sunday Pack (`../sunday/`) links. Set a 3- or 6-month floor + four me-now bands. Tap **See your new life**.
-4. **Step 3:** today→future timeline with circular **%** pins. Ladder **Fix → Stabilize → Plan → Invest**. Modest goals (phone / course / visit), not a HK$1.5M house. Living↔Net + one-line status. Coach chips if it does not hold.
+4. **Step 3:** today→future path of spaced beats (not overlapping pins). Each beat shows its stage (Fix / Stabilize / Plan / Invest) plus a one-line **You're in …**. Rebuild includes an **Invest** beat (First growth pot). Living↔Net; percentages wait on “…” / last value — never a fake 0% flash. Coach chips if it does not hold.
 5. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 
 Other checks: drag a living pin; both dials move. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.

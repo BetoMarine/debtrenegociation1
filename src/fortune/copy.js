@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.8.0";
+export const APP_VERSION = "PoC v0.8.1";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -22,6 +22,7 @@ const en = {
   optional: "Optional",
   localOnly:
     "This plan stays on this phone. No account required. Uninstall wipes it. We do not upload your numbers.",
+  footerCompact: "On this phone · not advice · not a sale. Not affiliated with HSBC.",
   otherToolsRight: "Right Door",
   otherToolsSunday: "Sunday Pack",
   otherToolsLabel: "Other tools from Plan Your Life",
@@ -135,7 +136,11 @@ const en = {
   boardKicker: "Step 3 · Your new life",
   boardTitle: "Your new life",
   timelineTitle: "Today → future",
-  timelineHint: "Each pin is a chance it works. Drag a living goal.",
+  timelineHint: "Each beat is a chance it works. Drag a living goal along the path.",
+  youAreIn: "You're in {stage}.",
+  pathPending: "Reading the path…",
+  today: "Today",
+  pathNow: "now",
   stageFix: "Fix",
   stageStabilize: "Stabilize",
   stagePlan: "Plan",

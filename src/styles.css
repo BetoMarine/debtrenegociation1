@@ -244,6 +244,16 @@ textarea.short {
   padding-top: 28px;
 }
 
+.fortune .footer.ft-foot-compact {
+  padding-top: 12px;
+}
+
+.fortune .footer.ft-foot-compact .tiny {
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0 0 4px;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
@@ -475,6 +485,27 @@ html.fortune-root body {
   --tone: var(--ok);
 }
 
+.ft-dial.tone-wait,
+.ft-dial.is-pending {
+  --tone: #d4d4d8;
+}
+
+.ft-dial.is-pending .ft-dial-ring,
+.ft-dial.tone-wait .ft-dial-ring {
+  background: #ececec;
+  animation: ft-pulse 1.15s ease-in-out infinite;
+}
+
+.ft-verdict.wait {
+  color: var(--muted);
+}
+
+@keyframes ft-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .ft-dial-read strong {
   display: block;
   font-size: 28px;
@@ -504,20 +535,39 @@ html.fortune-root body {
 
 .ft-timeline {
   position: relative;
-  min-height: 196px;
-  padding: 8px 4px 4px;
+  padding: 8px 4px 12px;
   touch-action: none;
   user-select: none;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ft-path-kicker {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ft-path-status {
+  margin: 2px 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .ft-path {
   display: block;
   width: 100%;
-  height: 88px;
-  margin-top: 56px;
+  min-width: calc(var(--ft-beats, 4) * 76px);
+  height: 28px;
+  margin: 4px 0 2px;
+  color: var(--pyl-teal);
 }
 
 .ft-rail {
@@ -525,31 +575,25 @@ html.fortune-root body {
 }
 
 .ft-ticks {
+  display: none;
+}
+
+.ft-beats {
+  display: grid;
+  grid-template-columns: repeat(var(--ft-beats, 4), minmax(72px, 1fr));
+  gap: 8px;
+  min-width: calc(var(--ft-beats, 4) * 76px);
+  align-items: start;
+}
+
+.ft-beat {
   display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  padding: 0 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.ft-chips {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  top: 0;
-  height: 150px;
-}
-
-.ft-chip,
-.ft-pin {
-  position: absolute;
-  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   min-height: 44px;
-  width: max-content;
-  max-width: 108px;
-  z-index: 2;
-  padding: 0;
+  width: 100%;
+  padding: 0 2px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -560,13 +604,13 @@ html.fortune-root body {
   touch-action: none;
 }
 
+.ft-beat-dot,
 .ft-pin-dot {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 42px;
   height: 42px;
-  margin: 0 auto 4px;
   border-radius: 50%;
   border: 2px solid #fff;
   background: var(--pyl-teal);
@@ -576,26 +620,50 @@ html.fortune-root body {
   box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
 }
 
+.ft-beat.tone-today .ft-beat-dot {
+  background: var(--pyl-purple);
+  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.28);
+  font-size: 11px;
+}
+
+.ft-beat.tone-fix .ft-beat-dot {
+  background: var(--ft-wreck);
+  box-shadow: 0 2px 8px rgba(180, 35, 24, 0.22);
+}
+
+.ft-beat.tone-wreck .ft-beat-dot,
+.ft-beat.tone-low .ft-beat-dot,
 .ft-pin.tone-wreck .ft-pin-dot,
 .ft-pin.tone-low .ft-pin-dot {
   background: var(--ft-wreck);
   box-shadow: 0 2px 8px rgba(180, 35, 24, 0.22);
 }
 
+.ft-beat.tone-mid .ft-beat-dot,
 .ft-pin.tone-mid .ft-pin-dot {
   background: #b8860b;
   box-shadow: 0 2px 8px rgba(184, 134, 11, 0.22);
 }
 
+.ft-beat.tone-ok .ft-beat-dot,
 .ft-pin.tone-ok .ft-pin-dot {
   background: var(--pyl-teal);
 }
 
-.ft-chip:active,
+.ft-beat.tone-wait .ft-beat-dot,
+.ft-beat.is-pending .ft-beat-dot {
+  background: #d4d4d8;
+  color: #52525b;
+  box-shadow: none;
+  animation: ft-pulse 1.15s ease-in-out infinite;
+}
+
+.ft-beat:active,
 .ft-pin:active {
   z-index: 5;
 }
 
+.ft-beat-when,
 .ft-chip em,
 .ft-pin em {
   display: block;
@@ -604,14 +672,42 @@ html.fortune-root body {
   font-size: 10px;
 }
 
+.ft-beat-name,
 .ft-pin-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   font-weight: 600;
   font-size: 11px;
-  max-width: 108px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  line-height: 1.25;
+}
+
+.ft-beat-stage,
+.ft-pin-stage {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pyl-purple);
+}
+
+.ft-beat.stage-fix .ft-beat-stage,
+.ft-pin.stage-fix .ft-pin-stage {
+  color: var(--ft-wreck);
+}
+
+.ft-beat.stage-stabilize .ft-beat-stage,
+.ft-pin.stage-stabilize .ft-pin-stage {
+  color: var(--pyl-teal);
+}
+
+.ft-beat.stage-invest .ft-beat-stage,
+.ft-pin.stage-invest .ft-pin-stage {
+  color: var(--pyl-purple);
 }
 
 .ft-tease,
@@ -691,16 +787,16 @@ html.fortune-root body {
 
 .ft-life-card {
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 18px 16px 16px;
-  min-height: 200px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 24px;
+  padding: 22px 18px 18px;
+  min-height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  gap: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
   font: inherit;
   color: inherit;
   width: 100%;
@@ -708,19 +804,26 @@ html.fortune-root body {
 
 .ft-life-card.selected,
 .ft-life-card.ft-theme-hero {
+  border-width: 2px;
   border-color: var(--pyl-purple);
-  box-shadow: 0 0 0 1px var(--pyl-purple), 0 8px 24px rgba(126, 34, 206, 0.08);
+  box-shadow: 0 0 0 1px var(--pyl-purple), 0 12px 32px rgba(126, 34, 206, 0.1);
 }
 
 .ft-life-icon {
-  width: 72px;
-  height: 72px;
-  color: var(--ink);
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--pyl-purple);
+  background: color-mix(in srgb, var(--pyl-purple) 7%, #fff);
+  border: 1px solid color-mix(in srgb, var(--pyl-purple) 16%, #fff);
+  box-shadow: inset 0 1px 0 #fff;
 }
 
 .ft-life-icon svg {
-  width: 72px;
-  height: 72px;
+  width: 44px;
+  height: 44px;
   display: block;
 }
 
@@ -759,47 +862,6 @@ html.fortune-root body {
   margin: 0 0 8px;
 }
 
-.ft-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.ft-legend-item {
-  color: var(--muted);
-}
-
-.ft-legend-item.on {
-  color: var(--pyl-purple);
-}
-
-.ft-legend-arrow {
-  color: var(--line);
-  font-weight: 500;
-}
-
-.ft-pin-stage {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pyl-purple);
-  margin-bottom: 2px;
-}
-
-.ft-pin.stage-fix .ft-pin-stage {
-  color: var(--ft-wreck);
-}
-
-.ft-pin.stage-stabilize .ft-pin-stage {
-  color: var(--pyl-teal);
-}
-
 .ft-coach-line {
   margin: 0 0 10px;
   font-size: 15px;
@@ -828,22 +890,6 @@ html.fortune-root body {
   background: var(--pyl-cta);
   color: #fff;
   border-color: transparent;
-}
-
-.ft-ticks-top {
-  margin-bottom: 4px;
-}
-
-.ft-timeline {
-  min-height: 248px;
-}
-
-.ft-path {
-  margin-top: 88px;
-}
-
-.ft-chips {
-  height: 200px;
 }
 
 .ft-fire {

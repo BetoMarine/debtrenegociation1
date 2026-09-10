@@ -15,7 +15,7 @@ export const THEMES = {
     label: "I need to rebuild",
     blurb: "Fix first. Then a floor.",
     hero: true,
-    chips: ["Fix", "Floor", "Modest goals"],
+    chips: ["Fix", "Floor", "Plan", "Invest"],
     moneyBands: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -27,6 +27,7 @@ export const THEMES = {
       { name: "Replace a worn-out phone", amount: 4000, months: 8, stage: "plan" },
       { name: "Skills course", amount: 12000, months: 14, stage: "plan" },
       { name: "Small family visit", amount: 18000, months: 18, stage: "plan" },
+      { name: "First growth pot", amount: 25000, months: 36, stage: "invest" },
     ],
     net: { emergencyMonths: 6, floorHkd: 120000 },
   },

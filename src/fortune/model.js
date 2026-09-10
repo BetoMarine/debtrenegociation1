@@ -164,6 +164,11 @@ export function migrateFortunePlan(raw) {
   const milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
   const net = raw.net || base.net;
   const theme = canonicalThemeId(raw.theme);
+  if (theme === "rebuild" && !milestones.some((m) => m.stage === "invest")) {
+    milestones.push(
+      normalizeMilestone({ name: "First growth pot", amount: 25000, months: 36, stage: "invest" }, milestones.length),
+    );
+  }
   const legacyBoard =
     raw.boardReached === true ||
     raw.phase2Unlocked === true ||

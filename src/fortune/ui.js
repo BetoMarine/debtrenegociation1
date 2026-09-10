@@ -2,7 +2,7 @@ import { productHref } from "../paths.js";
 import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
 import { boardCoachActions, isEmptyPot, shouldShowCoach } from "./coach.js";
-import { emphasizeStage, journeyItems } from "./journey.js";
+import { currentStage, journeyItems, layoutJourneyPins } from "./journey.js";
 import {
   DEBT_BANDS,
   INCOME_BANDS,
@@ -75,33 +75,41 @@ export function dialTone(pct, hardFail) {
 }
 
 function renderDials(host, { sticky } = {}) {
-  const { forecast, escapeHtml } = host;
-  const living = forecast?.livingPct ?? 0;
-  const net = forecast?.netPct ?? 0;
+  const { forecast, escapeHtml, busy } = host;
+  const living = forecast?.livingPct;
+  const net = forecast?.netPct;
   const hard = !!forecast?.hardFail;
-  const verdict = forecast?.verdict || "stretched";
+  const verdict = forecast?.verdict;
   const coaching = shouldShowCoach(forecast);
   const wrap = sticky ? "ft-dials ft-dials-sticky" : "ft-dials";
-  const headline = coaching && (verdict === "wrecked" || hard) ? t("coachTitle") : t(`verdicts.${verdict}`);
+  let headline = t("pathPending");
+  if (forecast) {
+    headline = coaching && (verdict === "wrecked" || hard) ? t("coachTitle") : t(`verdicts.${verdict}`);
+  } else if (busy) {
+    headline = t("pathPending");
+  }
   return `
     <section class="${wrap}" aria-label="${escapeHtml(t("dialsKicker"))}">
       <div class="ft-dial-row">
         ${dialMarkup("living", t("livingDial"), living, t("livingHint"), hard, escapeHtml)}
         ${dialMarkup("net", t("netDial"), net, t("netHint"), hard, escapeHtml)}
       </div>
-      <p class="ft-verdict ${hard ? "wreck" : verdict}">${escapeHtml(headline)}</p>
+      <p class="ft-verdict ${hard ? "wreck" : forecast ? verdict : "wait"}">${escapeHtml(headline)}</p>
     </section>
   `;
 }
 
 function dialMarkup(kind, label, pct, hint, hard, escapeHtml) {
-  const tone = dialTone(pct, hard);
-  const shown = Number.isFinite(pct) ? Math.round(pct) : 0;
+  const ready = pct != null && Number.isFinite(Number(pct));
+  const tone = !ready ? "wait" : dialTone(pct, hard);
+  const shown = ready ? Math.round(pct) : "";
+  const text = ready ? `${Math.round(pct)}%` : "…";
+  const pctStyle = ready ? `--pct:${shown}` : "";
   return `
-    <div class="ft-dial tone-${tone}" data-kind="${kind}" style="--pct:${shown}">
+    <div class="ft-dial tone-${tone}${ready ? "" : " is-pending"}" data-kind="${kind}" style="${pctStyle}">
       <div class="ft-dial-ring" aria-hidden="true"></div>
       <div class="ft-dial-read">
-        <strong>${shown}%</strong>
+        <strong>${text}</strong>
         <span>${escapeHtml(label)}</span>
       </div>
       <p class="tiny">${escapeHtml(hint)}</p>
@@ -132,9 +140,9 @@ function renderStart(host) {
 }
 
 const THEME_ICONS = {
-  rebuild: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="26" r="10"/><path d="M20 58c2-12 8-18 16-18s14 6 16 18"/><path d="M48 22l8-8M56 18v8h-8"/></svg>`,
-  steady: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 34L36 16l24 18"/><path d="M20 32v24h32V32"/><path d="M30 56V42h12v14"/></svg>`,
-  grow: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 52V36h12v16"/><path d="M32 52V24h12v28"/><path d="M48 52V16h12v36"/><path d="M12 56h48"/></svg>`,
+  rebuild: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="28" r="11"/><path d="M18 58c3-14 10-20 18-20s15 6 18 20"/><path d="M44 20l10-8M54 16v10h-10"/></svg>`,
+  steady: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 34L36 14l24 20"/><path d="M20 32v24h32V32"/><path d="M30 56V40h12v16"/></svg>`,
+  grow: `<svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 54V34h12v20"/><path d="M32 54V22h12v32"/><path d="M48 54V12h12v42"/><path d="M12 58h48"/></svg>`,
 };
 
 function renderWhere(host) {
@@ -383,28 +391,26 @@ function renderCoach(host) {
   `;
 }
 
+function stageCopy(stage) {
+  const key = `stage${String(stage || "plan")[0].toUpperCase()}${String(stage || "plan").slice(1)}`;
+  return t(key);
+}
+
 function renderBoard(host) {
   const { el, escapeHtml, plan, forecast, busy } = host;
   const body = el(`<div class="stack ft-board"></div>`);
   body.append(el(`<p class="kicker">${escapeHtml(t("boardKicker"))}</p>`));
   body.append(el(`<h1>${escapeHtml(t("boardTitle"))}</h1>`));
   body.insertAdjacentHTML("beforeend", renderDials(host, { sticky: true }));
-  if (busy) body.append(el(`<p class="hint">${escapeHtml(t("running"))}</p>`));
+  if (busy && forecast) body.append(el(`<p class="hint">${escapeHtml(t("running"))}</p>`));
   body.insertAdjacentHTML("beforeend", renderCoach(host));
   body.insertAdjacentHTML("beforeend", renderCrumb(host));
 
   const horizon = forecast?.horizonMonths || 48;
-  const active = emphasizeStage(plan);
-  body.append(
-    el(`<div class="ft-legend" aria-label="${escapeHtml(t("timelineTitle"))}">
-      ${["fix", "stabilize", "plan", "invest"]
-        .map((s) => {
-          const label = t(`stage${s[0].toUpperCase()}${s.slice(1)}`);
-          return `<span class="ft-legend-item${active === s ? " on" : ""}">${escapeHtml(label)}</span>`;
-        })
-        .join("<span class=\"ft-legend-arrow\" aria-hidden=\"true\">→</span>")}
-    </div>`),
-  );
+  const here = currentStage(plan, forecast);
+  const youAreIn = t("youAreIn", { stage: stageCopy(here) });
+  body.append(el(`<p class="ft-path-kicker">${escapeHtml(t("timelineTitle"))}</p>`));
+  body.append(el(`<p class="ft-path-status" data-stage-status>${escapeHtml(youAreIn)}</p>`));
   body.append(el(`<p class="tiny">${escapeHtml(t("timelineHint"))}</p>`));
   body.append(el(renderTimeline(plan, forecast, horizon, escapeHtml)));
 
@@ -418,47 +424,49 @@ function renderBoard(host) {
 
 function renderTimeline(plan, forecast, horizon, escapeHtml) {
   const months = Math.max(12, horizon);
-  const items = journeyItems(plan, forecast);
-  const chips = items
-    .map((item, i) => {
-      const left = Math.min(94, Math.max(4, ((item.months - 1) / (months - 1)) * 100));
-      const rows = [8, 112, 60];
-      const row = rows[i % 3];
-      const shown = item.pct == null ? "—" : `${item.pct}%`;
-      const tone = item.pct == null ? "mid" : dialTone(item.pct, !!forecast?.hardFail);
-      const stage = t(`stage${item.stage[0].toUpperCase()}${item.stage.slice(1)}`);
-      const shortName = item.name.length > 16 ? `${item.name.slice(0, 15)}…` : item.name;
+  const items = layoutJourneyPins(journeyItems(plan, forecast));
+  const beats = items
+    .map((item) => {
+      const pending = (item.kind === "goal" || item.kind === "floor") && item.pct == null;
+      const shown =
+        item.kind === "today"
+          ? t("pathNow")
+          : item.kind === "action" && item.pct == null
+            ? "→"
+            : pending
+              ? "…"
+              : `${item.pct}%`;
+      const tone = pending
+        ? "wait"
+        : item.kind === "today"
+          ? "today"
+          : item.kind === "action" && item.pct == null
+            ? "fix"
+            : dialTone(item.pct, !!forecast?.hardFail);
+      const stage = stageCopy(item.stage);
+      const when = item.months === 0 ? t("today") : monthYearLabel(item.months);
       const drag = item.draggable ? `data-chip="${escapeHtml(item.id)}"` : `data-static="${escapeHtml(item.id)}"`;
-      return `<button type="button" class="ft-pin tone-${tone} stage-${item.stage}" ${drag} style="left:${left}%;top:${row}px" aria-label="${escapeHtml(item.name)} ${shown}">
-        <span class="ft-pin-dot ft-pin-pct">${shown}</span>
-        <span class="ft-pin-stage">${escapeHtml(stage)}</span>
-        <span class="ft-pin-name">${escapeHtml(shortName)}</span>
-        <em>${escapeHtml(monthYearLabel(item.months))}</em>
+      return `<button type="button" class="ft-beat tone-${tone} stage-${item.stage}${item.draggable ? " is-drag" : ""}${pending ? " is-pending" : ""}" ${drag} data-months="${item.months}" aria-label="${escapeHtml(stage)} · ${escapeHtml(item.name)} ${shown}">
+        <span class="ft-beat-dot ft-pin-pct">${shown}</span>
+        <span class="ft-beat-stage">${escapeHtml(stage)}</span>
+        <span class="ft-beat-name">${escapeHtml(item.shortName || item.name)}</span>
+        <span class="ft-beat-when">${escapeHtml(when)}</span>
       </button>`;
     })
     .join("");
+  const cols = Math.max(items.length, 1);
   return `
-    <div class="ft-timeline" data-timeline data-horizon="${months}">
-      <div class="ft-ticks ft-ticks-top">
-        <span>Today</span>
-        <span>${escapeHtml(monthYearLabel(Math.round(months / 2)))}</span>
-        <span>${escapeHtml(monthYearLabel(months))}</span>
-      </div>
-      <svg class="ft-path" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 32 C 22 32 30 18 50 16 S 78 22 100 8" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.4" stroke-linecap="round"/>
-        <path d="M0 32 C 22 32 30 18 50 16 S 78 22 100 8 V 40 H 0 Z" fill="url(#ft-path-fill)" opacity="0.35"/>
+    <div class="ft-timeline" data-timeline data-horizon="${months}" style="--ft-beats:${cols}">
+      <svg class="ft-path" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M6 22 C 28 10, 72 32, 94 16" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.2" stroke-linecap="round"/>
         <defs>
           <linearGradient id="ft-path-stroke" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stop-color="#7e22ce"/>
             <stop offset="100%" stop-color="#06b6d4"/>
           </linearGradient>
-          <linearGradient id="ft-path-fill" x1="0" y1="0" x2="0" y2="40" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#06b6d4"/>
-            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
-          </linearGradient>
         </defs>
       </svg>
-      <div class="ft-chips">${chips}</div>
+      <div class="ft-beats">${beats}</div>
     </div>
   `;
 }

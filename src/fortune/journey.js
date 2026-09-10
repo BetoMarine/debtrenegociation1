@@ -18,6 +18,15 @@ export function inferStage(milestone) {
   return "plan";
 }
 
+function shortName(item) {
+  if (item.kind === "floor") return "Floor";
+  const name = String(item.name || "").trim();
+  if (name.length <= 14) return name;
+  const words = name.split(/\s+/);
+  if (words.length > 2) return `${words.slice(0, 2).join(" ")}`;
+  return `${name.slice(0, 13)}…`;
+}
+
 /**
  * Pins for the today→future timeline. Time is the axis; stage is the ladder.
  * Rebuild always leads with Fix, then the emergency-fund pin, then living goals.
@@ -42,9 +51,7 @@ export function journeyItems(plan, forecast, from = new Date()) {
   }
 
   const floorMonths = Math.max(2, Math.min(24, snap.targetMonths || 6));
-  const fundedPct =
-    snap.need > 0 ? Math.max(0, Math.min(100, Math.round((snap.money.savings / snap.need) * 100))) : 100;
-  const stabilizePct = forecast?.netPct != null ? Math.round(forecast.netPct) : fundedPct;
+  const stabilizePct = forecast?.netPct != null ? Math.round(forecast.netPct) : null;
   items.push({
     id: "journey-floor",
     kind: "floor",
@@ -73,13 +80,49 @@ export function journeyItems(plan, forecast, from = new Date()) {
   });
 
   items.sort((a, b) => a.months - b.months || stageRank(a.stage) - stageRank(b.stage) || a.name.localeCompare(b.name));
-  return items;
+  const here = currentStage(plan, forecast);
+  items.unshift({
+    id: "journey-today",
+    kind: "today",
+    stage: here,
+    name: "Today",
+    months: 0,
+    amount: 0,
+    pct: null,
+    draggable: false,
+  });
+  return items.map((item) => ({ ...item, shortName: shortName(item) }));
 }
 
-export function emphasizeStage(plan) {
-  if (plan?.theme === "rebuild") {
-    return needsFireCard(plan?.debtHeat) ? "fix" : "stabilize";
-  }
-  if (plan?.theme === "grow") return "plan";
+/** Even columns along today→future so pin labels never stack on mobile. */
+export function layoutJourneyPins(items) {
+  const n = Math.max(1, items.length);
+  return items.map((item, i) => ({
+    ...item,
+    slot: i,
+    slots: n,
+    leftPct: n === 1 ? 50 : Math.round((i / (n - 1)) * 1000) / 10,
+  }));
+}
+
+/**
+ * First incomplete beat on the ladder, so the board can say “You're in Stabilize”
+ * without relying on memory of Steps 1–2.
+ */
+export function currentStage(plan, forecast) {
+  const snap = stabilizeSnapshot(plan);
+  if (plan?.theme === "rebuild" && needsFireCard(plan?.debtHeat)) return "fix";
+  if (!snap.ready) return "stabilize";
+  const miles = plan?.milestones || [];
+  const invest = miles.filter((m) => inferStage(m) === "invest");
+  const planned = miles.filter((m) => inferStage(m) !== "invest");
+  const living = forecast?.livingPct;
+  if (planned.length && (living == null || living < 70)) return "plan";
+  if (invest.length) return "invest";
+  if (planned.length) return "plan";
   return "stabilize";
+}
+
+export function emphasizeStage(plan, forecast) {
+  return currentStage(plan, forecast);
 }

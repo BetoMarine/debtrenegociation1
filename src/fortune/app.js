@@ -8,6 +8,7 @@ import {
   nextAfterStart,
   stabilizeTargetMonths,
 } from "./stabilize.js";
+import { currentStage } from "./journey.js";
 import { FORTUNE_SCREENS, dialTone, renderFortune } from "./ui.js";
 import {
   applyTheme,
@@ -153,6 +154,26 @@ async function runAndPersistForecast({ persistEvent = true, keepScroll = true } 
   }
 }
 
+function fortuneFooter() {
+  const tools = `<a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
+          ·
+          <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
+  const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;
+  if (screen === "start") {
+    return `
+        ${pylWordmarkHtml({ footer: true })}
+        <p class="tiny">${escapeHtml(ft("localOnly"))}</p>
+        <p class="tiny">${escapeHtml(ft("otherToolsLabel"))}<br/>
+          ${tools}
+        </p>
+        <p class="tiny">${escapeHtml(ft("compliance"))}</p>
+        ${version}`;
+  }
+  return `
+        <p class="tiny">${escapeHtml(ft("footerCompact"))}</p>
+        <p class="tiny">${tools} · ${version}</p>`;
+}
+
 function shell(body) {
   const root = document.getElementById("app");
   root.innerHTML = "";
@@ -165,16 +186,8 @@ function shell(body) {
         </div>
       </header>
       <main></main>
-      <footer class="footer">
-        ${pylWordmarkHtml({ footer: true })}
-        <p class="tiny">${escapeHtml(ft("localOnly"))}</p>
-        <p class="tiny">${escapeHtml(ft("otherToolsLabel"))}<br/>
-          <a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
-          ·
-          <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>
-        </p>
-        <p class="tiny">${escapeHtml(ft("compliance"))}</p>
-        <button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>
+      <footer class="footer${screen === "start" ? "" : " ft-foot-compact"}">
+        ${fortuneFooter()}
       </footer>
     </div>
   `);
@@ -459,9 +472,9 @@ function bindTimeline(rail) {
         const months = Math.max(1, Math.min(horizon, Math.round(1 + (x / box.width) * (horizon - 1))));
         const id = chip.dataset.chip;
         const found = plan.milestones.find((m) => m.id === id);
-        chip.style.left = `${((months - 1) / Math.max(1, horizon - 1)) * 100}%`;
-        const em = chip.querySelector("em");
-        if (em) em.textContent = monthYearLabel(months);
+        chip.dataset.months = String(months);
+        const when = chip.querySelector(".ft-beat-when, em");
+        if (when) when.textContent = monthYearLabel(months);
         if (!found || found.months === months) return;
         found.months = months;
         liveForecast();
@@ -492,12 +505,14 @@ function patchDials() {
   if (!root || !forecast) return;
   root.querySelectorAll(".ft-dial").forEach((dial) => {
     const pct = dial.dataset.kind === "living" ? forecast.livingPct : forecast.netPct;
-    const shown = Math.round(pct);
-    const tone = dialTone(pct, forecast.hardFail);
-    dial.style.setProperty("--pct", String(shown));
-    dial.className = `ft-dial tone-${tone}`;
+    const ready = pct != null && Number.isFinite(Number(pct));
+    const shown = ready ? Math.round(pct) : null;
+    const tone = ready ? dialTone(pct, forecast.hardFail) : "wait";
+    if (ready) dial.style.setProperty("--pct", String(shown));
+    else dial.style.removeProperty("--pct");
+    dial.className = `ft-dial tone-${tone}${ready ? "" : " is-pending"}`;
     const strong = dial.querySelector("strong");
-    if (strong) strong.textContent = `${shown}%`;
+    if (strong) strong.textContent = ready ? `${shown}%` : "…";
   });
   const verdict = root.querySelector(".ft-verdict");
   if (verdict) {
@@ -505,22 +520,33 @@ function patchDials() {
     verdict.textContent =
       forecast.hardFail || forecast.verdict === "wrecked" ? ft("coachTitle") : ft(`verdicts.${forecast.verdict}`);
   }
+  const stageEl = root.querySelector("[data-stage-status]");
+  if (stageEl) {
+    const here = currentStage(plan, forecast);
+    const label = { fix: "Fix", stabilize: "Stabilize", plan: "Plan", invest: "Invest" }[here] || "Plan";
+    stageEl.textContent = ft("youAreIn", { stage: label });
+  }
   root.querySelectorAll("[data-chip], [data-static]").forEach((chip) => {
     const id = chip.dataset.chip || chip.dataset.static;
-    const pctEl = chip.querySelector(".ft-pin-pct");
-    if (!pctEl) return;
-    if (id === "journey-floor" && forecast.netPct != null) {
-      const shown = Math.round(forecast.netPct);
-      pctEl.textContent = `${shown}%`;
-      chip.className = `ft-pin tone-${dialTone(forecast.netPct, forecast.hardFail)} stage-stabilize`;
+    const pctEl = chip.querySelector(".ft-pin-pct, .ft-beat-dot");
+    if (!pctEl || id === "journey-today") return;
+    const drag = chip.classList.contains("is-drag");
+    const apply = (pct, stage) => {
+      const ready = pct != null && Number.isFinite(Number(pct));
+      const shown = ready ? Math.round(pct) : null;
+      pctEl.textContent = ready ? `${shown}%` : "…";
+      const tone = ready ? dialTone(pct, forecast.hardFail) : "wait";
+      chip.className = `ft-beat tone-${tone} stage-${stage}${drag ? " is-drag" : ""}${ready ? "" : " is-pending"}`;
+    };
+    if (id === "journey-floor") {
+      apply(forecast.netPct, "stabilize");
       return;
     }
+    if (id === "journey-fix") return;
     const i = plan.milestones.findIndex((m) => m.id === id);
-    if (i >= 0 && forecast.milestonePct?.[i] != null) {
-      const shown = Math.round(forecast.milestonePct[i]);
-      pctEl.textContent = `${shown}%`;
+    if (i >= 0) {
       const stage = plan.milestones[i].stage || "plan";
-      chip.className = `ft-pin tone-${dialTone(forecast.milestonePct[i], forecast.hardFail)} stage-${stage}`;
+      apply(forecast.milestonePct?.[i], stage);
     }
   });
 }
@@ -573,7 +599,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.8.0",
+    version: "0.8.1",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

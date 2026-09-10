@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTheme, newFortunePlan, resolveMoney, THEME_IDS, THEMES, toEnginePlan } from "./model.js";
+import { applyTheme, migrateFortunePlan, newFortunePlan, resolveMoney, THEME_IDS, THEMES, toEnginePlan } from "./model.js";
 import { nextAfterStart, gateFortuneScreen, isBoardUnlocked } from "./stabilize.js";
 
 describe("Fortune Teller plan model", () => {
@@ -83,5 +83,15 @@ describe("Fortune Teller plan model", () => {
     expect(engine.milestones[0].name).toBe("Keep me");
     expect(isBoardUnlocked({ phase2Unlocked: true })).toBe(true);
     expect(gateFortuneScreen("board", { privacyAccepted: true, theme: "grow", boardReached: true })).toBe("board");
+  });
+
+  it("adds a modest Invest beat to rebuild plans that never had one", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      theme: "rebuild",
+      milestones: [{ id: "phone", name: "Phone", amount: 4000, months: 8, stage: "plan" }],
+    });
+    expect(plan.milestones.some((m) => m.stage === "invest" && /growth pot/i.test(m.name))).toBe(true);
+    expect(Math.max(...plan.milestones.map((m) => m.amount))).toBeLessThan(50000);
   });
 });
