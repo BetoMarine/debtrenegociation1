@@ -28,6 +28,9 @@
         }
     </script>
     <style>
+        html {
+            scroll-padding-top: 7.5rem;
+        }
         body {
             background-color: #0f172a;
             color: #f8fafc;
@@ -57,7 +60,7 @@
                 Draft shelf for QA — production planyourlife.tech not swapped yet.
             </p>
         </div>
-        <header id="header" class="transition-all duration-300 py-5">
+        <header id="header" class="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 transition-all duration-300 py-5">
             <div class="container mx-auto px-6 flex justify-between items-center gap-4">
                 <a href="#home" class="flex items-center gap-2 group">
                     <i data-lucide="layout-grid" class="w-8 h-8 text-brand-teal group-hover:scale-110 transition-transform duration-300"></i>
@@ -373,10 +376,10 @@
         const header = document.getElementById('header');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 20) {
-                header.classList.add('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
+                header.classList.add('py-3');
                 header.classList.remove('py-5');
             } else {
-                header.classList.remove('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
+                header.classList.remove('py-3');
                 header.classList.add('py-5');
             }
         });
