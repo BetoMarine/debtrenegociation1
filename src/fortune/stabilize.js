@@ -1,6 +1,6 @@
 /**
- * Phase 1 — stabilize the floor before Living↔Net planning.
- * Pure module: triage helpers, surplus, meat-on-the-bone progress, unlock rules.
+ * Floor math + Step 2 routing. Pure module.
+ * Rebuild still does fire triage + floor-first; the board is not gated on a funded floor.
  */
 import { monthYearLabel, resolveMoney } from "./model.js";
 
@@ -37,6 +37,9 @@ export function debtServiceMonthly(money, heat) {
 }
 
 export function monthlySurplus(money, heat) {
+  if (money?.leftoverMonthly != null && Number.isFinite(Number(money.leftoverMonthly))) {
+    return Math.round(Number(money.leftoverMonthly));
+  }
   const income = Number(money?.incomeMonthly) || 0;
   const spend = Number(money?.spendMonthly) || 0;
   return Math.round(income - spend - debtServiceMonthly(money, heat));
@@ -109,37 +112,46 @@ export function stabilizeSnapshot(plan, from = new Date()) {
   };
 }
 
+export function isBoardUnlocked(plan) {
+  return !!(plan?.boardReached || plan?.phase2Unlocked || plan?.phase2Override);
+}
+
+/** @deprecated Use isBoardUnlocked — kept so older tests/callers still compile. */
+export function isPhase2Unlocked(plan) {
+  return isBoardUnlocked(plan);
+}
+
 export function canUnlockPhase2(plan) {
-  if (plan?.phase2Override || plan?.phase2Unlocked) return true;
+  if (isBoardUnlocked(plan)) return true;
   return stabilizeSnapshot(plan).ready;
 }
 
-export function isPhase2Unlocked(plan) {
-  return !!(plan?.phase2Unlocked || plan?.phase2Override);
+const STEP1 = new Set(["where", "theme"]);
+const STEP2 = new Set(["next", "triage", "stabilize"]);
+const HOME = new Set(["board", "goal-edit", "net-edit", "compare", "sheet", "more", "adjust", "money"]);
+
+export function canonicalScreen(name) {
+  if (name === "theme") return "where";
+  if (name === "triage" || name === "stabilize" || name === "money") return "next";
+  return name;
 }
 
-export const PHASE2_SCREENS = ["money", "board", "goal-edit", "net-edit", "compare", "sheet", "more"];
-
 export function nextAfterStart(plan) {
-  if (isPhase2Unlocked(plan) && plan?.theme) return "board";
-  if (isPhase2Unlocked(plan)) return "theme";
-  if (plan?.theme && isDebtHeat(plan.debtHeat)) return "stabilize";
-  if (plan?.theme) return "triage";
-  return "theme";
+  if (isBoardUnlocked(plan) && plan?.theme) return "board";
+  if (plan?.theme) return "next";
+  return "where";
 }
 
 export function gateFortuneScreen(name, plan) {
   if (!name || name === "start" || name === "counters") return name;
   if (!plan?.privacyAccepted) return "start";
-  if (name === "theme") return "theme";
-  if (name === "triage") return plan?.theme ? "triage" : "theme";
-  if (name === "stabilize") {
-    if (!plan?.theme) return "theme";
-    if (!isDebtHeat(plan.debtHeat)) return "triage";
-    return "stabilize";
+  const screen = canonicalScreen(name);
+  if (STEP1.has(name) || screen === "where") return "where";
+  if (!plan?.theme) return "where";
+  if (STEP2.has(name) || screen === "next") return "next";
+  if (HOME.has(screen)) {
+    if (!isBoardUnlocked(plan)) return "next";
+    return screen;
   }
-  if (PHASE2_SCREENS.includes(name) && !isPhase2Unlocked(plan)) {
-    return nextAfterStart(plan);
-  }
-  return name;
+  return nextAfterStart(plan);
 }

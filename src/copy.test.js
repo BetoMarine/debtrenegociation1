@@ -82,12 +82,20 @@ describe("product copy", () => {
   it("Fortune Teller never claims a set-for-life score or Envizage", () => {
     const all = walk(FORTUNE_STRINGS.en).join("\n");
     expect(all).not.toMatch(/envizage/i);
+    expect(all).not.toMatch(/phase 1/i);
+    expect(all).not.toMatch(/phase 2/i);
+    expect(all).not.toMatch(/monte carlo/i);
+    expect(all).not.toMatch(/kill-test/i);
+    expect(all).not.toMatch(/\bnugget/i);
     expect(FORTUNE_STRINGS.en.verdicts.shared).not.toMatch(/you'?re set/i);
     expect(FORTUNE_STRINGS.en.verdicts.wrecked).not.toMatch(/you'?re set/i);
-    expect(FORTUNE_STRINGS.en.startTitle).toMatch(/floor/i);
-    expect(FORTUNE_STRINGS.en.startTip).toMatch(/fix the fire/i);
+    expect(FORTUNE_STRINGS.en.startTitle).toMatch(/phone/i);
+    expect(FORTUNE_STRINGS.en.whereTitle).toMatch(/where are you today/i);
+    expect(FORTUNE_STRINGS.en.boardKicker).toMatch(/your new life/i);
     expect(FORTUNE_STRINGS.en.startLead).not.toMatch(/years to retirement/i);
     expect(FORTUNE_STRINGS.en.themes.rebuild.label).toMatch(/I need to rebuild/i);
+    expect(FORTUNE_STRINGS.en.themes.steady.label).toMatch(/steady/i);
+    expect(FORTUNE_STRINGS.en.themes.grow.label).toMatch(/grow/i);
     expect(all).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not regulated advice/i);
   });

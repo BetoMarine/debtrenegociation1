@@ -750,6 +750,102 @@ html.fortune-root body {
   margin-bottom: 4px;
 }
 
+.ft-bullets {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.ft-bullets li {
+  margin: 0 0 8px;
+}
+
+.ft-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ft-legend-item {
+  color: var(--muted);
+}
+
+.ft-legend-item.on {
+  color: var(--pyl-purple);
+}
+
+.ft-legend-arrow {
+  color: var(--line);
+  font-weight: 500;
+}
+
+.ft-pin-stage {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pyl-purple);
+  margin-bottom: 2px;
+}
+
+.ft-pin.stage-fix .ft-pin-stage {
+  color: var(--ft-wreck);
+}
+
+.ft-pin.stage-stabilize .ft-pin-stage {
+  color: var(--pyl-teal);
+}
+
+.ft-coach-line {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.ft-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ft-chip-btn {
+  min-height: 40px;
+  width: auto;
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ft-chip-btn.primary {
+  background: var(--pyl-cta);
+  color: #fff;
+  border-color: transparent;
+}
+
+.ft-ticks-top {
+  margin-bottom: 4px;
+}
+
+.ft-timeline {
+  min-height: 220px;
+}
+
+.ft-path {
+  margin-top: 72px;
+}
+
+.ft-chips {
+  height: 170px;
+}
+
 .ft-fire {
   border-color: var(--ft-wreck);
   box-shadow: inset 3px 0 0 var(--ft-wreck);

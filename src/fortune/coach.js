@@ -56,7 +56,7 @@ export function coachActions(plan, forecast) {
       key: "edit-money",
       id: "edit-money",
       kind: "primary",
-      label: "Add income or savings bands",
+      label: "Add income or savings",
     });
   }
 
@@ -67,7 +67,7 @@ export function coachActions(plan, forecast) {
       kind: empty ? "secondary" : "primary",
       goalId: focus.id,
       goalName: focus.name,
-      label: `Delay ${focus.name} by 12 months`,
+      label: `Delay ${focus.name} 12 months`,
     });
     actions.push({
       key: `cut:${focus.id}`,
@@ -75,7 +75,7 @@ export function coachActions(plan, forecast) {
       kind: "secondary",
       goalId: focus.id,
       goalName: focus.name,
-      label: `Cut ${focus.name} by 20%`,
+      label: `Cut ${focus.name} 20%`,
     });
   }
 
@@ -105,7 +105,7 @@ export function coachActions(plan, forecast) {
       key: "edit-money",
       id: "edit-money",
       kind: "secondary",
-      label: "Raise savings or income bands",
+      label: "Raise savings or income",
     });
   }
 
@@ -126,6 +126,11 @@ export function coachActions(plan, forecast) {
   });
 
   return actions;
+}
+
+/** Board chips: one primary plus at most two more. */
+export function boardCoachActions(plan, forecast) {
+  return coachActions(plan, forecast).slice(0, 3);
 }
 
 export function applyCoachAction(plan, action) {
@@ -178,7 +183,7 @@ export function coachCrumb(action, before, after, stillEmpty) {
   const stillWrecked = after?.hardFail || after?.verdict === "wrecked";
   const moneyNote = stillEmpty && stillWrecked ? " Income or savings has to rise." : "";
   if (action?.id === "delay") {
-    return `Delayed ${action.goalName || "that goal"} by a year — Living ${b}% → ${a}%.${moneyNote}`;
+    return `Delayed ${action.goalName || "that goal"} 12 months — Living ${b}% → ${a}%.${moneyNote}`;
   }
   if (action?.id === "cut") {
     return `Cut ${action.goalName || "that goal"} by 20% — Living ${b}% → ${a}%.${moneyNote}`;

@@ -1,4 +1,4 @@
-import { THEMES, THEME_IDS, getTheme } from "./themes.js";
+import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
 import { TEMPLATE_IDS, getTemplate } from "./templates.js";
 
 export const INCOME_BANDS = [
@@ -20,6 +20,15 @@ export const SPEND_BANDS = [
   { id: "gt80", label: "HK$80,000+", value: 100000 },
 ];
 
+export const LEFTOVER_BANDS = [
+  { id: "0", label: "None — HK$0", value: 0 },
+  { id: "lt5", label: "Under HK$5,000", value: 2500 },
+  { id: "5_10", label: "HK$5,000 – 10,000", value: 7500 },
+  { id: "10_20", label: "HK$10,000 – 20,000", value: 15000 },
+  { id: "20_40", label: "HK$20,000 – 40,000", value: 30000 },
+  { id: "gt40", label: "HK$40,000+", value: 50000 },
+];
+
 export const SAVINGS_BANDS = [
   { id: "0", label: "None — HK$0", value: 0 },
   { id: "lt50", label: "Under HK$50,000", value: 25000 },
@@ -39,9 +48,12 @@ export const DEBT_BANDS = [
   { id: "gt1m", label: "Over HK$1 million", value: 1500000 },
 ];
 
+export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
+
 const BANDS = {
   incomeBand: INCOME_BANDS,
   spendBand: SPEND_BANDS,
+  leftoverBand: LEFTOVER_BANDS,
   savingsBand: SAVINGS_BANDS,
   debtsBand: DEBT_BANDS,
 };
@@ -75,12 +87,25 @@ export function hkd(n) {
   return `HK$${Math.round(Number(n)).toLocaleString("en-HK")}`;
 }
 
+function approxDebtService(debts) {
+  const bal = Math.max(0, Number(debts) || 0);
+  if (bal <= 0) return 0;
+  return Math.min(bal, Math.max(800, bal * 0.02));
+}
+
+function inferStage(raw) {
+  if (JOURNEY_STAGES.includes(raw?.stage)) return raw.stage;
+  if ((Number(raw?.amount) || 0) >= 500000) return "invest";
+  return "plan";
+}
+
 export function newFortunePlan() {
   return {
     id: "fortune-local",
     privacyAccepted: false,
     theme: null,
     debtHeat: null,
+    boardReached: false,
     phase2Unlocked: false,
     phase2Override: false,
     moneyCapturedAtStabilize: false,
@@ -89,6 +114,7 @@ export function newFortunePlan() {
     money: {
       incomeBand: "30_50",
       spendBand: "20_35",
+      leftoverBand: "5_10",
       savingsBand: "50_150",
       debtsBand: "0",
     },
@@ -116,6 +142,7 @@ export function normalizeMilestone(raw, index = 0) {
     name: String(raw?.name || "Living goal").trim().slice(0, 80) || "Living goal",
     amount,
     months,
+    stage: inferStage({ ...raw, amount }),
   };
 }
 
@@ -123,16 +150,28 @@ export function migrateFortunePlan(raw) {
   if (!raw) return raw;
   const base = newFortunePlan();
   const money = { ...base.money, ...(raw.money || {}) };
+  if (raw.money && raw.money.leftoverBand == null && raw.money.leftoverMonthly == null) {
+    delete money.leftoverBand;
+  }
   Object.keys(BANDS).forEach((key) => {
+    if (money[key] == null) {
+      if (key === "leftoverBand") return;
+      money[key] = base.money[key];
+      return;
+    }
     if (!BANDS[key].some((b) => b.id === money[key])) money[key] = base.money[key];
   });
   const milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
   const net = raw.net || base.net;
-  const legacyPhase2 =
-    raw.phase2Unlocked == null &&
-    !!raw.privacyAccepted &&
-    THEME_IDS.includes(raw.theme) &&
-    (milestones.length > 0 || raw.screen === "board");
+  const theme = canonicalThemeId(raw.theme);
+  const legacyBoard =
+    raw.boardReached === true ||
+    raw.phase2Unlocked === true ||
+    raw.phase2Override === true ||
+    (raw.phase2Unlocked == null &&
+      !!raw.privacyAccepted &&
+      !!theme &&
+      (milestones.length > 0 || raw.screen === "board"));
   const targetMonths = Number(raw.stabilizeTargetMonths) === 3 ? 3 : 6;
   return {
     ...base,
@@ -140,7 +179,8 @@ export function migrateFortunePlan(raw) {
     money,
     milestones,
     debtHeat: ["none", "paying", "heavy", "fdw"].includes(raw.debtHeat) ? raw.debtHeat : null,
-    phase2Unlocked: raw.phase2Unlocked === true || legacyPhase2,
+    boardReached: legacyBoard,
+    phase2Unlocked: legacyBoard,
     phase2Override: !!raw.phase2Override,
     moneyCapturedAtStabilize: !!raw.moneyCapturedAtStabilize,
     thinFloorWarned: !!raw.thinFloorWarned,
@@ -152,7 +192,7 @@ export function migrateFortunePlan(raw) {
     templateId: TEMPLATE_IDS.includes(raw.templateId) ? raw.templateId : "balanced",
     inflationOn: raw.inflationOn !== false,
     seed: Number(raw.seed) || base.seed,
-    theme: THEME_IDS.includes(raw.theme) ? raw.theme : raw.theme || null,
+    theme,
     compareMilestoneId: raw.compareMilestoneId || milestones[0]?.id || null,
   };
 }
@@ -173,12 +213,22 @@ export function applyTheme(plan, themeId) {
 }
 
 export function resolveMoney(money = {}) {
-  return {
-    incomeMonthly: numberOrBand(money.incomeMonthly, INCOME_BANDS, money.incomeBand),
-    spendMonthly: numberOrBand(money.spendMonthly, SPEND_BANDS, money.spendBand),
-    savings: numberOrBand(money.savings, SAVINGS_BANDS, money.savingsBand),
-    debts: numberOrBand(money.debts, DEBT_BANDS, money.debtsBand),
-  };
+  const incomeMonthly = numberOrBand(money.incomeMonthly, INCOME_BANDS, money.incomeBand);
+  const savings = numberOrBand(money.savings, SAVINGS_BANDS, money.savingsBand);
+  const debts = numberOrBand(money.debts, DEBT_BANDS, money.debtsBand);
+  const leftoverSet =
+    (money.leftoverMonthly != null && Number.isFinite(Number(money.leftoverMonthly))) ||
+    (money.leftoverBand && LEFTOVER_BANDS.some((b) => b.id === money.leftoverBand));
+  let spendMonthly;
+  let leftoverMonthly;
+  if (leftoverSet) {
+    leftoverMonthly = numberOrBand(money.leftoverMonthly, LEFTOVER_BANDS, money.leftoverBand);
+    spendMonthly = Math.max(0, incomeMonthly - leftoverMonthly - approxDebtService(debts));
+  } else {
+    spendMonthly = numberOrBand(money.spendMonthly, SPEND_BANDS, money.spendBand);
+    leftoverMonthly = Math.max(0, incomeMonthly - spendMonthly - approxDebtService(debts));
+  }
+  return { incomeMonthly, spendMonthly, savings, debts, leftoverMonthly };
 }
 
 function numberOrBand(numeric, list, bandId) {
@@ -206,7 +256,7 @@ export function netNeedNow(plan) {
 
 export function defaultUiState() {
   return {
-    loginTeaseDismissed: false,
+    loginTeaseDismissed: true,
     crumbsShown: {},
   };
 }
@@ -215,9 +265,9 @@ export function migrateUiState(raw) {
   const base = defaultUiState();
   if (!raw) return base;
   return {
-    loginTeaseDismissed: !!raw.loginTeaseDismissed,
+    loginTeaseDismissed: raw.loginTeaseDismissed !== false,
     crumbsShown: raw.crumbsShown && typeof raw.crumbsShown === "object" ? { ...raw.crumbsShown } : {},
   };
 }
 
-export { THEMES, THEME_IDS, getTheme, TEMPLATE_IDS, getTemplate };
+export { THEMES, THEME_IDS, canonicalThemeId, getTheme, TEMPLATE_IDS, getTemplate };

@@ -1,10 +1,10 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.7.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.8.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
-3. **Fortune Teller** — fix the break → build the foundation → then living goals vs a security net. An **owned Monte Carlo** engine runs in the browser. Not a retirement gadget. Envizage is out.
+3. **Fortune Teller** — where you are today → the right next moves → a today→future path with a chance-% on each goal. An **owned client-side forecast** runs in the browser. Not a retirement gadget. Envizage is out.
 
 They are not App Store apps, not a debt mill, and not a collector. Neither hardship app **emails Enrich, NGOs, banks, or lenders**. Routing is a suggestion plus a tap-to-open link. Fortune Teller does not sell a fund or execute a trade.
 
@@ -31,7 +31,7 @@ On each start / privacy screen:
 4. Legal lines still present in the compact footer / privacy card (on-device, you send it, not advice, not affiliated, we never contact lenders).
 5. Right Door: letter rules and required-upload gates unchanged.
 6. Sunday Pack: Enrich “not affiliated” footer + door links unchanged.
-7. Fortune Teller: rebuild first; theme cards are tall/white with goal chips; timeline pins show % success; Phase 1/2, coach, kill-test, Living↔Net, RD/Sunday fire links still work.
+7. Fortune Teller: rebuild card first; Step 1 is three today-cards; Step 2 is card-specific (fire links + floor for rebuild); Step 3 is a today→future timeline with % on each pin (Fix → Stabilize → Plan → Invest). Living↔Net, RD/Sunday fire links, and honest “does not hold — yet” still work.
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
@@ -54,7 +54,7 @@ If the public URL is 404, turn on Pages once (Safari, not the GitHub app):
 
 **Sunday Pack** — foreign domestic workers in Hong Kong who want to prepare for a counsellor (Enrich by default, HELP / Labour / consulate if the red-flag screen says so).
 
-**Fortune Teller** — people in Hong Kong who should not skip straight to goals. The hero path is **I need to rebuild**: fix debt heat, put meat on the bone, then modest living goals vs a security net. Not “years to retirement” as the hero.
+**Fortune Teller** — people in Hong Kong who should not skip straight to goals. The hero path is **I need to rebuild**: fix debt heat if it’s on fire, put a floor under the plan, then modest living goals vs a security net on a today→future timeline. Not “years to retirement” as the hero.
 
 Not in this build: money-lender-only bank packs, Alipay, chatbots, accounts, payments, bank APIs, cloud document vaults for Sunday Pack, Envizage, Finnhub live marks, custody/trading.
 
@@ -95,22 +95,19 @@ Stored in a **separate IndexedDB key** from the Right Door vault (no photo annex
 
 ### Fortune Teller
 
-Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortuneUi`). **Hero PoC story:** do not assume people start healthy.
+Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortuneUi`). **Hero PoC story:** do not assume people start healthy. Main path is four screens:
 
-1. Privacy / promise, plus an on-start tip: **fix the fire → build the foundation → then living goals and mixes**
-2. Life theme. **“I need to rebuild” is first / primary.** It does **not** dump a peak-career house on the board. Other themes stay available.
-3. Debt-heat triage: none / paying / heavy or missing payments / FDW stress. Heavy → “Fix the fire first” with soft links to Right Door (`../`) and Sunday Pack (`../sunday/`). FDW prefers Sunday Pack. You can still tap “I've stabilized, continue.”
-4. **Phase 1 Stabilize (default before the board):** emergency months (3 / 6) and/or HKD floor, money-now bands, surplus ≈ income − spend − debt service, a reach-month for the fund, meat-on-the-bone ticks at 1 / 3 / 6 months. Primary **Start real planning (Phase 2)** stays disabled until the floor holds. Secondary: thin-floor override with a warning.
-5. **Phase 2:** rebuild seeds a *modest* living pack (phone / course / small visit) plus a strong net — not a HK$1.5M house fantasy. Then Living % / Net % dials, drag-the-timeline, templates, Rebuild coach
-6. Portfolio templates (benchmarks, not products): Steady / Balanced / Growth / Frontier — assumed μ/σ + “illustrative, not a fund we sell”
-7. Drag a milestone earlier/later → Monte Carlo re-runs → dials update
-8. Save-vs-borrow compare for one milestone
-9. One-page implementation sheet (PDF): plan summary + execute elsewhere with a licensed intermediary + not advice + not affiliated with HSBC
-10. Export JSON / clear this plan. Soft dismissible login tease only (no real auth)
+1. **Privacy** — three short bullets + Continue. Plan Your Life wordmark. Compact legal footer.
+2. **Step 1 · Where you are today** — exactly three tall cards. **I need to rebuild** is first / primary. **I'm steady**. **I want to grow**. Sparse copy. This is not a money form.
+3. **Step 2 · Correct actions** — card-specific, not one form for everyone:
+   - **Rebuild** → debt-on-fire triage. Heavy / helper heat shows Right Door (`../`) and Sunday Pack (`../sunday/`) links (FDW prefers Sunday Pack). Then floor-first: 3 or 6 months + four “me now” bands. Fixing is the first goal. One Continue to the board (a thin floor is allowed; honesty lives on Step 3).
+   - **Steady** → light four-field snapshot, skippable, onto the board. No fire tooling.
+   - **Grow** → add one living goal (or skip) onto the board. Rebuild still does **not** dump a HK$1.5M house.
+4. **Step 3 · Your new life** (home forever after) — Living % vs Security-net %, one-line “holds” / “does not hold — yet”, and a **today→future timeline** with circular pins. Each pin shows **chance it works**. Goals are tagged **Fix → Stabilize → Plan → Invest** (rebuild leads with Fix + emergency-fund, then modest Plan goals). Coach is one line + 1–3 chips. **Adjust** holds mixes, ~4.5% price-rise, shuffle, save-vs-borrow, PDF, export.
 
-Client-side Monte Carlo: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
+Rebuild seeds a *modest* living pack (phone / course / small visit) plus a strong net. Client-side forecast: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
 
-**Absurd-input kill-test:** 0 income, 0 savings, a HK$15M+ house must hard-fail (dials wrecked, no green “you're set”). Covered by `src/fortune/engine.test.js`. A **Rebuild coach** under the dials stays on the board: honest “does not hold — yet,” what’s breaking, and one-tap delay / cut / money-band next steps so it is never a dead end.
+**Absurd input:** 0 income, 0 savings, a HK$15M+ house must hard-fail (dials wrecked, no green “you're set”). Covered by `src/fortune/engine.test.js`. The board coach stays: honest “does not hold — yet” plus delay / cut / add-money chips so it is never a dead end.
 
 Fortune Teller PDF footer:
 
@@ -210,18 +207,17 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.7.0). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.8.0). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
-1. Open `/fortune/`. Read the tip: fix the fire → foundation → goals. Tap **Start with “I need to rebuild”**.
-2. Theme picker: **I need to rebuild** is first (tag: The full story). Tap it. You must **not** land on a peak-career house board.
-3. Debt heat: pick **Heavy debt or missing payments**. Confirm Right Door (`../`) and Sunday Pack (`../sunday/`) links. Tap **I've stabilized — continue to the floor**.
-4. Phase 1: set 3 or 6 months, money bands, watch the reach date (or the honest “floor is not moving” line if surplus is 0). Meat-on-the-bone ticks at 1 / 3 / 6.
-5. Raise savings / surplus until **Start real planning (Phase 2)** enables — or use the thin-floor override (warning first).
-6. Phase 2 board: modest goals (phone / course / visit), not a HK$1.5M house. Dials + Rebuild coach still apply. Kill-test (0 income, 0 savings, add a HK$15M house) still hard-fails; coach stays.
+1. Open `/fortune/`. Privacy: three bullets + **Continue**.
+2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
+3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../`) and Sunday Pack (`../sunday/`) links. Set a 3- or 6-month floor + four me-now bands. Tap **See your new life**.
+4. **Step 3:** today→future timeline with circular **%** pins. Ladder **Fix → Stabilize → Plan → Invest**. Modest goals (phone / course / visit), not a HK$1.5M house. Living↔Net + one-line status. Coach chips if it does not hold.
+5. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 
-Other checks: drag a milestone; both dials move. Switch Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
+Other checks: drag a living pin; both dials move. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
 
 Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store). `/pyl/` must show three Live cards.
 
