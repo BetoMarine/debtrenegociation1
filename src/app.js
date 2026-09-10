@@ -237,10 +237,13 @@ function renderHome() {
   const actions = el(`<div class="nav"></div>`);
   if (hasPack) {
     actions.append(el(`<button class="btn btn-primary" data-go="pack" type="button">${escapeHtml(s("openPack"))}</button>`));
+    actions.append(el(`<button class="btn btn-accent" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
   } else if (hasDraft) {
     actions.append(el(`<button class="btn btn-primary" data-go="reason" type="button">${escapeHtml(s("resume"))}</button>`));
+    actions.append(el(`<button class="btn btn-accent" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
+  } else {
+    actions.append(el(`<button class="btn btn-primary" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
   }
-  actions.append(el(`<button class="btn btn-accent" data-act="start" type="button">${escapeHtml(s("start"))}</button>`));
   body.append(actions);
   if (pack) {
     body.append(el(`<button class="btn btn-ghost" data-act="wipe" type="button">${escapeHtml(s("wipe"))}</button>`));
