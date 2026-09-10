@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plan Your Life | Tools for people banks leave behind</title>
-    <meta name="description" content="Plan Your Life builds small, honest tools for people banks do not serve well. Right Door, Sunday Pack, and Fortune Teller are live. Offshore is research. PYL Invest is earlier work.">
+    <title>Plan Your Life | Fix first — then New Me</title>
+    <meta name="description" content="Plan Your Life is for people who are stressed or unbanked, not for people who already have it made. Right Door and Sunday Pack help you Fix and Stabilize. Fortune Teller builds New Me. Offshore is research. PYL Invest is earlier work.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -50,38 +50,48 @@
 </head>
 <body class="bg-slate-950 text-slate-200">
 
-    <header id="header" class="fixed top-0 left-0 w-full z-40 transition-all duration-300 py-6">
-        <div class="container mx-auto px-6 flex justify-between items-center gap-4">
-            <a href="#home" class="flex items-center gap-2 group">
-                <i data-lucide="layout-grid" class="w-8 h-8 text-brand-teal group-hover:scale-110 transition-transform duration-300"></i>
-                <span class="text-xl font-bold text-white tracking-tight">Plan Your Life</span>
-            </a>
-            <nav class="flex items-center gap-4 sm:gap-8">
-                <a href="#work" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Work</a>
-                <a href="#how" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">How we work</a>
-                <a href="#contact" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-all">Contact</a>
-            </nav>
+    <div id="chrome" class="fixed top-0 left-0 w-full z-50">
+        <div class="bg-amber-400 text-slate-950 text-center px-4 py-2.5" role="status">
+            <p class="text-sm font-semibold leading-snug">
+                <span class="inline-block align-middle px-1.5 py-0.5 mr-2 rounded bg-slate-950 text-amber-300 text-xs font-bold tracking-wider">DRAFT</span>
+                Draft shelf for QA — production planyourlife.tech not swapped yet.
+            </p>
         </div>
-    </header>
+        <header id="header" class="transition-all duration-300 py-5">
+            <div class="container mx-auto px-6 flex justify-between items-center gap-4">
+                <a href="#home" class="flex items-center gap-2 group">
+                    <i data-lucide="layout-grid" class="w-8 h-8 text-brand-teal group-hover:scale-110 transition-transform duration-300"></i>
+                    <span class="text-xl font-bold text-white tracking-tight">Plan Your Life</span>
+                </a>
+                <nav class="flex items-center gap-4 sm:gap-8">
+                    <a href="#journey" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Path</a>
+                    <a href="#work" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Work</a>
+                    <a href="#how" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">How we work</a>
+                    <a href="#contact" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-all">Contact</a>
+                </nav>
+            </div>
+        </header>
+    </div>
 
     <main>
-        <section id="home" class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden reveal">
+        <section id="home" class="relative min-h-screen flex items-center justify-center pt-36 overflow-hidden reveal">
             <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
                 <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-purple/20 rounded-full blur-[100px]"></div>
                 <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-teal/20 rounded-full blur-[100px]"></div>
             </div>
             <div class="container mx-auto px-6 relative z-10 text-center">
                 <div class="inline-block px-4 py-1.5 mb-6 border border-brand-teal/30 rounded-full bg-brand-teal/10 backdrop-blur-md">
-                    <span class="text-brand-teal text-sm font-semibold tracking-wide uppercase">Hong Kong · small studio · product first</span>
+                    <span class="text-brand-teal text-sm font-semibold tracking-wide uppercase">Hong Kong · Fix first · then New Me</span>
                 </div>
                 <h1 class="text-4xl sm:text-5xl md:text-7xl font-bold mb-8 leading-tight text-white">
-                    Tools for people
-                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">banks leave behind</span>
+                    Fix first.
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">Not for people who already have it made.</span>
                 </h1>
                 <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                    Plan Your Life builds tools you can use yourself. Three are live — each with
-                    its own Safari home-screen icon. We do not call anyone for you. We do not
-                    collect your data.
+                    For people who are stressed or unbanked. Right Door and Sunday Pack help you
+                    <strong class="text-slate-200 font-medium">Fix and Stabilize</strong>.
+                    Then Fortune Teller builds <strong class="text-slate-200 font-medium">New Me</strong>.
+                    You act. We do not call anyone for you. We do not collect your data.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 flex-wrap">
                     <a href="https://betomarine.github.io/debtrenegociation1/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-purple-900/20 text-center">
@@ -90,10 +100,34 @@
                     <a href="https://betomarine.github.io/debtrenegociation1/sunday/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-teal to-brand-purple text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-teal-900/20 text-center">
                         Open Sunday Pack
                     </a>
-                    <a href="https://betomarine.github.io/debtrenegociation1/fortune/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-purple-900/20 text-center">
+                    <a href="https://betomarine.github.io/debtrenegociation1/fortune/" class="w-full sm:w-auto px-8 py-4 border border-slate-500 text-slate-200 rounded-lg font-semibold hover:border-brand-teal hover:text-white transition-colors text-center bg-transparent">
                         Open Fortune Teller
                     </a>
                 </div>
+            </div>
+        </section>
+
+        <section id="journey" class="py-16 bg-slate-950 border-y border-slate-800 relative reveal">
+            <div class="container mx-auto px-6">
+                <p class="text-center text-xs uppercase tracking-wide text-slate-500 mb-8">The path</p>
+                <ol class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <li class="rounded-2xl border border-brand-teal/30 bg-slate-900/60 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-teal mb-2">1 · Fix</p>
+                        <p class="text-white font-semibold">Stop the fire</p>
+                    </li>
+                    <li class="rounded-2xl border border-brand-teal/30 bg-slate-900/60 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-teal mb-2">2 · Stabilize</p>
+                        <p class="text-white font-semibold">Put a floor under the month</p>
+                    </li>
+                    <li class="rounded-2xl border border-slate-700 bg-slate-900/40 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">3 · Plan</p>
+                        <p class="text-white font-semibold">Living goals vs a net</p>
+                    </li>
+                    <li class="rounded-2xl border border-slate-700 bg-slate-900/40 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">4 · Invest</p>
+                        <p class="text-white font-semibold">Only after the floor holds</p>
+                    </li>
+                </ol>
             </div>
         </section>
 
@@ -108,6 +142,7 @@
                     <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-10 flex flex-col h-full">
                         <div class="flex flex-wrap items-center gap-3 mb-6">
                             <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">Fix</span>
                             <span class="text-slate-500 text-sm">Hong Kong · banked borrowers</span>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
@@ -115,14 +150,14 @@
                         </div>
                         <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Right Door · 正確的門</h3>
                         <p class="text-slate-400 leading-relaxed mb-6">
-                            A free PWA for banked Hong Kong borrowers who lost hours or a job and need
-                            to write to the published hardship door — IDRP or the bank’s own workout unit —
+                            A free PWA for banked Hong Kong borrowers under stress. Write to
+                            hardship / debt programmes the bank must offer but won’t advertise —
                             not the branch account manager. You prepare the letter on your phone. You send it.
                         </p>
                         <ul class="space-y-3 text-slate-300 text-sm mb-6">
                             <li class="flex gap-3"><i data-lucide="smartphone" class="w-5 h-5 text-brand-teal shrink-0"></i><span>On this phone only. Pack, photos, HKID, and amounts stay here unless you share them.</span></li>
                             <li class="flex gap-3"><i data-lucide="shield-off" class="w-5 h-5 text-brand-teal shrink-0"></i><span>No account. We do not upload, store, or collect your data. Uninstall wipes it.</span></li>
-                            <li class="flex gap-3"><i data-lucide="book-open" class="w-5 h-5 text-brand-teal shrink-0"></i><span>Published doors only. We never contact a bank, lender, or anyone else in your name.</span></li>
+                            <li class="flex gap-3"><i data-lucide="book-open" class="w-5 h-5 text-brand-teal shrink-0"></i><span>Published hardship programmes — not the branch account manager. We never contact a bank, lender, or anyone else in your name.</span></li>
                         </ul>
                         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 mb-8">
                             <p class="text-xs uppercase tracking-wide text-slate-500 mb-2">What it is not</p>
@@ -141,6 +176,7 @@
                     <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-10 flex flex-col h-full">
                         <div class="flex flex-wrap items-center gap-3 mb-6">
                             <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">Fix · Stabilize</span>
                             <span class="text-slate-500 text-sm">Hong Kong · foreign domestic workers</span>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
@@ -148,9 +184,9 @@
                         </div>
                         <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Sunday Pack</h3>
                         <p class="text-slate-400 leading-relaxed mb-6">
-                            A free PWA for foreign domestic workers in Hong Kong. Screen red flags, list debts
-                            in bands, and split remittance into a 1-page counsellor briefing you prepare on
-                            this phone. You bring it. We never email Enrich, banks, or lenders.
+                            A free PWA for foreign domestic workers and helpers in Hong Kong.
+                            Build a floor, stop new loans, and walk to the Enrich door with a 1-page
+                            briefing you prepare on this phone. Not a literacy lecture on its own.
                         </p>
                         <ul class="space-y-3 text-slate-300 text-sm mb-6">
                             <li class="flex gap-3"><i data-lucide="smartphone" class="w-5 h-5 text-brand-teal shrink-0"></i><span>On this phone only. Separate store from Right Door. Uninstall wipes it.</span></li>
@@ -174,15 +210,18 @@
                     <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-10 flex flex-col h-full">
                         <div class="flex flex-wrap items-center gap-3 mb-6">
                             <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
-                            <span class="text-slate-500 text-sm">Hong Kong · fix → floor → living vs a net</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">New Me</span>
+                            <span class="text-slate-500 text-sm">Hong Kong · timeline + %</span>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
                             <i data-lucide="orbit" class="w-6 h-6 text-brand-teal"></i>
                         </div>
                         <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Fortune Teller</h3>
                         <p class="text-slate-400 leading-relaxed mb-6">
-                            A free PWA for the Plan Your Life arc: <strong class="text-slate-200">fix the break → build the foundation → then goals and investments</strong>.
-                            Start with “I need to rebuild.” Diffuse debt if it’s on fire, put meat on the bone, then unlock living milestones vs a security net. Two dials. An owned Monte Carlo on this phone. Not a retirement gadget. Not Envizage.
+                            A free PWA for <strong class="text-slate-200">New Me</strong>: a today→future timeline with a chance-% on each pin.
+                            The path is <strong class="text-slate-200">Fix → Stabilize → Plan → Invest</strong>.
+                            Rebuild first. If debt is on fire, it routes you to Right Door or Sunday Pack.
+                            Not a retirement gadget. Not Envizage.
                         </p>
                         <ul class="space-y-3 text-slate-300 text-sm mb-6">
                             <li class="flex gap-3"><i data-lucide="smartphone" class="w-5 h-5 text-brand-teal shrink-0"></i><span>On this phone only. Separate store from Right Door and Sunday Pack. Uninstall wipes it.</span></li>
@@ -197,7 +236,7 @@
                                 hard-fail. The URL is stable: <span class="text-slate-200">/fortune/</span>.
                             </p>
                         </div>
-                        <a href="https://betomarine.github.io/debtrenegociation1/fortune/" class="mt-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                        <a href="https://betomarine.github.io/debtrenegociation1/fortune/" class="mt-auto inline-flex items-center justify-center gap-2 px-6 py-3 border border-slate-500 text-slate-200 rounded-lg font-semibold hover:border-brand-teal hover:text-white transition-colors bg-transparent">
                             Open Fortune Teller
                             <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                         </a>
@@ -243,28 +282,28 @@
             <div class="container mx-auto px-6">
                 <div class="text-center mb-16">
                     <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">How we work</h2>
-                    <p class="text-slate-400">A small studio. Ship the useful thing. Say what is not ready.</p>
+                    <p class="text-slate-400">You act. We point to published doors. We label what is live.</p>
                 </div>
                 <div class="grid md:grid-cols-3 gap-6">
                     <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
                         <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
                             <i data-lucide="hand" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-3">You stay in control</h3>
+                        <h3 class="text-xl font-bold text-white mb-3">You act</h3>
                         <p class="text-slate-400 leading-relaxed">We build tools you run yourself. If a letter has to go to a bank, you send it in your name. We never become the middleman.</p>
                     </div>
                     <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
                         <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center mb-6">
                             <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Published paths only</h3>
-                        <p class="text-slate-400 leading-relaxed">When money or hardship is involved, we point to doors the bank or regulator already publishes. No invented units. No “we know someone.”</p>
+                        <h3 class="text-xl font-bold text-white mb-3">Published doors</h3>
+                        <p class="text-slate-400 leading-relaxed">When money or hardship is involved, we point to hardship programmes the bank already publishes — not the branch account manager. No invented units. No “we know someone.”</p>
                     </div>
                     <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
                         <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
                             <i data-lucide="eye" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Label the stage</h3>
+                        <h3 class="text-xl font-bold text-white mb-3">Honest labels</h3>
                         <p class="text-slate-400 leading-relaxed">Live, research, or earlier work. If it is not shipped, we say so. That is why Offshore is research and Right Door, Sunday Pack, and Fortune Teller are the products we ask you to open.</p>
                     </div>
                 </div>
@@ -283,7 +322,7 @@
                         </span>
                     </div>
                     <p class="text-slate-400 mb-8 leading-relaxed">
-                        Tools for people banks leave behind. Talk to Beto if you want to test Right Door,
+                        Fix first for people banks leave behind. Talk to Beto if you want to test Right Door,
                         Sunday Pack, or Fortune Teller, compare notes on Offshore research, or just say hello.
                     </p>
                 </div>
@@ -335,10 +374,10 @@
         window.addEventListener('scroll', () => {
             if (window.scrollY > 20) {
                 header.classList.add('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
-                header.classList.remove('py-6');
+                header.classList.remove('py-5');
             } else {
                 header.classList.remove('bg-slate-950/80', 'backdrop-blur-md', 'border-b', 'border-slate-800', 'py-3');
-                header.classList.add('py-6');
+                header.classList.add('py-5');
             }
         });
     </script>
