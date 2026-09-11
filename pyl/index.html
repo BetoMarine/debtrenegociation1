@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Your Life | Fix first — two live tools</title>
+    <meta name="description" content="Plan Your Life has two live tools: Right Door and Sunday Pack. Fortune Teller is testing. Offshore is research. Digital twin is ideation.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            purple: '#7e22ce',
+                            teal: '#06b6d4',
+                            dark: '#0f172a',
+                            card: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scroll-padding-top: 7.5rem;
+        }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+
+    <div id="chrome" class="fixed top-0 left-0 w-full z-50">
+        <div class="bg-amber-400 text-slate-950 text-center px-4 py-2.5" role="status">
+            <p class="text-sm font-semibold leading-snug">
+                <span class="inline-block align-middle px-1.5 py-0.5 mr-2 rounded bg-slate-950 text-amber-300 text-xs font-bold tracking-wider">DRAFT</span>
+                Draft shelf for QA — production planyourlife.tech not swapped yet.
+            </p>
+        </div>
+        <header id="header" class="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 transition-all duration-300 py-5">
+            <div class="container mx-auto px-6 flex justify-between items-center gap-4">
+                <a href="#home" class="flex items-center gap-2 group">
+                    <i data-lucide="layout-grid" class="w-8 h-8 text-brand-teal group-hover:scale-110 transition-transform duration-300"></i>
+                    <span class="text-xl font-bold text-white tracking-tight">Plan Your Life</span>
+                </a>
+                <nav class="flex items-center gap-4 sm:gap-8">
+                    <a href="#journey" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Path</a>
+                    <a href="#work" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">Work</a>
+                    <a href="#how" class="hidden sm:inline text-slate-300 hover:text-brand-teal transition-colors text-sm font-medium">How we work</a>
+                    <a href="#contact" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-all">Contact</a>
+                </nav>
+            </div>
+        </header>
+    </div>
+
+    <main>
+        <section id="home" class="relative min-h-screen flex items-center justify-center pt-36 overflow-hidden reveal">
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+                <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-purple/20 rounded-full blur-[100px]"></div>
+                <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-teal/20 rounded-full blur-[100px]"></div>
+            </div>
+            <div class="container mx-auto px-6 relative z-10 text-center">
+                <div class="inline-block px-4 py-1.5 mb-6 border border-brand-teal/30 rounded-full bg-brand-teal/10 backdrop-blur-md">
+                    <span class="text-brand-teal text-sm font-semibold tracking-wide uppercase">Hong Kong · Fix first · two live tools</span>
+                </div>
+                <h1 class="text-4xl sm:text-5xl md:text-7xl font-bold mb-8 leading-tight text-white">
+                    Fix first.
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">Not for people who already have it made.</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                    For people who are stressed or unbanked.
+                    <strong class="text-slate-200 font-medium">Right Door</strong> and
+                    <strong class="text-slate-200 font-medium">Sunday Pack</strong> are live —
+                    they help you <strong class="text-slate-200 font-medium">Fix and Stabilize</strong>.
+                    Fortune Teller is testing. You act. We do not call anyone for you. We do not collect your data.
+                </p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 flex-wrap">
+                    <a href="https://betomarine.github.io/debtrenegociation1/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-purple-900/20 text-center">
+                        Open Right Door
+                    </a>
+                    <a href="https://betomarine.github.io/debtrenegociation1/sunday/" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-teal to-brand-purple text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-teal-900/20 text-center">
+                        Open Sunday Pack
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="journey" class="py-16 bg-slate-950 border-y border-slate-800 relative reveal">
+            <div class="container mx-auto px-6">
+                <p class="text-center text-xs uppercase tracking-wide text-slate-500 mb-8">The path</p>
+                <ol class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <li class="rounded-2xl border border-brand-teal/30 bg-slate-900/60 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-teal mb-2">1 · Fix</p>
+                        <p class="text-white font-semibold">Stop the fire</p>
+                    </li>
+                    <li class="rounded-2xl border border-brand-teal/30 bg-slate-900/60 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-teal mb-2">2 · Stabilize</p>
+                        <p class="text-white font-semibold">Put a floor under the month</p>
+                    </li>
+                    <li class="rounded-2xl border border-slate-700 bg-slate-900/40 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">3 · Plan</p>
+                        <p class="text-white font-semibold">Living goals vs a net</p>
+                    </li>
+                    <li class="rounded-2xl border border-slate-700 bg-slate-900/40 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">4 · Invest</p>
+                        <p class="text-white font-semibold">Only after the floor holds</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="work" class="py-24 bg-slate-900 relative reveal">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">The work</h2>
+                    <p class="text-slate-400 max-w-2xl mx-auto">Two live tools. Fortune Teller is testing. Offshore is research. Digital twin is ideation. Live apps use Plan Your Life purple and teal on a calm light canvas — not this dark marketing page.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-10">
+                    <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-10 flex flex-col h-full">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">Fix</span>
+                            <span class="text-slate-500 text-sm">Hong Kong · banked borrowers</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
+                            <i data-lucide="door-open" class="w-6 h-6 text-brand-teal"></i>
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Right Door · 正確的門</h3>
+                        <p class="text-slate-400 leading-relaxed mb-8">
+                            Fix. Write to hardship / debt programmes the bank must offer but won’t advertise —
+                            not the branch account manager. On this phone. You send it.
+                        </p>
+                        <a href="https://betomarine.github.io/debtrenegociation1/" class="mt-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-purple to-brand-teal text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                            Open Right Door
+                            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        </a>
+                    </article>
+
+                    <article class="bg-slate-950 border border-brand-teal/40 rounded-3xl p-8 md:p-10 flex flex-col h-full">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-teal/15 text-brand-teal border border-brand-teal/30">Live</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">Fix · Stabilize</span>
+                            <span class="text-slate-500 text-sm">Hong Kong · foreign domestic workers</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center mb-6">
+                            <i data-lucide="file-text" class="w-6 h-6 text-brand-teal"></i>
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Sunday Pack</h3>
+                        <p class="text-slate-400 leading-relaxed mb-8">
+                            Fix and Stabilize for foreign domestic workers. Build a floor, stop new loans,
+                            and walk to the Enrich door with a briefing you prepare on this phone.
+                            Not a literacy lecture on its own.
+                        </p>
+                        <a href="https://betomarine.github.io/debtrenegociation1/sunday/" class="mt-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-teal to-brand-purple text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                            Open Sunday Pack
+                            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        </a>
+                    </article>
+                </div>
+
+                <article class="bg-slate-950 border border-amber-400/30 rounded-3xl p-8 md:p-10 mb-10">
+                    <div class="flex flex-wrap items-center gap-3 mb-6">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-amber-400/15 text-amber-200 border border-amber-400/40">Testing</span>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-brand-purple/15 text-purple-200 border border-brand-purple/30">Plan</span>
+                        <span class="text-slate-500 text-sm">Hong Kong · timeline + %</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-amber-400/10 flex items-center justify-center mb-6">
+                        <i data-lucide="orbit" class="w-6 h-6 text-amber-300"></i>
+                    </div>
+                    <h3 class="text-2xl md:text-3xl font-bold text-white mb-3">Fortune Teller</h3>
+                    <p class="text-slate-400 leading-relaxed max-w-3xl">
+                        New Me after the floor holds: a today→future timeline with a chance-% on each pin.
+                        The path is <strong class="text-slate-200">Fix → Stabilize → Plan → Invest</strong>.
+                        Rebuild first. If debt is on fire, it routes you to Right Door or Sunday Pack.
+                        Not a retirement gadget. Not Envizage. Not open as a primary app yet.
+                    </p>
+                </article>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <article class="bg-slate-950 border border-slate-800 rounded-3xl p-8 hover:border-slate-600 transition-all duration-300">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-800 text-slate-300 border border-slate-700">Research</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center mb-6">
+                            <i data-lucide="compass" class="w-6 h-6 text-brand-purple"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">Offshore</h3>
+                        <p class="text-slate-400 leading-relaxed text-sm">
+                            Research: tools for migrant domestic workers who send money home and are poorly served by banks.
+                            Not a shipped remittance product. No live rail or wallet.
+                        </p>
+                    </article>
+
+                    <article class="bg-slate-950 border border-slate-800 rounded-3xl p-8 hover:border-slate-600 transition-all duration-300">
+                        <div class="flex flex-wrap items-center gap-3 mb-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-800 text-slate-300 border border-slate-700">Ideation</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center mb-6">
+                            <i data-lucide="box" class="w-6 h-6 text-brand-purple"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Digital twin</h3>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="how" class="py-24 bg-slate-950 relative reveal">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">How we work</h2>
+                    <p class="text-slate-400">You act. We point to published doors. We label what is live.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
+                            <i data-lucide="hand" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">You act</h3>
+                        <p class="text-slate-400 leading-relaxed">We build tools you run yourself. If a letter has to go to a bank, you send it in your name. We never become the middleman.</p>
+                    </div>
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center mb-6">
+                            <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Published doors</h3>
+                        <p class="text-slate-400 leading-relaxed">When money or hardship is involved, we point to hardship programmes the bank already publishes — not the branch account manager. No invented units. No “we know someone.”</p>
+                    </div>
+                    <div class="bg-slate-900/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-800">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center mb-6">
+                            <i data-lucide="eye" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Honest labels</h3>
+                        <p class="text-slate-400 leading-relaxed">Live, testing, research, or ideation. If it is not shipped, we say so. Right Door and Sunday Pack are the two live tools. Fortune Teller is testing. Offshore is research. Digital twin is ideation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contact" class="bg-slate-950 pt-24 pb-12 border-t border-slate-800 reveal">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-12">
+                <div class="max-w-md">
+                    <div class="flex items-center gap-3 mb-6">
+                        <i data-lucide="layout-grid" class="w-10 h-10 text-brand-teal"></i>
+                        <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-purple to-brand-teal">
+                            Plan Your Life
+                        </span>
+                    </div>
+                    <p class="text-slate-400 mb-8 leading-relaxed">
+                        Fix first for people banks leave behind. Talk to Beto if you want to try the two live tools —
+                        Right Door or Sunday Pack — compare notes on Fortune Teller testing or Offshore research, or just say hello.
+                    </p>
+                </div>
+                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 w-full lg:w-auto min-w-[320px]">
+                    <h3 class="text-xl font-semibold text-white mb-6">Contact</h3>
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+                            <div class="font-bold text-brand-purple text-lg">BM</div>
+                        </div>
+                        <div>
+                            <p class="text-white font-medium text-lg">Beto Marinelli</p>
+                            <p class="text-brand-teal text-sm">Founder</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <a href="mailto:beto.marinelli@planyourlife.tech" class="flex items-center gap-3 text-slate-300 hover:text-brand-teal transition-colors group">
+                            <div class="p-2 bg-slate-800 rounded-lg group-hover:bg-slate-700 transition-colors">
+                                <i data-lucide="mail" class="w-5 h-5"></i>
+                            </div>
+                            <span>beto.marinelli@planyourlife.tech</span>
+                        </a>
+                        <a href="tel:+85263357616" class="flex items-center gap-3 text-slate-300 hover:text-brand-teal transition-colors group">
+                            <div class="p-2 bg-slate-800 rounded-lg group-hover:bg-slate-700 transition-colors">
+                                <i data-lucide="phone" class="w-5 h-5"></i>
+                            </div>
+                            <span>+852 6335 7616</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-20 pt-8 border-t border-slate-900 text-center text-slate-600 text-sm">
+                <p>&copy; <span id="year"></span> Plan Your Life. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) entry.target.classList.add('active');
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                header.classList.add('py-3');
+                header.classList.remove('py-5');
+            } else {
+                header.classList.remove('py-3');
+                header.classList.add('py-5');
+            }
+        });
+    </script>
+</body>
+</html>
