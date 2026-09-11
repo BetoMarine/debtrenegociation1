@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.8.1";
+export const APP_VERSION = "PoC v0.9.0";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -137,10 +137,22 @@ const en = {
 
   boardKicker: "Step 3 · Your new life",
   boardTitle: "Your new life",
-  timelineTitle: "Today → future",
-  timelineHint: "Each beat is a chance it works. Drag a living goal along the path.",
-  youAreIn: "You're in {stage}.",
-  pathPending: "Reading the path…",
+  timelineTitle: "Stages",
+  timelineHint: "Each row is a chance it works.",
+  youAreIn: "You're in {stage}",
+  youAreInCount: "{n} of {total}",
+  stageRollup: "stage rollup",
+  stageNow: "Now",
+  holdFloorFirst: "floor first",
+  stackFoot: "Goals = rows + % rings. No path pins.",
+  dragHint: "Drag to reorder",
+  stageEmpty: {
+    fix: "No fire to fix on this path.",
+    stabilize: "Set a floor to stabilize.",
+    plan: "Add a living goal to this stage.",
+    invest: "Thin for now — still on the board.",
+  },
+  pathPending: "Reading the plan…",
   today: "Today",
   pathNow: "now",
   stageFix: "Fix",
@@ -148,7 +160,7 @@ const en = {
   stagePlan: "Plan",
   stageInvest: "Invest",
   goalsTitle: "Your goals",
-  goalsEmpty: "Add a living goal to pin on the path.",
+  goalsEmpty: "Add a living goal to this stage.",
   netTitle: "Security net",
   netSummary: "{months} months, or {floor} — need {need} today.",
   adjustCta: "Adjust",
@@ -206,7 +218,7 @@ const en = {
     "Illustrative model, not regulated advice, not a product sale. Execute elsewhere with a licensed intermediary. Plan Your Life / Fortune Teller. Not affiliated with HSBC.",
 
   crumbClose: "Got it",
-  running: "Updating the path…",
+  running: "Updating the plan…",
   medianPot: "Median pot",
   pathsLine: "{n} paths · seed {seed}",
 };

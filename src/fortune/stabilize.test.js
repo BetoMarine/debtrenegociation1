@@ -78,7 +78,7 @@ describe("Floor math", () => {
     expect(monthlySurplus({ incomeMonthly: 20000, spendMonthly: 20000, debts: 0 }, "none")).toBe(0);
   });
 
-  it("lets a thin floor onto the board after Step 2 — honesty lives on the timeline", () => {
+  it("lets a thin floor onto the board after Step 2 — honesty lives on the board", () => {
     const thin = {
       ...newFortunePlan(),
       privacyAccepted: true,

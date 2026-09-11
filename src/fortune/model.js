@@ -143,6 +143,7 @@ export function normalizeMilestone(raw, index = 0) {
     amount,
     months,
     stage: inferStage({ ...raw, amount }),
+    boardOrder: Number.isFinite(Number(raw?.boardOrder)) ? Math.round(Number(raw.boardOrder)) : index,
   };
 }
 

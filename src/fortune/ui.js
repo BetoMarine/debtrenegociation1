@@ -2,7 +2,7 @@ import { productHref } from "../paths.js";
 import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
 import { boardCoachActions, isEmptyPot, shouldShowCoach } from "./coach.js";
-import { currentStage, journeyItems, layoutJourneyPins } from "./journey.js";
+import { currentStage, holdStatus, stageStack } from "./journey.js";
 import {
   DEBT_BANDS,
   INCOME_BANDS,
@@ -74,7 +74,7 @@ export function dialTone(pct, hardFail) {
   return "ok";
 }
 
-function renderDials(host, { sticky } = {}) {
+function renderDials(host, { sticky, hold = true } = {}) {
   const { forecast, escapeHtml, busy } = host;
   const living = forecast?.livingPct;
   const net = forecast?.netPct;
@@ -94,9 +94,30 @@ function renderDials(host, { sticky } = {}) {
         ${dialMarkup("living", t("livingDial"), living, t("livingHint"), hard, escapeHtml)}
         ${dialMarkup("net", t("netDial"), net, t("netHint"), hard, escapeHtml)}
       </div>
-      <p class="ft-verdict ${hard ? "wreck" : forecast ? verdict : "wait"}">${escapeHtml(headline)}</p>
+      ${hold ? `<p class="ft-verdict ${hard ? "wreck" : forecast ? verdict : "wait"}">${escapeHtml(headline)}</p>` : ""}
     </section>
   `;
+}
+
+export function holdLineText(plan, forecast, busy) {
+  const status = holdStatus(plan, forecast);
+  if (status.pending) return t("pathPending");
+  const coaching = shouldShowCoach(forecast);
+  const hard = status.hard;
+  const verdict = status.verdict;
+  let line = coaching && (verdict === "wrecked" || hard) ? t("coachTitle") : t(`verdicts.${verdict}`);
+  if (status.floorFirst) {
+    line = `${String(line).replace(/\.$/, "")} · ${t("holdFloorFirst")}`;
+  }
+  return busy && !forecast ? t("pathPending") : line;
+}
+
+function renderHold(host) {
+  const { plan, forecast, busy, escapeHtml } = host;
+  const status = holdStatus(plan, forecast);
+  const line = holdLineText(plan, forecast, busy);
+  const tone = status.pending ? "wait" : status.tone;
+  return `<p class="ft-hold ${tone}" data-hold>${escapeHtml(line)}</p>`;
 }
 
 function dialMarkup(kind, label, pct, hint, hard, escapeHtml) {
@@ -407,19 +428,26 @@ function renderBoard(host) {
   const body = el(`<div class="stack ft-board"></div>`);
   body.append(el(`<p class="kicker">${escapeHtml(t("boardKicker"))}</p>`));
   body.append(el(`<h1>${escapeHtml(t("boardTitle"))}</h1>`));
-  body.insertAdjacentHTML("beforeend", renderDials(host, { sticky: true }));
+  body.insertAdjacentHTML("beforeend", renderDials(host, { hold: false }));
+  body.insertAdjacentHTML("beforeend", renderHold(host));
   if (busy && forecast) body.append(el(`<p class="hint">${escapeHtml(t("running"))}</p>`));
   body.insertAdjacentHTML("beforeend", renderCoach(host));
   body.insertAdjacentHTML("beforeend", renderCrumb(host));
 
-  const horizon = forecast?.horizonMonths || 48;
   const here = currentStage(plan, forecast);
+  const stack = stageStack(plan, forecast, { open: host.openStages });
   const youAreIn = t("youAreIn", { stage: stageCopy(here) });
-  body.append(el(`<p class="ft-path-kicker">${escapeHtml(t("timelineTitle"))}</p>`));
-  body.append(el(`<p class="ft-path-status" data-stage-status>${escapeHtml(youAreIn)}</p>`));
-  body.append(el(`<p class="tiny">${escapeHtml(t("timelineHint"))}</p>`));
-  body.append(el(renderTimeline(plan, forecast, horizon, escapeHtml)));
+  const hereSection = stack.find((section) => section.current) || stack[0];
+  const count = t("youAreInCount", { n: String(hereSection.index), total: String(hereSection.total) });
+  body.append(
+    el(`<div class="ft-you-in" data-you-in>
+      <p data-stage-status data-stage-line>${escapeHtml(youAreIn)}</p>
+      <span data-stage-count>${escapeHtml(count)}</span>
+    </div>`),
+  );
+  body.insertAdjacentHTML("beforeend", renderStageStackHtml(stack, escapeHtml, !!forecast?.hardFail));
 
+  body.append(el(`<p class="tiny ft-stack-foot">${escapeHtml(t("stackFoot"))}</p>`));
   const addCls = shouldShowCoach(forecast) ? "btn" : "btn btn-primary";
   body.append(el(`<button class="${addCls}" type="button" data-act="add-goal">${escapeHtml(t("addGoalCta"))}</button>`));
   body.append(el(`<button class="btn btn-ghost" data-go="adjust" type="button">${escapeHtml(t("adjustCta"))}</button>`));
@@ -428,53 +456,76 @@ function renderBoard(host) {
   bindBoard(host);
 }
 
-function renderTimeline(plan, forecast, horizon, escapeHtml) {
-  const months = Math.max(12, horizon);
-  const items = layoutJourneyPins(journeyItems(plan, forecast));
-  const beats = items
-    .map((item) => {
-      const pending = (item.kind === "goal" || item.kind === "floor") && item.pct == null;
-      const shown =
-        item.kind === "today"
-          ? t("pathNow")
-          : item.kind === "action" && item.pct == null
-            ? "→"
-            : pending
-              ? "…"
-              : `${item.pct}%`;
-      const tone = pending
-        ? "wait"
-        : item.kind === "today"
-          ? "today"
-          : item.kind === "action" && item.pct == null
-            ? "fix"
-            : dialTone(item.pct, !!forecast?.hardFail);
-      const stage = stageCopy(item.stage);
-      const when = item.months === 0 ? t("today") : monthYearLabel(item.months);
-      const drag = item.draggable ? `data-chip="${escapeHtml(item.id)}"` : `data-static="${escapeHtml(item.id)}"`;
-      return `<button type="button" class="ft-beat tone-${tone} stage-${item.stage}${item.draggable ? " is-drag" : ""}${pending ? " is-pending" : ""}" ${drag} data-months="${item.months}" aria-label="${escapeHtml(stage)} · ${escapeHtml(item.name)} ${shown}">
-        <span class="ft-beat-dot ft-pin-pct">${shown}</span>
-        <span class="ft-beat-stage">${escapeHtml(stage)}</span>
-        <span class="ft-beat-name">${escapeHtml(item.shortName || item.name)}</span>
-        <span class="ft-beat-when">${escapeHtml(when)}</span>
-      </button>`;
-    })
-    .join("");
-  const cols = Math.max(items.length, 1);
+function rowShown(item) {
+  const pending = (item.kind === "goal" || item.kind === "floor") && item.pct == null;
+  if (item.kind === "action" && item.pct == null) return { shown: "→", pending: false, tone: "fix" };
+  if (pending) return { shown: "…", pending: true, tone: "wait" };
+  return { shown: `${item.pct}%`, pending: false, tone: dialTone(item.pct, false) };
+}
+
+function renderStageRow(item, escapeHtml, hardFail) {
+  const { shown, pending, tone } = rowShown(item);
+  const ringTone = hardFail && !pending && item.pct != null ? "wreck" : tone;
+  const pctStyle = !pending && item.pct != null ? `--pct:${Math.round(item.pct)}` : "";
+  const action =
+    item.kind === "goal"
+      ? `data-edit-goal="${escapeHtml(item.id)}"`
+      : item.kind === "floor"
+        ? `data-open-net="1"`
+        : `data-open-next="1"`;
+  const idAttr = item.draggable
+    ? `data-chip="${escapeHtml(item.id)}"`
+    : `data-static="${escapeHtml(item.id)}"`;
+  const handle = item.draggable
+    ? `<button class="ft-row-handle" type="button" data-drag aria-label="${escapeHtml(t("dragHint"))}">⋮⋮</button>`
+    : `<span class="ft-row-handle is-spacer" aria-hidden="true"></span>`;
+  const hint = item.draggable ? `<em class="ft-row-hint">${escapeHtml(t("dragHint"))}</em>` : "";
   return `
-    <div class="ft-timeline" data-timeline data-horizon="${months}" style="--ft-beats:${cols}">
-      <svg class="ft-path" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M6 22 C 28 10, 72 32, 94 16" fill="none" stroke="url(#ft-path-stroke)" stroke-width="2.2" stroke-linecap="round"/>
-        <defs>
-          <linearGradient id="ft-path-stroke" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7e22ce"/>
-            <stop offset="100%" stop-color="#06b6d4"/>
-          </linearGradient>
-        </defs>
-      </svg>
-      <div class="ft-beats">${beats}</div>
+    <div class="ft-row tone-${ringTone}${pending ? " is-pending" : ""}${item.draggable ? " is-goal" : ""}" data-row data-stage="${item.stage}" ${idAttr}>
+      ${handle}
+      <button class="ft-row-main" type="button" ${action} aria-label="${escapeHtml(item.name)} ${shown}">
+        <span class="ft-row-dial" style="${pctStyle}">
+          <span class="ft-row-ring" aria-hidden="true"></span>
+          <strong class="ft-pin-pct">${shown}</strong>
+        </span>
+        <span class="ft-row-text">
+          <strong>${escapeHtml(item.name)}</strong>
+          ${hint}
+        </span>
+      </button>
     </div>
   `;
+}
+
+export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
+  const sections = (stack || [])
+    .map((section) => {
+      const label = `${section.index} · ${stageCopy(section.id)}`;
+      const current = section.current ? " is-current" : "";
+      const open = section.expanded ? " is-open" : "";
+      const thin = section.thin ? " is-thin" : "";
+      const showNow = section.current;
+      const rollupReady = section.rollup != null;
+      const meta = showNow ? t("stageNow") : rollupReady ? `${section.rollup}%` : "…";
+      const rollupLabel = showNow ? "" : `<em>${escapeHtml(t("stageRollup"))}</em>`;
+      const body = section.thin
+        ? `<p class="tiny ft-stage-empty">${escapeHtml(t(`stageEmpty.${section.id}`))}</p>`
+        : section.rows.map((row) => renderStageRow(row, escapeHtml, hardFail)).join("");
+      return `
+        <section class="ft-stage${current}${open}${thin}" data-stage="${section.id}">
+          <button class="ft-stage-head" type="button" data-toggle-stage="${section.id}" aria-expanded="${section.expanded ? "true" : "false"}">
+            <span class="ft-stage-title">${escapeHtml(label)}</span>
+            <span class="ft-stage-meta" data-rollup>
+              <strong>${escapeHtml(meta)}</strong>
+              ${rollupLabel}
+            </span>
+          </button>
+          <div class="ft-stage-body" ${section.expanded ? "" : "hidden"}>${body}</div>
+        </section>
+      `;
+    })
+    .join("");
+  return `<div class="ft-stack" data-stack>${sections}</div>`;
 }
 
 function bindBoard(host) {
@@ -484,10 +535,16 @@ function bindBoard(host) {
   root.querySelectorAll("[data-edit-goal]").forEach((btn) => {
     btn.addEventListener("click", () => host.editGoal(btn.dataset.editGoal));
   });
+  root.querySelectorAll("[data-open-net]").forEach((btn) => {
+    btn.addEventListener("click", () => host.go("net-edit"));
+  });
+  root.querySelectorAll("[data-open-next]").forEach((btn) => {
+    btn.addEventListener("click", () => host.go("next"));
+  });
   root.querySelectorAll("[data-coach]").forEach((btn) => {
     btn.addEventListener("click", () => host.applyCoach(btn.dataset.coach));
   });
-  host.bindTimeline(root.querySelector("[data-timeline]"));
+  host.bindStageStack(root.querySelector("[data-stack]"));
 }
 
 function monthOptions(selectedMonths, escapeHtml) {

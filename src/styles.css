@@ -533,182 +533,291 @@ html.fortune-root body {
   color: var(--ok);
 }
 
-.ft-timeline {
-  position: relative;
-  padding: 8px 2px 12px;
-  touch-action: none;
-  user-select: none;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: visible;
-}
-
-.ft-path-kicker {
-  margin: 8px 0 0;
-  font-size: 12px;
+.ft-hold {
+  margin: 4px 0 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 15px;
 }
 
-.ft-path-status {
-  margin: 2px 0 4px;
+.ft-hold.wreck {
+  color: var(--ft-wreck);
+}
+
+.ft-hold.shared {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: var(--ok);
+}
+
+.ft-hold.stretched,
+.ft-hold.living_heavy,
+.ft-hold.net_heavy {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.ft-hold.wait {
+  color: var(--muted);
+  background: #f4f4f5;
+  border-color: var(--line);
+}
+
+.ft-you-in {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px -4px 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pyl-purple) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--pyl-purple) 18%, #fff);
+  backdrop-filter: blur(10px);
+}
+
+.ft-you-in p {
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.ft-path {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 22px;
-  margin: 4px 0 2px;
-  color: var(--pyl-teal);
+.ft-you-in span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.ft-rail {
-  display: none;
-}
-
-.ft-ticks {
-  display: none;
-}
-
-.ft-beats {
-  display: grid;
-  grid-template-columns: repeat(var(--ft-beats, 4), minmax(0, 1fr));
-  gap: 6px 2px;
-  min-width: 0;
-  align-items: start;
-}
-
-.ft-beat {
+.ft-stack {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.ft-stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.ft-stage.is-current {
+  border-color: var(--pyl-purple);
+  background: color-mix(in srgb, var(--pyl-purple) 5%, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pyl-purple) 35%, transparent);
+}
+
+.ft-stage.is-thin.is-current,
+.ft-stage.is-thin {
+  min-height: 52px;
+}
+
+.ft-stage-head {
+  display: flex;
   align-items: center;
-  gap: 3px;
-  min-height: 44px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
-  padding: 0 1px;
+  min-height: 52px;
+  padding: 12px 14px;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 11px;
+  text-align: left;
+}
+
+.ft-stage-title {
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.ft-stage-meta {
+  text-align: right;
   line-height: 1.2;
-  text-align: center;
-  touch-action: none;
 }
 
-.ft-beat-dot,
-.ft-pin-dot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: var(--pyl-teal);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.28);
-  flex: 0 0 auto;
-}
-
-.ft-beat.tone-today .ft-beat-dot {
-  background: var(--pyl-purple);
-  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.28);
-  font-size: 11px;
-}
-
-.ft-beat.tone-fix .ft-beat-dot {
-  background: var(--ft-wreck);
-  box-shadow: 0 2px 8px rgba(180, 35, 24, 0.22);
-}
-
-.ft-beat.tone-wreck .ft-beat-dot,
-.ft-beat.tone-low .ft-beat-dot,
-.ft-pin.tone-wreck .ft-pin-dot,
-.ft-pin.tone-low .ft-pin-dot {
-  background: var(--ft-wreck);
-  box-shadow: 0 2px 8px rgba(180, 35, 24, 0.22);
-}
-
-.ft-beat.tone-mid .ft-beat-dot,
-.ft-pin.tone-mid .ft-pin-dot {
-  background: #b8860b;
-  box-shadow: 0 2px 8px rgba(184, 134, 11, 0.22);
-}
-
-.ft-beat.tone-ok .ft-beat-dot,
-.ft-pin.tone-ok .ft-pin-dot {
-  background: var(--pyl-teal);
-}
-
-.ft-beat.tone-wait .ft-beat-dot,
-.ft-beat.is-pending .ft-beat-dot {
-  background: #d4d4d8;
-  color: #52525b;
-  box-shadow: none;
-  animation: ft-pulse 1.15s ease-in-out infinite;
-}
-
-.ft-beat:active,
-.ft-pin:active {
-  z-index: 5;
-}
-
-.ft-beat-when,
-.ft-chip em,
-.ft-pin em {
+.ft-stage-meta strong {
   display: block;
-  font-style: normal;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.ft-beat-name,
-.ft-pin-name {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  font-weight: 600;
-  font-size: 11px;
-  max-width: 100%;
-  line-height: 1.25;
-}
-
-.ft-beat-stage,
-.ft-pin-stage {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pyl-purple);
-}
-
-.ft-beat.stage-fix .ft-beat-stage,
-.ft-pin.stage-fix .ft-pin-stage {
-  color: var(--ft-wreck);
-}
-
-.ft-beat.stage-stabilize .ft-beat-stage,
-.ft-pin.stage-stabilize .ft-pin-stage {
+  font-size: 16px;
   color: var(--pyl-teal);
 }
 
-.ft-beat.stage-invest .ft-beat-stage,
-.ft-pin.stage-invest .ft-pin-stage {
+.ft-stage.is-current .ft-stage-meta strong {
   color: var(--pyl-purple);
+}
+
+.ft-stage-meta em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.ft-stage-body {
+  padding: 0 8px 10px;
+}
+
+.ft-stage-empty {
+  margin: 0 6px 6px;
+  color: var(--muted);
+}
+
+.ft-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding: 8px 8px 8px 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.ft-row.is-drag {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  border-color: var(--pyl-purple);
+}
+
+.ft-row-handle {
+  width: 22px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  opacity: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.ft-row-handle.is-spacer {
+  pointer-events: none;
+}
+
+.ft-row:hover .ft-row-handle,
+.ft-row:focus-within .ft-row-handle,
+.ft-row.is-drag .ft-row-handle,
+.ft-row-handle:focus-visible {
+  opacity: 0.55;
+}
+
+@media (hover: none) {
+  .ft-row:active .ft-row-handle,
+  .ft-row.is-drag .ft-row-handle {
+    opacity: 0.55;
+  }
+}
+
+.ft-row-main {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.ft-row-dial {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.ft-row-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--tone, var(--pyl-teal)) calc(var(--pct, 0) * 1%), #eee 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent 62%, #000 63%);
+  mask: radial-gradient(farthest-side, transparent 62%, #000 63%);
+}
+
+.ft-row.tone-fix,
+.ft-row.tone-wreck,
+.ft-row.tone-low {
+  --tone: var(--ft-wreck);
+}
+
+.ft-row.tone-mid {
+  --tone: #b8860b;
+}
+
+.ft-row.tone-ok {
+  --tone: var(--pyl-teal);
+}
+
+.ft-row.tone-wait,
+.ft-row.is-pending {
+  --tone: #d4d4d8;
+}
+
+.ft-row.is-pending .ft-row-ring {
+  animation: ft-pulse 1.15s ease-in-out infinite;
+}
+
+.ft-row-dial strong {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ft-row-text strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.ft-row-hint {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0;
+}
+
+.ft-row:hover .ft-row-hint,
+.ft-row:focus-within .ft-row-hint,
+.ft-row.is-drag .ft-row-hint {
+  opacity: 1;
+}
+
+.ft-stack-foot {
+  margin-top: 4px;
+}
+
+.ft-path-kicker,
+.ft-path-status,
+.ft-timeline,
+.ft-path,
+.ft-beats,
+.ft-beat {
+  display: none;
 }
 
 .ft-tease,

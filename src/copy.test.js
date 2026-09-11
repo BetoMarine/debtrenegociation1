@@ -92,6 +92,11 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.startTitle).toMatch(/phone/i);
     expect(FORTUNE_STRINGS.en.whereTitle).toMatch(/where are you today/i);
     expect(FORTUNE_STRINGS.en.boardKicker).toMatch(/your new life/i);
+    expect(FORTUNE_STRINGS.en.stageRollup).toMatch(/stage rollup/i);
+    expect(FORTUNE_STRINGS.en.stackFoot).toMatch(/no path pins/i);
+    expect(FORTUNE_STRINGS.en.stageEmpty.invest).toMatch(/still on the board/i);
+    expect(FORTUNE_STRINGS.en.youAreIn).toMatch(/you're in \{stage\}/i);
+    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.0/);
     expect(FORTUNE_STRINGS.en.startLead).not.toMatch(/years to retirement/i);
     expect(FORTUNE_STRINGS.en.themes.rebuild.label).toMatch(/I need to rebuild/i);
     expect(FORTUNE_STRINGS.en.themes.steady.label).toMatch(/steady/i);
