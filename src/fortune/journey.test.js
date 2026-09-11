@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { applyTheme, newFortunePlan } from "./model.js";
 import {
+  applyStageOrder,
   currentStage,
   emphasizeStage,
+  holdStatus,
   inferStage,
   journeyItems,
   JOURNEY_STAGES,
   layoutJourneyPins,
+  stageRollup,
+  stageStack,
 } from "./journey.js";
 
 describe("Step 3 journey path", () => {
@@ -96,5 +100,65 @@ describe("Step 3 journey path", () => {
       money: { ...steady.money, savings: 500000, savingsBand: "400_800" },
     };
     expect(currentStage(funded, { livingPct: 40 })).toBe("plan");
+  });
+});
+
+describe("Step 3 vertical stage stack", () => {
+  it("always renders Fix → Stabilize → Plan → Invest, including a thin Invest", () => {
+    const plan = applyTheme(newFortunePlan(), "grow");
+    const stack = stageStack(plan, { netPct: 40, milestonePct: [], livingPct: 20 });
+    expect(stack.map((s) => s.id)).toEqual(["fix", "stabilize", "plan", "invest"]);
+    expect(stack).toHaveLength(4);
+    const invest = stack.find((s) => s.id === "invest");
+    expect(invest).toBeTruthy();
+    expect(invest.thin).toBe(true);
+    expect(invest.rows).toEqual([]);
+    expect(stack.find((s) => s.id === "stabilize").thin).toBe(false);
+  });
+
+  it("expands the current stage and labels a rollup as the mean of row %", () => {
+    const plan = applyTheme(newFortunePlan(), "rebuild");
+    plan.debtHeat = "none";
+    const forecast = { netPct: 42, milestonePct: [70, 50, 30, 10], livingPct: 40, hardFail: false };
+    const stack = stageStack(plan, forecast);
+    const here = stack.find((s) => s.current);
+    expect(here.id).toBe("stabilize");
+    expect(here.expanded).toBe(true);
+    expect(stack.filter((s) => s.expanded)).toHaveLength(1);
+    const planStage = stack.find((s) => s.id === "plan");
+    expect(planStage.rollup).toBe(50);
+    expect(stageRollup([{ pct: 70 }, { pct: 50 }, { pct: 30 }])).toBe(50);
+    expect(stageRollup([{ pct: null }, { pct: undefined }])).toBeNull();
+  });
+
+  it("keeps Invest on a rebuild board and reorders living goals inside a stage", () => {
+    const plan = applyTheme(newFortunePlan(), "rebuild");
+    const stack = stageStack(plan, { netPct: 20, milestonePct: [40, 55, 60, 35] });
+    expect(stack.find((s) => s.id === "invest").thin).toBe(false);
+    expect(stack.find((s) => s.id === "invest").rows.some((r) => /growth pot/i.test(r.name))).toBe(true);
+    const planIds = stack.find((s) => s.id === "plan").rows.map((r) => r.id);
+    expect(planIds.length).toBeGreaterThanOrEqual(2);
+    const flipped = applyStageOrder(plan.milestones, "plan", [...planIds].reverse());
+    expect(flipped.find((m) => m.id === planIds[0]).boardOrder).toBeGreaterThan(
+      flipped.find((m) => m.id === planIds[planIds.length - 1]).boardOrder,
+    );
+    const resorted = stageStack({ ...plan, milestones: flipped }, { netPct: 20, milestonePct: [40, 55, 60, 35] });
+    expect(resorted.find((s) => s.id === "plan").rows.map((r) => r.id)).toEqual([...planIds].reverse());
+  });
+
+  it("keeps wrecked honesty and appends floor-first when the floor is thin", () => {
+    const plan = applyTheme(newFortunePlan(), "rebuild");
+    plan.money = { ...plan.money, savingsBand: "0", savings: 0 };
+    const wrecked = holdStatus(plan, { verdict: "wrecked", hardFail: true, netPct: 4, livingPct: 2 });
+    expect(wrecked.hard).toBe(true);
+    expect(wrecked.floorFirst).toBe(true);
+    const funded = {
+      ...plan,
+      money: { ...plan.money, savings: 500000, savingsBand: "400_800" },
+      debtHeat: "none",
+    };
+    const holds = holdStatus(funded, { verdict: "shared", hardFail: false, netPct: 80, livingPct: 75 });
+    expect(holds.floorFirst).toBe(false);
+    expect(holds.tone).toBe("shared");
   });
 });

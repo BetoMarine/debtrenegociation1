@@ -9,15 +9,14 @@ import {
   nextAfterStart,
   stabilizeTargetMonths,
 } from "./stabilize.js";
-import { currentStage } from "./journey.js";
-import { FORTUNE_SCREENS, dialTone, renderFortune } from "./ui.js";
+import { applyStageOrder, currentStage, holdStatus, stageStack } from "./journey.js";
+import { FORTUNE_SCREENS, dialTone, holdLineText, renderFortune } from "./ui.js";
 import {
   applyTheme,
   defaultUiState,
   emptyDraftGoal,
   migrateFortunePlan,
   migrateUiState,
-  monthYearLabel,
   newFortunePlan,
   normalizeMilestone,
   toEnginePlan,
@@ -55,7 +54,7 @@ let draftGoal = emptyDraftGoal();
 let compare = null;
 let forecastTimer = 0;
 let lastScreen = null;
-let dragBeforeNet = null;
+let openStages = null;
 
 export async function boot() {
   ui = migrateUiState(await getFortuneUi());
@@ -262,7 +261,10 @@ function host() {
     handlePdf,
     exportJson,
     clearPlan,
-    bindTimeline,
+    bindStageStack,
+    toggleStage,
+    reorderStage,
+    openStages,
     applyCoach,
   };
 }
@@ -278,6 +280,7 @@ async function pickTheme(id) {
   if (id === "rebuild") {
     plan.stabilizeTargetMonths = Number(plan.net?.emergencyMonths) === 3 ? 3 : 6;
   }
+  openStages = null;
   await persistPlan("next");
   go("next");
 }
@@ -319,6 +322,7 @@ async function finishStep2() {
     ...plan.net,
     emergencyMonths: stabilizeTargetMonths(plan),
   };
+  openStages = null;
   await persistPlan("board");
   go("board");
   queueForecast();
@@ -473,46 +477,54 @@ function refreshCompare() {
   compare = compareSaveBorrow(toEnginePlan(plan), id, { paths: 800, seed: plan.seed });
 }
 
-function bindTimeline(rail) {
-  if (!rail) return;
-  const horizon = Number(rail.dataset.horizon) || 48;
-  rail.querySelectorAll("[data-chip]").forEach((chip) => {
-    chip.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      chip.setPointerCapture(event.pointerId);
-      dragBeforeNet = forecast?.netPct ?? null;
-      const onMove = (ev) => {
-        const box = rail.getBoundingClientRect();
-        const x = Math.min(Math.max(ev.clientX - box.left, 0), box.width);
-        const months = Math.max(1, Math.min(horizon, Math.round(1 + (x / box.width) * (horizon - 1))));
-        const id = chip.dataset.chip;
-        const found = plan.milestones.find((m) => m.id === id);
-        chip.dataset.months = String(months);
-        const when = chip.querySelector(".ft-beat-when, em");
-        if (when) when.textContent = monthYearLabel(months);
-        if (!found || found.months === months) return;
-        found.months = months;
-        liveForecast();
-      };
-      const onUp = async () => {
-        chip.removeEventListener("pointermove", onMove);
-        chip.removeEventListener("pointerup", onUp);
-        await persistPlan("board");
-        await runAndPersistForecast({ persistEvent: false, keepScroll: true });
-        await maybeDragCrumb();
-      };
-      chip.addEventListener("pointermove", onMove);
-      chip.addEventListener("pointerup", onUp);
-    });
-  });
+function toggleStage(id) {
+  const here = currentStage(plan, forecast);
+  if (!openStages) openStages = new Set([here]);
+  if (openStages.has(id)) openStages.delete(id);
+  else openStages.add(id);
+  render({ keepScroll: true });
 }
 
-function liveForecast() {
-  clearTimeout(forecastTimer);
-  forecastTimer = setTimeout(async () => {
-    forecast = await runForecast(toEnginePlan(plan), { paths: 700, seed: plan.seed });
-    patchDials();
-  }, 40);
+async function reorderStage(stage, orderedIds) {
+  plan.milestones = applyStageOrder(plan.milestones, stage, orderedIds);
+  await persistPlan("board");
+  render({ keepScroll: true });
+}
+
+function bindStageStack(stack) {
+  if (!stack) return;
+  stack.querySelectorAll("[data-toggle-stage]").forEach((btn) => {
+    btn.addEventListener("click", () => toggleStage(btn.dataset.toggleStage));
+  });
+  stack.querySelectorAll("[data-drag]").forEach((handle) => {
+    handle.addEventListener("pointerdown", (event) => {
+      const row = handle.closest("[data-row]");
+      if (!row) return;
+      event.preventDefault();
+      event.stopPropagation();
+      handle.setPointerCapture?.(event.pointerId);
+      row.classList.add("is-drag");
+      const stage = row.dataset.stage;
+      const start = [...row.parentElement.querySelectorAll("[data-row][data-chip]")].map((node) => node.dataset.chip);
+      const onMove = (ev) => {
+        const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-row][data-chip]");
+        if (!over || over === row || over.dataset.stage !== stage) return;
+        const box = over.getBoundingClientRect();
+        if (ev.clientY < box.top + box.height / 2) over.before(row);
+        else over.after(row);
+      };
+      const onUp = async () => {
+        row.classList.remove("is-drag");
+        handle.removeEventListener("pointermove", onMove);
+        handle.removeEventListener("pointerup", onUp);
+        const ids = [...row.parentElement.querySelectorAll("[data-row][data-chip]")].map((node) => node.dataset.chip);
+        if (ids.join() === start.join()) return;
+        await reorderStage(stage, ids);
+      };
+      handle.addEventListener("pointermove", onMove);
+      handle.addEventListener("pointerup", onUp);
+    });
+  });
 }
 
 function patchDials() {
@@ -529,57 +541,61 @@ function patchDials() {
     const strong = dial.querySelector("strong");
     if (strong) strong.textContent = ready ? `${shown}%` : "…";
   });
-  const verdict = root.querySelector(".ft-verdict");
-  if (verdict) {
-    verdict.className = `ft-verdict ${forecast.hardFail ? "wreck" : forecast.verdict}`;
-    verdict.textContent =
-      forecast.hardFail || forecast.verdict === "wrecked" ? ft("coachTitle") : ft(`verdicts.${forecast.verdict}`);
+  const hold = root.querySelector("[data-hold]");
+  if (hold) {
+    const status = holdStatus(plan, forecast);
+    hold.className = `ft-hold ${status.pending ? "wait" : status.tone}`;
+    hold.textContent = holdLineText(plan, forecast, busy);
   }
-  const stageEl = root.querySelector("[data-stage-status]");
+  const stageEl = root.querySelector("[data-stage-line]");
+  const countEl = root.querySelector("[data-stage-count]");
   if (stageEl) {
     const here = currentStage(plan, forecast);
     const label = { fix: "Fix", stabilize: "Stabilize", plan: "Plan", invest: "Invest" }[here] || "Plan";
     stageEl.textContent = ft("youAreIn", { stage: label });
+    if (countEl) {
+      const stack = stageStack(plan, forecast, { open: openStages });
+      const section = stack.find((s) => s.current) || stack[0];
+      countEl.textContent = ft("youAreInCount", { n: String(section.index), total: String(section.total) });
+    }
   }
-  root.querySelectorAll("[data-chip], [data-static]").forEach((chip) => {
-    const id = chip.dataset.chip || chip.dataset.static;
-    const pctEl = chip.querySelector(".ft-pin-pct, .ft-beat-dot");
+  root.querySelectorAll("[data-row]").forEach((row) => {
+    const id = row.dataset.chip || row.dataset.static;
+    const pctEl = row.querySelector(".ft-pin-pct");
+    const dial = row.querySelector(".ft-row-dial");
     if (!pctEl || id === "journey-today") return;
-    const drag = chip.classList.contains("is-drag");
-    const apply = (pct, stage) => {
+    const apply = (pct) => {
       const ready = pct != null && Number.isFinite(Number(pct));
       const shown = ready ? Math.round(pct) : null;
       pctEl.textContent = ready ? `${shown}%` : "…";
       const tone = ready ? dialTone(pct, forecast.hardFail) : "wait";
-      chip.className = `ft-beat tone-${tone} stage-${stage}${drag ? " is-drag" : ""}${ready ? "" : " is-pending"}`;
+      row.classList.toggle("is-pending", !ready);
+      row.className = row.className.replace(/tone-\w+/g, "").trim() + ` tone-${tone}`;
+      if (dial) {
+        if (ready) dial.style.setProperty("--pct", String(shown));
+        else dial.style.removeProperty("--pct");
+      }
     };
     if (id === "journey-floor") {
-      apply(forecast.netPct, "stabilize");
+      apply(forecast.netPct);
       return;
     }
     if (id === "journey-fix") return;
     const i = plan.milestones.findIndex((m) => m.id === id);
-    if (i >= 0) {
-      const stage = plan.milestones[i].stage || "plan";
-      apply(forecast.milestonePct?.[i], stage);
+    if (i >= 0) apply(forecast.milestonePct?.[i]);
+  });
+  stageStack(plan, forecast, { open: openStages }).forEach((section) => {
+    const meta = root.querySelector(`[data-stage="${section.id}"] [data-rollup] strong`);
+    const label = root.querySelector(`[data-stage="${section.id}"] [data-rollup] em`);
+    if (!meta) return;
+    if (section.current) {
+      meta.textContent = ft("stageNow");
+      if (label) label.hidden = true;
+    } else {
+      meta.textContent = section.rollup == null ? "…" : `${section.rollup}%`;
+      if (label) label.hidden = false;
     }
   });
-}
-
-async function maybeDragCrumb() {
-  const after = forecast?.netPct;
-  if (
-    dragBeforeNet != null &&
-    after != null &&
-    dragBeforeNet - after >= 8 &&
-    shouldShowCrumb(ui, CRUMB_KEYS.dragNet)
-  ) {
-    crumb = CRUMB_KEYS.dragNet;
-    ui = markCrumb(ui, CRUMB_KEYS.dragNet);
-    await persistUi();
-    render({ keepScroll: true });
-  }
-  dragBeforeNet = null;
 }
 
 async function handlePdf(mode) {
@@ -614,7 +630,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.8.1",
+    version: "0.9.0",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,
@@ -632,6 +648,7 @@ async function clearPlan() {
   ui = defaultUiState();
   compare = null;
   crumb = null;
+  openStages = null;
   await persistPlan("start");
   go("start");
 }
