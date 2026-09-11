@@ -17,7 +17,7 @@ Stores stay separate: Right Door uses the `pack` vault; Sunday Pack uses `sunday
 | **Right Door** (root — existing links keep working) | https://betomarine.github.io/debtrenegociation1/ | 正確的門 |
 | **Sunday Pack** | https://betomarine.github.io/debtrenegociation1/sunday/ | Sunday Pack |
 | **Fortune Teller** (stable path — do not rename) | https://betomarine.github.io/debtrenegociation1/fortune/ | Fortune Teller |
-| **Plan Your Life DRAFT shelf** (QA only — production planyourlife.tech not swapped) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
+| **Plan Your Life DRAFT shelf** (QA only — production planyourlife.tech not swapped; two live tools, Fortune testing) | https://betomarine.github.io/debtrenegociation1/pyl/ | — |
 
 Open each URL in **Safari**. Share → Add to Home Screen. You get three icons. The Fortune Teller URL is `/fortune/` (not `/fortune-teller/`). Keep it stable.
 
@@ -220,7 +220,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 Other checks: drag a living pin; both dials move. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
 
-Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store). `/pyl/` is a DRAFT shelf for QA (banner on top; production planyourlife.tech not swapped). It must show three Live cards, Fix-first CTAs, and no raw “IDRP”.
+Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store). `/pyl/` is a DRAFT shelf for QA (banner on top; production planyourlife.tech not swapped). It must show two Live cards (Right Door, Sunday Pack) with Open links, Fortune Teller as Testing with no Open CTA, Offshore as Research, Digital twin as Ideation with no description, Fix→Stabilize→Plan→Invest (“Only after the floor holds”), and no raw “IDRP”.
 
 Local preview (needs Node):
 
