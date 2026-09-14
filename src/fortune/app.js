@@ -40,7 +40,7 @@ import {
 } from "../db.js";
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
-import { fortuneOutboundHref } from "../refer.js";
+import { productHref } from "../paths.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 
 const FORTUNE_EVENT_TYPES = ["fortune_started", "fortune_forecast_run", "fortune_pdf", "fortune_export"];
@@ -168,9 +168,9 @@ async function runAndPersistForecast({ persistEvent = true, keepScroll = true } 
 }
 
 function fortuneFooter() {
-  const tools = `<a class="link" href="${escapeHtml(fortuneOutboundHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
+  const tools = `<a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
           ·
-          <a class="link" href="${escapeHtml(fortuneOutboundHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
+          <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
   const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;
   if (screen === "start") {
     return `
