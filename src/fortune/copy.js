@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.0";
+export const APP_VERSION = "PoC v0.9.1";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -83,7 +83,7 @@ const en = {
   nextSteadyLead: "A light snapshot. Skip if you want the board now.",
   nextGrowTitle: "Add a goal.",
   nextGrowLead: "Pin one living goal on the path from today.",
-  nextSeeLife: "See your new life",
+  nextSeeLife: "Looks right — open my plan",
   nextSkipBoard: "Skip to the board",
 
   moneyTitle: "Me now",
@@ -106,7 +106,11 @@ const en = {
   fireLeadFdw: "Helper debt? Start with Sunday Pack.",
   fireRightDoor: "Open Right Door",
   fireSunday: "Open Sunday Pack",
-  fireHint: "Links only. We do not email a bank or a lender.",
+  fireHint: "Links only. We do not email a bank or a lender. Come back — your plan stays here.",
+  fixPickHint: "3 or 6 months. Pick once.",
+  efNow: "Emergency fund now (HKD)",
+  efNowHint: "What you have today. 0 is allowed — this milestone stays.",
+  investPlaceholder: "Suggested mix (after floor) — not a product",
 
   floorLabel: "Your floor",
   stabilizeMonths3: "3 months",

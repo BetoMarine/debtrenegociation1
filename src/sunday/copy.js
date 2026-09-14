@@ -32,6 +32,7 @@ const en = {
   otherTools: "Other tools from Plan Your Life",
   otherToolsRight: "Right Door",
   otherToolsFortune: "Fortune Teller",
+  backToFortune: "Back to Fortune Teller",
   addHome: "Add to Home Screen",
   addHomeHow:
     "iPhone: open this Sunday Pack page in Safari → Share → Add to Home Screen. After the first load it works offline.",
@@ -290,6 +291,7 @@ const tl = {
   otherTools: "Iba pang tool mula sa Plan Your Life",
   otherToolsRight: "Right Door",
   otherToolsFortune: "Fortune Teller",
+  backToFortune: "Bumalik sa Fortune Teller",
   addHome: "Idagdag sa Home Screen",
   addHomeHow:
     "iPhone: buksan ang Sunday Pack sa Safari → Share → Add to Home Screen. Pagkatapos ng unang load, gumagana offline.",
@@ -510,6 +512,7 @@ const id = {
   otherTools: "Alat lain dari Plan Your Life",
   otherToolsRight: "Right Door",
   otherToolsFortune: "Fortune Teller",
+  backToFortune: "Kembali ke Fortune Teller",
   addHome: "Tambahkan ke Layar Utama",
   addHomeHow:
     "iPhone: buka Sunday Pack di Safari → Share → Add to Home Screen. Setelah muat pertama, bisa dipakai offline.",

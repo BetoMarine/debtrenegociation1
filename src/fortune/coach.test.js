@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyCoachAction,
+  boardCoachActions,
   breakingMilestones,
   coachActions,
   coachCrumb,
@@ -109,9 +110,27 @@ describe("Rebuild coach", () => {
     );
   });
 
-  it("shows coach for stretched as well as wrecked, never a you're-set headline", () => {
-    expect(shouldShowCoach({ verdict: "stretched", hardFail: false, livingPct: 50, netPct: 50 })).toBe(true);
-    expect(shouldShowCoach({ verdict: "shared", hardFail: false, livingPct: 80, netPct: 80 })).toBe(false);
-    expect(shouldShowCoach({ verdict: "wrecked", hardFail: true, livingPct: 0, netPct: 0 })).toBe(true);
+  it("hard-fail 0% board coach is one Fix or floor action, not an edit pile", () => {
+    const wrecked = { hardFail: true, verdict: "wrecked", livingPct: 0, netPct: 0 };
+    const firePlan = { ...newFortunePlan(), debtHeat: "heavy", theme: "rebuild" };
+    expect(boardCoachActions(firePlan, wrecked)).toHaveLength(1);
+    expect(boardCoachActions(firePlan, wrecked)[0].id).toBe("open-fix");
+    const empty = {
+      ...newFortunePlan(),
+      ...killTestInput(),
+      money: {
+        incomeBand: "0",
+        savingsBand: "0",
+        spendBand: "20_35",
+        debtsBand: "0",
+        incomeMonthly: 0,
+        savings: 0,
+        spendMonthly: 25000,
+        debts: 0,
+      },
+      milestones: [{ id: "house", name: "New house", amount: 15_000_000, months: 24 }],
+    };
+    expect(boardCoachActions(empty, wrecked)).toHaveLength(1);
+    expect(boardCoachActions(empty, wrecked)[0].id).toBe("edit-money");
   });
 });

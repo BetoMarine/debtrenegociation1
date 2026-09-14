@@ -3,6 +3,7 @@
  * Pure module — no DOM. Used by the board and unit tests.
  */
 import { hkd, resolveMoney } from "./model.js";
+import { needsFireCard, receivedFixMilestone } from "./stabilize.js";
 import { TEMPLATES } from "./templates.js";
 
 export function shouldShowCoach(forecast) {
@@ -128,8 +129,42 @@ export function coachActions(plan, forecast) {
   return actions;
 }
 
-/** Board chips: one primary plus at most two more. */
+/**
+ * Board chips. Hard-fail / 0% is one prioritized next action (Fix or floor),
+ * not an edit pile. Stretched can still show up to three.
+ */
 export function boardCoachActions(plan, forecast) {
+  const hard = !!(forecast?.hardFail || forecast?.verdict === "wrecked");
+  if (hard) {
+    if (receivedFixMilestone(plan) || needsFireCard(plan?.debtHeat)) {
+      return [
+        {
+          key: "open-fix",
+          id: "open-fix",
+          kind: "primary",
+          label: "Fix first — debt renegotiation",
+        },
+      ];
+    }
+    if (isEmptyPot(plan)) {
+      return [
+        {
+          key: "edit-money",
+          id: "edit-money",
+          kind: "primary",
+          label: "Add income or savings",
+        },
+      ];
+    }
+    return [
+      {
+        key: "edit-net",
+        id: "edit-net",
+        kind: "primary",
+        label: "Start the emergency floor",
+      },
+    ];
+  }
   return coachActions(plan, forecast).slice(0, 3);
 }
 

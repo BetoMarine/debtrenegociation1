@@ -2,7 +2,8 @@
  * Floor math + Step 2 routing. Pure module.
  * Rebuild still does fire triage + floor-first; the board is not gated on a funded floor.
  */
-import { monthYearLabel, resolveMoney } from "./model.js";
+import { EF_MILESTONE_ID, FIX_GOAL_NAME, FIX_MILESTONE_ID, isFireHandoff } from "../handoff.js";
+import { emergencyCurrentHkd, milestoneRole, monthYearLabel, resolveMoney } from "./model.js";
 
 export const DEBT_HEAT_IDS = ["none", "paying", "heavy", "fdw"];
 
@@ -27,6 +28,84 @@ export function prefersSunday(heat) {
 export function fireLinkOrder(heat) {
   if (!needsFireCard(heat)) return [];
   return prefersSunday(heat) ? ["sunday", "right-door"] : ["right-door", "sunday"];
+}
+
+/** Debt renegotiation horizon. Default 3 months; 6 stays available. */
+export function fireFixMonths(plan) {
+  const n = Number(plan?.fixMonths);
+  if (n === 6 || n === 3) return n;
+  const fix = receivedFixMilestone(plan);
+  if (Number(fix?.months) === 6) return 6;
+  return 3;
+}
+
+export function receivedFixMilestone(plan) {
+  return (plan?.milestones || []).find((m) => milestoneRole(m) === "fix") || null;
+}
+
+/** Fortune receives a Fix milestone created by Right Door or Sunday Pack. Does not invent one. */
+export function receiveFireHandoff(plan, handoff) {
+  if (!plan || !isFireHandoff(handoff)) return plan;
+  const existing = receivedFixMilestone(plan);
+  const fromPack = handoff.months === 3 || handoff.months === 6 ? handoff.months : null;
+  const alreadyPicked = !!plan.fixMonthsPicked || !!existing?.monthsKnown;
+  const months = fromPack || (alreadyPicked ? fireFixMonths(plan) : 3);
+  const picked = !!fromPack || alreadyPicked;
+  const fix = {
+    id: FIX_MILESTONE_ID,
+    name: FIX_GOAL_NAME,
+    amount: 0,
+    months,
+    stage: "fix",
+    role: "fix",
+    source: handoff.source,
+    monthsKnown: !!fromPack,
+    boardOrder: 0,
+  };
+  const rest = (plan.milestones || []).filter((m) => milestoneRole(m) !== "fix");
+  return {
+    ...plan,
+    milestones: [fix, ...rest],
+    fixMonths: months,
+    fixMonthsPicked: picked,
+    boardReached: true,
+    phase2Unlocked: true,
+  };
+}
+
+export function ensureEmergencyFund(plan) {
+  if (!plan) return plan;
+  const months = stabilizeTargetMonths(plan);
+  const current = emergencyCurrentHkd(plan);
+  const floor = {
+    id: EF_MILESTONE_ID,
+    name: "Emergency fund",
+    amount: current,
+    months,
+    stage: "stabilize",
+    role: "floor",
+    boardOrder: 0,
+  };
+  const rest = (plan.milestones || []).filter((m) => milestoneRole(m) !== "floor");
+  return {
+    ...plan,
+    milestones: [...rest.filter((m) => milestoneRole(m) === "fix"), floor, ...rest.filter((m) => milestoneRole(m) !== "fix")],
+    net: {
+      ...(plan.net || {}),
+      currentHkd: current,
+      emergencyMonths: months,
+    },
+  };
+}
+
+/**
+ * After a fire round-trip: receive Fix (if RD/Sunday created it) and keep the EF milestone.
+ * Does not invent a renegotiation goal.
+ */
+export function ensureFireSequence(plan, handoff) {
+  let next = ensureEmergencyFund(plan);
+  if (handoff) next = receiveFireHandoff(next, handoff);
+  return ensureEmergencyFund(next);
 }
 
 export function debtServiceMonthly(money, heat) {

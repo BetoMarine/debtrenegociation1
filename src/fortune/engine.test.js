@@ -168,4 +168,25 @@ describe("Fortune Teller Monte Carlo", () => {
     expect(verdictOf(70, 20)).toBe("wrecked");
     expect(["wrecked", "stretched", "living_heavy", "net_heavy", "shared"]).toContain(verdictOf(60, 60));
   });
+
+  it("living-goal % uses current EF and a 3/6-month renegotiation path, not the Fix row as a living goal", () => {
+    const base = {
+      money: { incomeMonthly: 22000, spendMonthly: 18000, savings: 0, debts: 400000 },
+      milestones: [
+        { id: "fix-renegotiate", name: "Debt renegotiation", amount: 0, months: 3, stage: "fix", role: "fix" },
+        { id: "trip", name: "Trip", amount: 40000, months: 18, stage: "plan", role: "living" },
+      ],
+      net: { emergencyMonths: 3, floorHkd: 0, currentHkd: 0 },
+      templateId: "steady",
+      inflationOn: false,
+      seed: 21,
+      fixMonths: 3,
+    };
+    const withPath = runMonteCarlo(base, { paths: 300, seed: 21, inflation: 0 });
+    const noPath = runMonteCarlo({ ...base, fixMonths: 0 }, { paths: 300, seed: 21, inflation: 0 });
+    expect(withPath.milestonePct[0]).toBeGreaterThanOrEqual(95);
+    expect(withPath.livingPct).toBe(withPath.milestonePct[1]);
+    expect(withPath.livingPct).toBeGreaterThanOrEqual(noPath.livingPct);
+    expect(withPath.hardFail || withPath.livingPct < 70).toBe(true);
+  });
 });

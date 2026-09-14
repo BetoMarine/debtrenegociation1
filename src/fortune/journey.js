@@ -2,7 +2,9 @@
  * Step 3 board: Fix → Stabilize → Plan → Invest as a vertical stage stack.
  * Pure module — stage rows, rollups, and labels. No DOM.
  */
-import { needsFireCard, stabilizeSnapshot } from "./stabilize.js";
+import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID } from "../handoff.js";
+import { emergencyCurrentHkd, isLivingGoal, milestoneRole } from "./model.js";
+import { fireFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 
 export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
 
@@ -40,34 +42,52 @@ export function journeyItems(plan, forecast, from = new Date()) {
   const snap = stabilizeSnapshot(plan, from);
   const theme = plan?.theme;
 
-  if (theme === "rebuild") {
-    const fire = needsFireCard(plan?.debtHeat);
+  const received = receivedFixMilestone(plan);
+  if (received) {
+    const months = fireFixMonths(plan);
+    const picked = !!plan.fixMonthsPicked || !!received.monthsKnown;
+    items.push({
+      id: received.id,
+      kind: "action",
+      stage: "fix",
+      name: picked ? `Debt renegotiation (${months} mo)` : "Debt renegotiation",
+      months,
+      amount: 0,
+      pct: null,
+      draggable: false,
+      pickMonths: !picked,
+    });
+  } else if (theme === "rebuild") {
     items.push({
       id: "journey-fix",
       kind: "action",
       stage: "fix",
-      name: fire ? "Fix the fire" : "Rebuild first",
+      name: "Rebuild first",
       months: 1,
       amount: 0,
-      pct: fire ? null : 100,
+      pct: 100,
       draggable: false,
+      pickMonths: false,
     });
   }
 
   const floorMonths = Math.max(2, Math.min(24, snap.targetMonths || 6));
   const stabilizePct = forecast?.netPct != null ? Math.round(forecast.netPct) : null;
+  const currentHkd = emergencyCurrentHkd(plan);
   items.push({
-    id: "journey-floor",
+    id: EF_MILESTONE_ID,
     kind: "floor",
     stage: "stabilize",
     name: "Emergency fund",
     months: floorMonths,
-    amount: snap.need,
+    amount: currentHkd,
+    need: snap.need,
     pct: stabilizePct,
     draggable: false,
   });
 
   (plan?.milestones || []).forEach((m, i) => {
+    if (milestoneRole(m) === "fix" || milestoneRole(m) === "floor") return;
     const stage = inferStage(m);
     items.push({
       id: m.id,
@@ -123,10 +143,11 @@ export function stackRows(plan, forecast, from = new Date()) {
     .filter((item) => item.kind !== "today")
     .map((item) => {
       if (item.kind !== "floor") return item;
+      const now = Number(item.amount) || 0;
       return {
         ...item,
-        name: `Emergency floor (${item.months} mo)`,
-        shortName: `Floor (${item.months} mo)`,
+        name: `Emergency fund · now HK$${now.toLocaleString("en-HK")} (${item.months} mo)`,
+        shortName: `EF (${item.months} mo)`,
       };
     });
 }
@@ -142,22 +163,36 @@ export function stageRollup(rows) {
 }
 
 /**
- * Locked four-section board model. Invest is always present, even when thin.
- * Current stage starts expanded; `open` overrides which headers are open.
+ * Locked four-section board. Sequence is priority (You're in …), not hiding.
+ * All stages start open so Plan/Invest goals stay visible with Fix + EF.
  */
 export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
   const here = currentStage(plan, forecast);
   const rows = stackRows(plan, forecast, from);
   const openSet = open instanceof Set ? open : null;
   return JOURNEY_STAGES.map((id, index) => {
-    const stageRows = rows.filter((row) => row.stage === id).sort(stackRowOrder);
+    let stageRows = rows.filter((row) => row.stage === id).sort(stackRowOrder);
+    if (id === "invest" && stageRows.length === 0) {
+      stageRows = [
+        {
+          id: INVEST_PLACEHOLDER_ID,
+          kind: "placeholder",
+          stage: "invest",
+          name: INVEST_PLACEHOLDER_NAME,
+          months: 36,
+          amount: 0,
+          pct: null,
+          draggable: false,
+        },
+      ];
+    }
     const current = here === id;
     return {
       id,
       index: index + 1,
       total: JOURNEY_STAGES.length,
       current,
-      expanded: openSet ? openSet.has(id) : current,
+      expanded: openSet ? openSet.has(id) : true,
       rollup: stageRollup(stageRows),
       rows: stageRows,
       thin: stageRows.length === 0,
@@ -211,10 +246,11 @@ export function holdStatus(plan, forecast) {
  * without relying on memory of Steps 1–2.
  */
 export function currentStage(plan, forecast) {
+  if (receivedFixMilestone(plan)) return "fix";
   const snap = stabilizeSnapshot(plan);
   if (plan?.theme === "rebuild" && needsFireCard(plan?.debtHeat)) return "fix";
   if (!snap.ready) return "stabilize";
-  const miles = plan?.milestones || [];
+  const miles = (plan?.milestones || []).filter((m) => isLivingGoal(m));
   const invest = miles.filter((m) => inferStage(m) === "invest");
   const planned = miles.filter((m) => inferStage(m) !== "invest");
   const living = forecast?.livingPct;

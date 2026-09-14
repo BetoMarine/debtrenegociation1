@@ -564,6 +564,9 @@ function renderReview(host) {
   actions.append(el(`<button class="btn btn-ghost" data-go="sunday-door" type="button">${ex(t(host, "back"))}</button>`));
   const done = el(`<button class="btn" type="button">${ex(t(host, "continue"))}</button>`);
   actions.append(done);
+  if (host.fromFortune) {
+    actions.append(el(host.fortuneReturnCta(t(host, "backToFortune"))));
+  }
   body.append(actions);
   host.shellSunday(body);
   if (!blocked) {
@@ -587,6 +590,9 @@ function renderDone(host) {
     el(`<a class="btn btn-primary ext" href="${ENRICH.booking}" target="_blank" rel="noopener">${ex(t(host, "openEnrich"))}</a>`),
     el(`<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`),
   );
+  if (host.fromFortune) {
+    body.append(el(host.fortuneReturnCta(t(host, "backToFortune"))));
+  }
   const clear = el(`<button class="btn" type="button">${ex(t(host, "clearPack"))}</button>`);
   const box = el(`<div class="nav"></div>`);
   box.append(clear);

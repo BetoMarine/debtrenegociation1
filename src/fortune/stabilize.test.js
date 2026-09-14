@@ -3,6 +3,7 @@ import { killTestInput, runMonteCarlo } from "./engine.js";
 import { applyTheme, newFortunePlan } from "./model.js";
 import {
   canUnlockPhase2,
+  ensureFireSequence,
   fireLinkOrder,
   gateFortuneScreen,
   isBoardUnlocked,
@@ -12,6 +13,7 @@ import {
   needsFireCard,
   prefersSunday,
   projectReachDate,
+  receivedFixMilestone,
   stabilizeSnapshot,
 } from "./stabilize.js";
 import { shouldShowCoach } from "./coach.js";
@@ -28,6 +30,13 @@ describe("Rebuild fire triage", () => {
     expect(needsFireCard("fdw")).toBe(true);
     expect(prefersSunday("fdw")).toBe(true);
     expect(fireLinkOrder("fdw")).toEqual(["sunday", "right-door"]);
+  });
+
+  it("does not invent a Fix renegotiation milestone until RD/Sunday hand off one", () => {
+    const plan = ensureFireSequence({ ...newFortunePlan(), debtHeat: "heavy", theme: "rebuild" }, null);
+    expect(receivedFixMilestone(plan)).toBeNull();
+    expect(plan.milestones.some((m) => m.role === "floor")).toBe(true);
+    expect(plan.milestones.find((m) => m.role === "floor").amount).toBe(0);
   });
 });
 

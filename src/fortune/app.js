@@ -1,9 +1,11 @@
 import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
-import { applyCoachAction, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
+import { applyCoachAction, boardCoachActions, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
 import {
   canOpenPlan,
+  ensureEmergencyFund,
+  ensureFireSequence,
   gateFortuneScreen,
   isBoardUnlocked,
   nextAfterStart,
@@ -19,6 +21,7 @@ import {
   migrateUiState,
   newFortunePlan,
   normalizeMilestone,
+  resolveMoney,
   toEnginePlan,
 } from "./model.js";
 import { buildFortunePdf } from "./pdf.js";
@@ -26,6 +29,7 @@ import { runForecast } from "./simulate.js";
 import {
   addEvent,
   getFortuneForecast,
+  getFortuneHandoff,
   getFortunePlan,
   getFortuneUi,
   listEvents,
@@ -36,7 +40,7 @@ import {
 } from "../db.js";
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
-import { productHref } from "../paths.js";
+import { fortuneOutboundHref } from "../refer.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 
 const FORTUNE_EVENT_TYPES = ["fortune_started", "fortune_forecast_run", "fortune_pdf", "fortune_export"];
@@ -55,10 +59,13 @@ let compare = null;
 let forecastTimer = 0;
 let lastScreen = null;
 let openStages = null;
+let fireHandoff = null;
 
 export async function boot() {
   ui = migrateUiState(await getFortuneUi());
   plan = migrateFortunePlan(await getFortunePlan()) || newFortunePlan();
+  fireHandoff = await getFortuneHandoff();
+  plan = ensureFireSequence(plan, fireHandoff);
   forecast = await getFortuneForecast();
   if (!plan.createdAt) plan = newFortunePlan();
   plan = await persistPlan();
@@ -124,6 +131,7 @@ function go(name) {
 
 async function persistPlan(nextScreen) {
   plan = migrateFortunePlan(plan);
+  plan = ensureFireSequence(plan, fireHandoff);
   if (nextScreen) plan.screen = nextScreen;
   plan.updatedAt = Date.now();
   plan = await saveFortunePlan(plan);
@@ -160,9 +168,9 @@ async function runAndPersistForecast({ persistEvent = true, keepScroll = true } 
 }
 
 function fortuneFooter() {
-  const tools = `<a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
+  const tools = `<a class="link" href="${escapeHtml(fortuneOutboundHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
           ·
-          <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
+          <a class="link" href="${escapeHtml(fortuneOutboundHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
   const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;
   if (screen === "start") {
     return `
@@ -266,6 +274,7 @@ function host() {
     reorderStage,
     openStages,
     applyCoach,
+    setFixMonths,
   };
 }
 
@@ -301,6 +310,7 @@ async function pickDebtHeat(heat) {
 async function patchStabilize(partial) {
   if (partial.stabilizeTargetMonths) {
     plan.stabilizeTargetMonths = partial.stabilizeTargetMonths === 3 ? 3 : 6;
+    plan.stabilizeMonthsPicked = true;
     plan.net = { ...plan.net, emergencyMonths: plan.stabilizeTargetMonths };
   }
   if (partial.money) {
@@ -318,14 +328,30 @@ async function finishStep2() {
   plan.moneyCapturedAtStabilize = true;
   plan.boardReached = true;
   plan.phase2Unlocked = true;
+  if (plan.net.currentHkd == null) {
+    plan.net = { ...plan.net, currentHkd: resolveMoney(plan.money).savings };
+  }
   plan.net = {
     ...plan.net,
     emergencyMonths: stabilizeTargetMonths(plan),
   };
+  plan = ensureEmergencyFund(plan);
   openStages = null;
   await persistPlan("board");
   go("board");
   queueForecast();
+}
+
+async function setFixMonths(n) {
+  const months = n === 6 ? 6 : 3;
+  plan.fixMonths = months;
+  plan.fixMonthsPicked = true;
+  plan.milestones = (plan.milestones || []).map((m) =>
+    m.role === "fix" || m.id === "fix-renegotiate" ? { ...m, months, monthsKnown: true } : m,
+  );
+  await persistPlan("board");
+  render({ keepScroll: true });
+  if (isBoardUnlocked(plan)) queueForecast({ persistEvent: false });
 }
 
 async function skipStep2() {
@@ -387,10 +413,14 @@ async function deleteGoal() {
 }
 
 async function saveNet(net) {
+  const current = Math.max(0, Math.round(Number(net.currentHkd) || 0));
   plan.net = {
     emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
     floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),
+    currentHkd: current,
   };
+  plan.money = { ...plan.money, savings: current };
+  plan = ensureEmergencyFund(plan);
   await persistPlan("board");
   go("board");
   queueForecast();
@@ -432,9 +462,13 @@ async function dismissCrumb() {
 }
 
 async function applyCoach(key) {
-  const actions = coachActions(plan, forecast);
+  const actions = [...boardCoachActions(plan, forecast), ...coachActions(plan, forecast)];
   const action = actions.find((a) => a.key === key);
   if (!action) return;
+  if (action.id === "open-fix") {
+    go("next");
+    return;
+  }
   if (action.id === "edit-money") {
     go("money");
     return;
@@ -576,11 +610,11 @@ function patchDials() {
         else dial.style.removeProperty("--pct");
       }
     };
-    if (id === "journey-floor") {
+    if (id === "ef-floor" || id === "journey-floor") {
       apply(forecast.netPct);
       return;
     }
-    if (id === "journey-fix") return;
+    if (id === "journey-fix" || id === "fix-renegotiate") return;
     const i = plan.milestones.findIndex((m) => m.id === id);
     if (i >= 0) apply(forecast.milestonePct?.[i]);
   });
@@ -630,7 +664,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.0",
+    version: "0.9.1",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

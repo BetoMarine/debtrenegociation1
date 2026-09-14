@@ -101,8 +101,14 @@ export function killTestInput() {
   };
 }
 
+function isLivingGoal(m) {
+  return m?.role !== "fix" && m?.role !== "floor" && m?.role !== "placeholder";
+}
+
 function isAbsurdUnfunded(plan) {
-  const livingSum = (plan.milestones || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+  const livingSum = (plan.milestones || [])
+    .filter(isLivingGoal)
+    .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
   const income = Number(plan.money?.incomeMonthly) || 0;
   const savings = Number(plan.money?.savings) || 0;
   return income <= 0 && savings <= 0 && livingSum >= 15_000_000;
@@ -151,8 +157,12 @@ export function runMonteCarlo(plan, options = {}) {
     name: m.name || "Goal",
     amount: Math.max(0, Number(m.amount) || 0),
     months: Math.max(1, Math.min(horizon, Math.round(Number(m.months) || 1))),
+    role: m.role || "living",
+    living: isLivingGoal(m),
   }));
   const order = milestones.map((_, i) => i).sort((a, b) => milestones[a].months - milestones[b].months || a - b);
+  const livingCount = milestones.filter((m) => m.living).length;
+  const fixMonths = Number(plan.fixMonths) === 6 ? 6 : Number(plan.fixMonths) === 3 ? 3 : 0;
 
   const livingHits = new Array(milestones.length).fill(0);
   const shortfalls = new Array(milestones.length).fill(0).map(() => []);
@@ -182,7 +192,8 @@ export function runMonteCarlo(plan, options = {}) {
         if (loanLeft <= 0) loanBal = 0;
       }
 
-      pot += income - spend - debtService - pmt;
+      const serviceNow = fixMonths && t > fixMonths ? Math.round(debtService * 0.5) : debtService;
+      pot += income - spend - serviceNow - pmt;
       if (pot > 0) {
         const r = muM + sigM * gaussian(rng);
         pot *= 1 + r;
@@ -195,6 +206,11 @@ export function runMonteCarlo(plan, options = {}) {
         const gap = Math.max(0, due - pot);
         shortfalls[i].push(gap);
 
+        if (!mile.living) {
+          if (mile.amount <= 0) funded[i] = true;
+          next += 1;
+          continue;
+        }
         if (borrowId && mile.id === borrowId) {
           funded[i] = true;
           if (pot >= due) {
@@ -218,8 +234,8 @@ export function runMonteCarlo(plan, options = {}) {
     const need = netTargetAt(plan, horizon, inflationOn, inf);
     if (pot >= need) netHits += 1;
     terminals.push(pot);
-    const hits = funded.filter(Boolean).length;
-    livingPathSum += milestones.length ? hits / milestones.length : 1;
+    const livingHitsOnPath = funded.filter((ok, i) => ok && milestones[i].living).length;
+    livingPathSum += livingCount ? livingHitsOnPath / livingCount : 1;
     funded.forEach((ok, i) => {
       if (ok) livingHits[i] += 1;
     });
@@ -229,7 +245,7 @@ export function runMonteCarlo(plan, options = {}) {
     }
   }
 
-  const livingPct = milestones.length ? (100 * livingPathSum) / paths : 100;
+  const livingPct = livingCount ? (100 * livingPathSum) / paths : 100;
   const netPct = (100 * netHits) / paths;
   const milestonePct = milestones.map((_, i) => (100 * livingHits[i]) / paths);
   const verdict = verdictOf(livingPct, netPct);

@@ -36,7 +36,8 @@ describe("Fortune board chrome", () => {
     const plan = applyTheme(newFortunePlan(), "grow");
     const html = renderStageStackHtml(stageStack(plan, { netPct: 10, milestonePct: [], livingPct: 10 }), escape);
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/Thin for now/i);
+    expect(html).toMatch(/Suggested mix \(after floor\)/i);
+    expect(html).not.toMatch(/Thin for now/i);
     const wrecked = applyTheme(newFortunePlan(), "rebuild");
     wrecked.money = { ...wrecked.money, savingsBand: "0", savings: 0 };
     const line = holdLineText(wrecked, { verdict: "wrecked", hardFail: true, livingPct: 2, netPct: 3 }, false);

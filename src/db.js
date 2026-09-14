@@ -103,6 +103,15 @@ export async function saveFortuneForecast(forecast) {
   return forecast;
 }
 
+export async function getFortuneHandoff() {
+  return getKv("fortuneFireHandoff");
+}
+
+export async function saveFortuneHandoff(value) {
+  await setKv("fortuneFireHandoff", value);
+  return value;
+}
+
 export async function getFortuneUi() {
   return getKv("fortuneUi");
 }

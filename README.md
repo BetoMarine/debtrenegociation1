@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.0). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.1). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -31,7 +31,7 @@ On each start / privacy screen:
 4. Legal lines still present in the compact footer / privacy card (on-device, you send it, not advice, not affiliated, we never contact lenders).
 5. Right Door: letter rules and required-upload gates unchanged.
 6. Sunday Pack: Enrich “not affiliated” footer + door links unchanged.
-7. Fortune Teller: every open lands on Step 1 (Me today) after Privacy is accepted once. Returning visitors confirm with **Looks right — open my plan** (no auto-skip to the board). Rebuild card first; Step 2 is card-specific (fire links + floor for rebuild); Step 3 is a vertical stage stack (Fix → Stabilize → Plan → Invest) with Living↔Net dials above, a one-line hold status, sticky **You're in …**, and a % ring on each goal row. RD/Sunday fire links and honest “does not hold — yet” still work.
+7. Fortune Teller: every open lands on Step 1 (Me today) after Privacy is accepted once. Returning visitors confirm with **Looks right — open my plan** (no auto-skip to the board). Rebuild card first; Step 2 is card-specific (fire links + floor for rebuild). Fire links to Right Door / Sunday Pack carry `?from=fortune`. Those apps show a persistent **Back to Fortune Teller** bar (not on standalone opens). On return, Fortune **receives** a Fix milestone created by the pack (debt renegotiation 3 or 6 months — pick once if the pack had no tenor). Emergency fund is a mandatory Stabilize milestone (current amount may be 0). **All** Plan/Invest goals stay visible; sequence is priority (`You're in Fix`), not hiding. Step 3 is a vertical stage stack (Fix → Stabilize → Plan → Invest) with Living↔Net dials, hold status, sticky **You're in …**, and a % ring on each goal row. Other-goal % is given the renegotiation path + current EF. Honest “does not hold — yet” still works.
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
@@ -207,16 +207,17 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.0). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.1). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
 1. Open `/fortune/`. Privacy: three bullets + **Continue**. (Second open: skip Privacy, land on Step 1.)
 2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
-3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../`) and Sunday Pack (`../sunday/`) links. Set a 3- or 6-month floor + four me-now bands. Tap **See your new life**.
-4. **Step 3:** vertical stage stack (Fix / Stabilize / Plan / Invest), not overlapping path pins. Living↔Net dials above; one-line hold status; sticky **You're in …**. Current stage expanded. Rebuild includes **Invest** (First growth pot) even when thin. Percentages wait on “…” / last value — never a fake 0% flash. Coach chips if it does not hold.
-5. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
-6. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
+3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../?from=fortune`) and Sunday Pack (`../sunday/?from=fortune`) links. Set a 3- or 6-month floor + four me-now bands. Tap **Looks right — open my plan**.
+4. **Must-fix loop:** Heavy → **Open Right Door**. Header shows **Back to Fortune Teller** while you work (or leave) the pack. Tap it. Fortune lands on **Me today** with **Looks right — open my plan**. Open the board: **Fix** is debt renegotiation (3 or 6 months from the pack, or pick once), **Stabilize** is emergency fund (current amount, 0 allowed), Plan/Invest goals stay **visible**. Same loop for Sunday Pack fire link.
+5. **Step 3:** vertical stage stack (Fix / Stabilize / Plan / Invest), not overlapping path pins. Living↔Net dials above; one-line hold status; sticky **You're in …**. All stages visible. Rebuild includes **Invest** (First growth pot / placeholder mix — not a product). Percentages wait on “…” / last value — never a fake 0% flash. Hard-fail coach is **one** next action (Fix or floor).
+6. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
+7. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 
 Other checks: press/hover a goal row for quiet drag chrome; reorder does not hide Invest. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
 

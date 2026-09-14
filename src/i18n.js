@@ -39,6 +39,7 @@ const zh = {
   otherTools: "Plan Your Life 其他工具",
   otherToolsSunday: "Sunday Pack",
   otherToolsFortune: "Fortune Teller",
+  backToFortune: "返回 Fortune Teller",
 
   reasonTitle: "你為甚麼在這裏？",
   reasonHint: "選一項。不用寫故事給我們——資料不會離開這部手機。",
@@ -244,6 +245,7 @@ const en = {
   otherTools: "Other tools from Plan Your Life",
   otherToolsSunday: "Sunday Pack",
   otherToolsFortune: "Fortune Teller",
+  backToFortune: "Back to Fortune Teller",
 
   reasonTitle: "Why are you here?",
   reasonHint: "Pick one. Do not write us a story — nothing leaves this phone.",

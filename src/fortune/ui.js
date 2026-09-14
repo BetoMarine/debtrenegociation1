@@ -1,4 +1,4 @@
-import { productHref } from "../paths.js";
+import { fortuneOutboundHref } from "../refer.js";
 import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
 import { boardCoachActions, isEmptyPot, shouldShowCoach } from "./coach.js";
@@ -206,7 +206,7 @@ function renderFireCard(heat, escapeHtml) {
   const links = order
     .map((which, i) => {
       const cls = i === 0 ? "btn btn-primary ext" : "btn ext";
-      return `<a class="${cls}" href="${escapeHtml(productHref(which))}">${escapeHtml(labels[which])}</a>`;
+      return `<a class="${cls}" href="${escapeHtml(fortuneOutboundHref(which))}">${escapeHtml(labels[which])}</a>`;
     })
     .join("");
   return `
@@ -458,6 +458,7 @@ function renderBoard(host) {
 
 function rowShown(item) {
   const pending = (item.kind === "goal" || item.kind === "floor") && item.pct == null;
+  if (item.kind === "placeholder") return { shown: "—", pending: false, tone: "wait" };
   if (item.kind === "action" && item.pct == null) return { shown: "→", pending: false, tone: "fix" };
   if (pending) return { shown: "…", pending: true, tone: "wait" };
   return { shown: `${item.pct}%`, pending: false, tone: dialTone(item.pct, false) };
@@ -472,7 +473,17 @@ function renderStageRow(item, escapeHtml, hardFail) {
       ? `data-edit-goal="${escapeHtml(item.id)}"`
       : item.kind === "floor"
         ? `data-open-net="1"`
-        : `data-open-next="1"`;
+        : item.kind === "placeholder"
+          ? ""
+          : `data-open-next="1"`;
+  const pick =
+    item.pickMonths
+      ? `<span class="ft-fix-horizon">
+          <button class="${item.months === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
+          <button class="${item.months === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
+          <em class="ft-row-hint">${escapeHtml(t("fixPickHint"))}</em>
+        </span>`
+      : "";
   const idAttr = item.draggable
     ? `data-chip="${escapeHtml(item.id)}"`
     : `data-static="${escapeHtml(item.id)}"`;
@@ -493,6 +504,7 @@ function renderStageRow(item, escapeHtml, hardFail) {
           ${hint}
         </span>
       </button>
+      ${pick}
     </div>
   `;
 }
@@ -540,6 +552,13 @@ function bindBoard(host) {
   });
   root.querySelectorAll("[data-open-next]").forEach((btn) => {
     btn.addEventListener("click", () => host.go("next"));
+  });
+  root.querySelectorAll("[data-fix-months]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      host.setFixMonths?.(Number(btn.dataset.fixMonths));
+    });
   });
   root.querySelectorAll("[data-coach]").forEach((btn) => {
     btn.addEventListener("click", () => host.applyCoach(btn.dataset.coach));
@@ -617,6 +636,10 @@ function renderNetEdit(host) {
   );
   const form = el(`<form class="stack"></form>`);
   form.innerHTML = `
+    <label class="field">${escapeHtml(t("efNow"))}
+      <input name="currentHkd" inputmode="numeric" value="${escapeHtml(plan.net.currentHkd ?? 0)}" />
+    </label>
+    <p class="tiny">${escapeHtml(t("efNowHint"))}</p>
     <label class="field">${escapeHtml(t("netMonths"))}
       <input name="emergencyMonths" type="number" min="0" max="36" value="${escapeHtml(plan.net.emergencyMonths)}" />
     </label>
@@ -632,6 +655,7 @@ function renderNetEdit(host) {
     e.preventDefault();
     const fd = new FormData(form);
     host.saveNet({
+      currentHkd: Number(fd.get("currentHkd")),
       emergencyMonths: Number(fd.get("emergencyMonths")),
       floorHkd: Number(fd.get("floorHkd")),
     });

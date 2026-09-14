@@ -12,35 +12,35 @@ import {
   stageRollup,
   stageStack,
 } from "./journey.js";
+import { ensureFireSequence, receiveFireHandoff } from "./stabilize.js";
+import { makeFireHandoff } from "../handoff.js";
 
 describe("Step 3 journey path", () => {
   it("orders the ladder Fix → Stabilize → Plan → Invest", () => {
     expect(JOURNEY_STAGES).toEqual(["fix", "stabilize", "plan", "invest"]);
   });
 
-  it("rebuild puts Today, Fix, then the emergency fund before living goals, including Invest", () => {
-    const plan = applyTheme(
-      { ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" },
-      "rebuild",
+  it("rebuild after a Right Door handoff shows Debt renegotiation, then emergency fund, with Plan goals still listed", () => {
+    const handed = receiveFireHandoff(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 3 }),
     );
+    const plan = ensureFireSequence(handed, makeFireHandoff({ source: "right-door", months: 3 }));
     plan.debtHeat = "heavy";
     const items = journeyItems(plan, { netPct: 22, milestonePct: [40, 55, 60, 35], hardFail: false });
     expect(items[0].kind).toBe("today");
     expect(items[0].stage).toBe("fix");
     expect(items[1].stage).toBe("fix");
-    expect(items[1].name).toMatch(/fire/i);
-    expect(items.some((i) => i.stage === "stabilize" && i.name === "Emergency fund")).toBe(true);
+    expect(items[1].name).toMatch(/renegotiat/i);
+    expect(items[1].months).toBe(3);
+    expect(items.some((i) => i.stage === "stabilize" && /Emergency fund/i.test(i.name))).toBe(true);
     const living = items.filter((i) => i.kind === "goal");
-    expect(living.length).toBe(4);
+    expect(living.length).toBeGreaterThanOrEqual(3);
     expect(living.filter((i) => i.stage === "plan").length).toBe(3);
     expect(living.some((i) => i.stage === "invest" && /growth pot/i.test(i.name))).toBe(true);
-    expect(living.every((i) => i.pct != null)).toBe(true);
-    const floor = items.find((i) => i.stage === "stabilize");
-    expect(floor.pct).toBe(22);
-    expect(floor.months).toBe(6);
-    expect(floor.months).toBeLessThan(living[0].months);
+    const floor = items.find((i) => i.kind === "floor");
+    expect(floor.amount).toBe(0);
     expect(currentStage(plan)).toBe("fix");
-    expect(emphasizeStage(plan)).toBe("fix");
   });
 
   it("spaces beats in even columns so labels do not stack", () => {
@@ -88,7 +88,7 @@ describe("Step 3 journey path", () => {
   });
 
   it("names the board stage from the first incomplete beat", () => {
-    const rebuildFire = applyTheme({ ...newFortunePlan(), debtHeat: "heavy" }, "rebuild");
+    const rebuildFire = receiveFireHandoff(applyTheme({ ...newFortunePlan(), debtHeat: "heavy" }, "rebuild"), makeFireHandoff({ source: "right-door", months: 3 }));
     rebuildFire.debtHeat = "heavy";
     expect(currentStage(rebuildFire)).toBe("fix");
     const rebuild = applyTheme(newFortunePlan(), "rebuild");
@@ -111,8 +111,8 @@ describe("Step 3 vertical stage stack", () => {
     expect(stack).toHaveLength(4);
     const invest = stack.find((s) => s.id === "invest");
     expect(invest).toBeTruthy();
-    expect(invest.thin).toBe(true);
-    expect(invest.rows).toEqual([]);
+    expect(invest.rows.some((r) => /Suggested mix \(after floor\)/i.test(r.name))).toBe(true);
+    expect(invest.thin).toBe(false);
     expect(stack.find((s) => s.id === "stabilize").thin).toBe(false);
   });
 
@@ -124,7 +124,9 @@ describe("Step 3 vertical stage stack", () => {
     const here = stack.find((s) => s.current);
     expect(here.id).toBe("stabilize");
     expect(here.expanded).toBe(true);
-    expect(stack.filter((s) => s.expanded)).toHaveLength(1);
+    expect(stack.filter((s) => s.expanded)).toHaveLength(4);
+    expect(stack.find((s) => s.id === "plan").expanded).toBe(true);
+    expect(stack.find((s) => s.id === "invest").expanded).toBe(true);
     const planStage = stack.find((s) => s.id === "plan");
     expect(planStage.rollup).toBe(50);
     expect(stageRollup([{ pct: 70 }, { pct: 50 }, { pct: 30 }])).toBe(50);

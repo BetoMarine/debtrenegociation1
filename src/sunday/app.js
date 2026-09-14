@@ -6,6 +6,7 @@ import {
   getSundayPack,
   listEvents,
   saveSundayPack,
+  saveFortuneHandoff,
   setSundayLang as persistSundayLang,
   wipeSundayPack,
 } from "../db.js";
@@ -13,6 +14,8 @@ import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
+import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral } from "../refer.js";
+import { makeFireHandoff } from "../handoff.js";
 import { emptyDraftLoan, migrateSundayPack, newSundayPack, normalizeLoan } from "./model.js";
 import { buildSundayPdf } from "./pdf.js";
 
@@ -33,14 +36,21 @@ let busy = false;
 let notice = "";
 
 export async function boot() {
+  captureFortuneReferral();
   sundayLang = await getSundayLang();
   sunday = migrateSundayPack(await getSundayPack(), sundayLang);
   await ensureSunday();
+  await persistFireHandoff();
   await log("app_open");
   await log("sunday_started");
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
   render();
+}
+
+async function persistFireHandoff() {
+  if (!isFortuneReferral()) return;
+  await saveFortuneHandoff(makeFireHandoff({ source: "sunday", months: null }));
 }
 
 async function log(type, extraEnum) {
@@ -103,6 +113,7 @@ async function persistSunday(nextScreen) {
   if (nextScreen) sunday.screen = nextScreen;
   sunday.updatedAt = Date.now();
   sunday = await saveSundayPack(sunday);
+  await persistFireHandoff();
   return sunday;
 }
 
@@ -153,6 +164,8 @@ function sundayHost() {
     handleSundayPdf,
     clearSunday,
     isStandalone: isStandalone(),
+    fromFortune: isFortuneReferral(),
+    fortuneReturnCta: (label) => fortuneReturnCtaHtml(escapeHtml, label),
   };
 }
 
@@ -229,6 +242,7 @@ function shell(body) {
         </div>
         <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
       </header>
+      ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml, s("backToFortune")) : ""}
       <main></main>
       <footer class="footer">
         ${pylWordmarkHtml({ footer: true })}
@@ -275,6 +289,7 @@ function tapVersion() {
 }
 
 function render() {
+  persistFireHandoff();
   if (screen === "counters") {
     renderCounters();
     window.scrollTo(0, 0);

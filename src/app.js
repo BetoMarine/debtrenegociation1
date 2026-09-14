@@ -8,6 +8,7 @@ import {
   listEvents,
   newPack,
   putAttachment,
+  saveFortuneHandoff,
   savePack,
   setLang,
   wipeRightDoor,
@@ -19,6 +20,8 @@ import { DOCUMENT_DEFS, missingAttachments, normalizeDocuments } from "./docs.js
 import { buildLetter, letterContext } from "./letter.js";
 import { productHref, SUNDAY_HASH_PREFIX } from "./paths.js";
 import { pylWordmarkHtml } from "./pyl-brand.js";
+import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral, withFromFortune } from "./refer.js";
+import { makeFireHandoff, packImpliedFixMonths } from "./handoff.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
 
 const STATUSES = ["draft", "sent", "waiting", "accepted", "rejected", "gave_up"];
@@ -61,12 +64,19 @@ function syncLetter() {
 }
 
 export async function boot() {
+  captureFortuneReferral();
   lang = await getLang();
   pack = migratePack(await getPack());
   await log("app_open");
+  await persistFireHandoff();
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
   render();
+}
+
+async function persistFireHandoff() {
+  if (!isFortuneReferral()) return;
+  await saveFortuneHandoff(makeFireHandoff({ source: "right-door", months: packImpliedFixMonths(pack) }));
 }
 
 async function log(type, extraEnum) {
@@ -84,7 +94,9 @@ function syncScreenFromHash() {
   const raw = (location.hash || "#/").replace(/^#\/?/, "");
   const name = raw.split("?")[0] || "home";
   if (name.startsWith(SUNDAY_HASH_PREFIX)) {
-    location.replace(`${productHref("sunday")}#/${name}`);
+    let dest = productHref("sunday");
+    if (isFortuneReferral()) dest = withFromFortune(dest);
+    location.replace(`${dest}#/${name}`);
     return;
   }
   screen = RD_SCREENS.has(name) ? name : "home";
@@ -104,6 +116,7 @@ async function ensurePack() {
   if (!pack) {
     pack = migratePack(newPack(lang));
     pack = await savePack(pack);
+    await persistFireHandoff();
   } else {
     pack = migratePack(pack);
   }
@@ -126,6 +139,7 @@ function shell(body) {
         </div>
         <button class="lang" type="button" data-act="lang">${escapeHtml(s("langToggle"))}</button>
       </header>
+      ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml, s("backToFortune")) : ""}
       <main></main>
       <footer class="footer">
         ${pylWordmarkHtml({ footer: true })}
@@ -181,6 +195,7 @@ function tapVersion() {
 }
 
 function render() {
+  persistFireHandoff();
   const view = {
     home: renderHome,
     reason: renderReason,
@@ -661,6 +676,9 @@ function renderPack() {
   share.disabled = busy || blocked;
   download.disabled = busy || blocked;
   actions.append(make, share, download);
+  if (isFortuneReferral()) {
+    actions.append(el(fortuneReturnCtaHtml(escapeHtml, s("backToFortune"))));
+  }
   body.append(actions);
   body.append(el(`<h2>${escapeHtml(s("statusTitle"))}</h2>`));
   body.append(el(`<p class="hint">${escapeHtml(s("statusHint"))}</p>`));

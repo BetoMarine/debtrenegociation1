@@ -1,3 +1,4 @@
+import { EF_MILESTONE_ID, FIX_MILESTONE_ID } from "../handoff.js";
 import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
 import { TEMPLATE_IDS, getTemplate } from "./templates.js";
 
@@ -94,9 +95,32 @@ function approxDebtService(debts) {
 }
 
 function inferStage(raw) {
+  const role = milestoneRole(raw);
+  if (role === "fix") return "fix";
+  if (role === "floor") return "stabilize";
   if (JOURNEY_STAGES.includes(raw?.stage)) return raw.stage;
   if ((Number(raw?.amount) || 0) >= 500000) return "invest";
   return "plan";
+}
+
+export function milestoneRole(raw) {
+  if (raw?.role === "fix" || raw?.id === FIX_MILESTONE_ID) return "fix";
+  if (raw?.role === "floor" || raw?.id === EF_MILESTONE_ID) return "floor";
+  if (raw?.role === "placeholder") return "placeholder";
+  return "living";
+}
+
+export function isLivingGoal(raw) {
+  return milestoneRole(raw) === "living";
+}
+
+/** Current emergency-fund amount. 0 is allowed and still keeps the milestone. */
+export function emergencyCurrentHkd(plan) {
+  if (plan?.net?.currentHkd != null && Number.isFinite(Number(plan.net.currentHkd))) {
+    return Math.max(0, Math.round(Number(plan.net.currentHkd)));
+  }
+  if (plan?.moneyCapturedAtStabilize) return resolveMoney(plan.money || {}).savings;
+  return 0;
 }
 
 export function newFortunePlan() {
@@ -111,6 +135,9 @@ export function newFortunePlan() {
     moneyCapturedAtStabilize: false,
     thinFloorWarned: false,
     stabilizeTargetMonths: 6,
+    stabilizeMonthsPicked: false,
+    fixMonths: 3,
+    fixMonthsPicked: false,
     money: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -119,7 +146,7 @@ export function newFortunePlan() {
       debtsBand: "0",
     },
     milestones: [],
-    net: { emergencyMonths: 6, floorHkd: 150000 },
+    net: { emergencyMonths: 6, floorHkd: 150000, currentHkd: null },
     templateId: "balanced",
     inflationOn: true,
     seed: 20260909,
@@ -135,16 +162,21 @@ export function emptyDraftGoal() {
 }
 
 export function normalizeMilestone(raw, index = 0) {
+  const role = milestoneRole(raw);
   const amount = Math.max(0, Math.round(Number(raw?.amount) || 0));
   const months = Math.max(1, Math.min(240, Math.round(Number(raw?.months) || 12)));
-  return {
-    id: raw?.id || newId(`g${index}`),
+  const out = {
+    id: raw?.id || (role === "fix" ? FIX_MILESTONE_ID : role === "floor" ? EF_MILESTONE_ID : newId(`g${index}`)),
     name: String(raw?.name || "Living goal").trim().slice(0, 80) || "Living goal",
     amount,
     months,
-    stage: inferStage({ ...raw, amount }),
+    stage: inferStage({ ...raw, amount, role }),
+    role,
     boardOrder: Number.isFinite(Number(raw?.boardOrder)) ? Math.round(Number(raw.boardOrder)) : index,
   };
+  if (raw?.source === "right-door" || raw?.source === "sunday") out.source = raw.source;
+  if (raw?.monthsKnown === true) out.monthsKnown = true;
+  return out;
 }
 
 export function migrateFortunePlan(raw) {
@@ -191,9 +223,16 @@ export function migrateFortunePlan(raw) {
     moneyCapturedAtStabilize: !!raw.moneyCapturedAtStabilize,
     thinFloorWarned: !!raw.thinFloorWarned,
     stabilizeTargetMonths: targetMonths,
+    stabilizeMonthsPicked: !!raw.stabilizeMonthsPicked,
+    fixMonths: Number(raw.fixMonths) === 6 ? 6 : 3,
+    fixMonthsPicked: !!raw.fixMonthsPicked,
     net: {
       emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
       floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),
+      currentHkd:
+        net.currentHkd != null && Number.isFinite(Number(net.currentHkd))
+          ? Math.max(0, Math.round(Number(net.currentHkd)))
+          : null,
     },
     templateId: TEMPLATE_IDS.includes(raw.templateId) ? raw.templateId : "balanced",
     inflationOn: raw.inflationOn !== false,
@@ -206,15 +245,19 @@ export function migrateFortunePlan(raw) {
 export function applyTheme(plan, themeId) {
   const theme = getTheme(themeId);
   if (!theme) return plan;
-  const milestones = theme.milestones.map((m, i) => normalizeMilestone({ ...m, id: newId(`t${i}`) }, i));
+  const kept = (plan.milestones || [])
+    .map((m, i) => normalizeMilestone(m, i))
+    .filter((m) => m.role === "fix" || m.role === "floor");
+  const seeded = theme.milestones.map((m, i) => normalizeMilestone({ ...m, id: newId(`t${i}`) }, kept.length + i));
+  const milestones = [...kept, ...seeded];
   const keepFloor = !!plan.moneyCapturedAtStabilize;
   return {
     ...plan,
     theme: theme.id,
     money: keepFloor ? plan.money : { ...plan.money, ...theme.moneyBands },
     milestones,
-    net: keepFloor ? { ...plan.net } : { ...theme.net },
-    compareMilestoneId: milestones[0]?.id || null,
+    net: keepFloor ? { ...plan.net } : { ...theme.net, currentHkd: plan.net?.currentHkd ?? null },
+    compareMilestoneId: milestones.find((m) => isLivingGoal(m))?.id || milestones[0]?.id || null,
   };
 }
 
@@ -244,14 +287,20 @@ function numberOrBand(numeric, list, bandId) {
 
 export function toEnginePlan(plan) {
   const migrated = migrateFortunePlan(plan);
+  const money = resolveMoney(migrated.money);
+  money.savings = emergencyCurrentHkd(migrated);
+  const fix = (migrated.milestones || []).find((m) => milestoneRole(m) === "fix");
+  let fixMonths = 0;
+  if (fix) fixMonths = Number(migrated.fixMonths) === 6 || Number(fix.months) === 6 ? 6 : 3;
   return {
     theme: migrated.theme,
-    money: resolveMoney(migrated.money),
-    milestones: migrated.milestones.map(normalizeMilestone),
-    net: migrated.net,
+    money,
+    milestones: migrated.milestones.map((m, i) => ({ ...normalizeMilestone(m, i), role: milestoneRole(m) })),
+    net: { ...migrated.net, currentHkd: emergencyCurrentHkd(migrated) },
     templateId: migrated.templateId,
     inflationOn: migrated.inflationOn,
     seed: migrated.seed,
+    fixMonths,
   };
 }
 
