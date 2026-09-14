@@ -11,6 +11,7 @@ import {
   layoutJourneyPins,
   stageRollup,
   stageStack,
+  defaultOpenStages,
 } from "./journey.js";
 import { ensureFireSequence, receiveFireHandoff } from "./stabilize.js";
 import { makeFireHandoff } from "../handoff.js";
@@ -116,7 +117,7 @@ describe("Step 3 vertical stage stack", () => {
     expect(stack.find((s) => s.id === "stabilize").thin).toBe(false);
   });
 
-  it("expands the current stage and labels a rollup as the mean of row %", () => {
+  it("keeps every stage open so Plan/Invest stay visible with Fix + EF", () => {
     const plan = applyTheme(newFortunePlan(), "rebuild");
     plan.debtHeat = "none";
     const forecast = { netPct: 42, milestonePct: [70, 50, 30, 10], livingPct: 40, hardFail: false };
@@ -127,6 +128,9 @@ describe("Step 3 vertical stage stack", () => {
     expect(stack.filter((s) => s.expanded)).toHaveLength(4);
     expect(stack.find((s) => s.id === "plan").expanded).toBe(true);
     expect(stack.find((s) => s.id === "invest").expanded).toBe(true);
+    const onlyHere = stageStack(plan, forecast, { open: new Set(["stabilize"]) });
+    expect(onlyHere.find((s) => s.id === "plan").expanded).toBe(false);
+    expect(stageStack(plan, forecast, { open: defaultOpenStages() }).every((s) => s.expanded)).toBe(true);
     const planStage = stack.find((s) => s.id === "plan");
     expect(planStage.rollup).toBe(50);
     expect(stageRollup([{ pct: 70 }, { pct: 50 }, { pct: 30 }])).toBe(50);

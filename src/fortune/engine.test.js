@@ -189,4 +189,23 @@ describe("Fortune Teller Monte Carlo", () => {
     expect(withPath.livingPct).toBeGreaterThanOrEqual(noPath.livingPct);
     expect(withPath.hardFail || withPath.livingPct < 70).toBe(true);
   });
+
+  it("a current emergency-fund floor lifts other-goal closeness vs a zero floor", () => {
+    const base = {
+      money: { incomeMonthly: 40000, spendMonthly: 30000, savings: 0, debts: 200000 },
+      milestones: [{ id: "course", name: "Course", amount: 100000, months: 12, stage: "plan", role: "living" }],
+      net: { emergencyMonths: 3, floorHkd: 0 },
+      templateId: "steady",
+      inflationOn: false,
+      seed: 33,
+      fixMonths: 3,
+    };
+    const zeroFloor = runMonteCarlo(base, { paths: 400, seed: 33, inflation: 0 });
+    const withFloor = runMonteCarlo(
+      { ...base, money: { ...base.money, savings: 40000 } },
+      { paths: 400, seed: 33, inflation: 0 },
+    );
+    expect(zeroFloor.livingPct).toBeLessThan(100);
+    expect(withFloor.livingPct).toBeGreaterThan(zeroFloor.livingPct);
+  });
 });

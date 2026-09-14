@@ -13,6 +13,11 @@ export function stageRank(stage) {
   return i < 0 ? JOURNEY_STAGES.indexOf("plan") : i;
 }
 
+/** Sequence is priority, not hiding — Plan/Invest stay open with Fix + EF. */
+export function defaultOpenStages() {
+  return new Set(JOURNEY_STAGES);
+}
+
 export function inferStage(milestone) {
   if (JOURNEY_STAGES.includes(milestone?.stage)) return milestone.stage;
   const amount = Number(milestone?.amount) || 0;

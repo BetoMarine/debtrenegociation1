@@ -11,7 +11,7 @@ import {
   nextAfterStart,
   stabilizeTargetMonths,
 } from "./stabilize.js";
-import { applyStageOrder, currentStage, holdStatus, stageStack } from "./journey.js";
+import { applyStageOrder, currentStage, defaultOpenStages, holdStatus, stageStack } from "./journey.js";
 import { FORTUNE_SCREENS, dialTone, holdLineText, renderFortune } from "./ui.js";
 import {
   applyTheme,
@@ -512,8 +512,7 @@ function refreshCompare() {
 }
 
 function toggleStage(id) {
-  const here = currentStage(plan, forecast);
-  if (!openStages) openStages = new Set([here]);
+  if (!openStages) openStages = defaultOpenStages();
   if (openStages.has(id)) openStages.delete(id);
   else openStages.add(id);
   render({ keepScroll: true });

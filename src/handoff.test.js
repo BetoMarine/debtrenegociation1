@@ -28,11 +28,13 @@ describe("Fire Fix handoff", () => {
   });
 
   it("maps pack tenor 3 to 3 and 6/9/12 to 6; missing tenor stays null", () => {
-    expect(packImpliedFixMonths({ situation: { tenorMonths: "3" } })).toBe(3);
-    expect(packImpliedFixMonths({ situation: { tenorMonths: "6" } })).toBe(6);
-    expect(packImpliedFixMonths({ situation: { tenorMonths: "12" } })).toBe(6);
+    expect(packImpliedFixMonths({ situation: { tenorMonths: "3", tenorStored: true } })).toBe(3);
+    expect(packImpliedFixMonths({ situation: { tenorMonths: "6", tenorStored: true } })).toBe(6);
+    expect(packImpliedFixMonths({ situation: { tenorMonths: "12", tenorStored: true } })).toBe(6);
+    expect(packImpliedFixMonths({ fullName: "Ada", situation: { tenorMonths: "3" } })).toBe(3);
     expect(packImpliedFixMonths(null)).toBeNull();
     expect(packImpliedFixMonths({ situation: {} })).toBeNull();
+    expect(packImpliedFixMonths({ situation: { tenorMonths: "6" } })).toBeNull();
   });
 
   it("Sunday handoff without tenor lets Fortune pick 3 vs 6 once", () => {

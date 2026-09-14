@@ -475,7 +475,7 @@ function renderSituation() {
     pack.fullName = next.fullName;
     pack.hkid = next.hkid;
     pack.phone = next.phone;
-    pack.situation = next.situation;
+    pack.situation = { ...next.situation, tenorStored: true };
     if (forceRebuild || !pack.letterTouched) {
       syncLetter();
       if (forceRebuild) pack.letterTouched = false;
@@ -484,6 +484,7 @@ function renderSituation() {
       pack.letter = form.querySelector("#letter").value;
     }
     pack = await savePack(pack);
+    await persistFireHandoff();
   };
   ["fullName", "hkid", "phone", "what", "when", "incomeItems", "incomeAmount", "expenseItems", "expenseAmount", "surplus"].forEach((id) => {
     form.querySelector(`#${id}`).addEventListener("input", () => persist(false));

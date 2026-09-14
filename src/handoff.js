@@ -8,8 +8,17 @@ export const FIX_GOAL_NAME = "Debt renegotiation";
 export const EF_GOAL_NAME = "Emergency fund";
 export const INVEST_PLACEHOLDER_NAME = "Suggested mix (after floor) — not a product";
 
-/** RD tenor is 3/6/9/12. Fortune Fix only offers 3 or 6. */
+/** True once Right Door actually captured a situation tenor (not the new-pack default). */
+export function packStoredTenor(pack) {
+  const sit = pack?.situation;
+  if (!sit) return false;
+  if (sit.tenorStored === true) return true;
+  return Boolean(String(pack?.fullName || "").trim());
+}
+
+/** RD tenor is 3/6/9/12. Fortune Fix only offers 3 or 6. Missing/default tenor stays null so Fortune can pick once. */
 export function packImpliedFixMonths(pack) {
+  if (!packStoredTenor(pack)) return null;
   const n = Number(pack?.situation?.tenorMonths);
   if (n === 3) return 3;
   if (n === 6 || n === 9 || n === 12) return 6;
