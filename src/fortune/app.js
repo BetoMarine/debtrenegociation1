@@ -42,6 +42,7 @@ import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
+import { clearFortuneReferral } from "../refer.js";
 
 const FORTUNE_EVENT_TYPES = ["fortune_started", "fortune_forecast_run", "fortune_pdf", "fortune_export"];
 
@@ -62,6 +63,7 @@ let openStages = null;
 let fireHandoff = null;
 
 export async function boot() {
+  clearFortuneReferral();
   ui = migrateUiState(await getFortuneUi());
   plan = migrateFortunePlan(await getFortunePlan()) || newFortunePlan();
   fireHandoff = await getFortuneHandoff();

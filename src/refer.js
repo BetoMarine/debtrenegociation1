@@ -65,6 +65,15 @@ export function isFortuneReferral(loc, storage) {
   return captureFortuneReferral(loc, storage);
 }
 
+/** Fortune and standalone hops share origin — drop the referral so footer links stay independent. */
+export function clearFortuneReferral(storage = sessionStore()) {
+  try {
+    storage?.removeItem(STORAGE_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
 export function fortuneReturnBarHtml(escapeHtml, label) {
   const href = escapeHtml(fortuneReturnHref());
   const text = escapeHtml(label);

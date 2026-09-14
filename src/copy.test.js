@@ -107,6 +107,12 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.footerCompact).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not affiliated with HSBC/i);
     expect(all).toMatch(/not regulated advice/i);
+    const fortuneApp = readFileSync(new URL("./fortune/app.js", import.meta.url), "utf8");
+    expect(fortuneApp).toMatch(/function fortuneFooter/);
+    expect(fortuneApp).toMatch(/productHref\("right-door"\)/);
+    expect(fortuneApp).toMatch(/productHref\("sunday"\)/);
+    expect(fortuneApp).toMatch(/clearFortuneReferral\(\)/);
+    expect(fortuneApp).not.toMatch(/fortuneOutboundHref\("right-door"\)/);
   });
 
   it("never claims the app emails Enrich or lenders for the helper", () => {

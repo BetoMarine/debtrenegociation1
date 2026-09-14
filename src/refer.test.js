@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { productHref } from "./paths.js";
 import {
   captureFortuneReferral,
+  clearFortuneReferral,
   fortuneOutboundHref,
   fortuneReturnBarHtml,
   fortuneReturnCtaHtml,
@@ -15,6 +16,9 @@ function memoryStore(start = {}) {
     getItem: (key) => (key in data ? data[key] : null),
     setItem: (key, value) => {
       data[key] = String(value);
+    },
+    removeItem: (key) => {
+      delete data[key];
     },
     data,
   };
@@ -48,6 +52,13 @@ describe("Fortune referral", () => {
     expect(captureFortuneReferral({ search: "" }, store)).toBe(false);
     expect(captureFortuneReferral({ search: "?from=elsewhere" }, store)).toBe(false);
     expect(store.getItem("pyl.from")).toBeNull();
+  });
+
+  it("clears a leftover referral so Fortune footer hops are standalone", () => {
+    const store = memoryStore({ "pyl.from": "fortune" });
+    clearFortuneReferral(store);
+    expect(store.getItem("pyl.from")).toBeNull();
+    expect(captureFortuneReferral({ search: "" }, store)).toBe(false);
   });
 
   it("points the return chip at Fortune, not a third chooser", () => {
