@@ -1,0 +1,27 @@
+{
+  "_comment": "SYNTHETIC fixture for Fortune 0.9.2 CI / silent Invest μ. Not live market data. Not Finnhub. Not advice. Not a product.",
+  "asOf": "2026-09-14",
+  "source": "fixture",
+  "sleeves": {
+    "stocks": {
+      "expectedReturn": 0.2,
+      "sigma": 0.2,
+      "note": "Synthetic total-return proxy for CI"
+    },
+    "fixedIncome": {
+      "expectedReturn": 0.03,
+      "sigma": 0.05,
+      "note": "Synthetic total-return proxy for CI"
+    },
+    "reit": {
+      "expectedReturn": 0.08,
+      "sigma": 0.16,
+      "note": "Synthetic total-return proxy for CI"
+    },
+    "cash": {
+      "expectedReturn": 0.01,
+      "sigma": 0.008,
+      "note": "Synthetic cash-like proxy for CI"
+    }
+  }
+}

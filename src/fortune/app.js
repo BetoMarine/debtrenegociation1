@@ -24,6 +24,7 @@ import {
   resolveMoney,
   toEnginePlan,
 } from "./model.js";
+import { applyInvestMarksOnOpen, loadMarks } from "./marks.js";
 import { buildFortunePdf } from "./pdf.js";
 import { runForecast } from "./simulate.js";
 import {
@@ -159,7 +160,12 @@ function queueForecast({ persistEvent = true, keepScroll = true } = {}) {
 async function runAndPersistForecast({ persistEvent = true, keepScroll = true } = {}) {
   busy = true;
   try {
-    const next = await runForecast(toEnginePlan(plan), { paths: 1000, seed: plan.seed });
+    const overlay = applyInvestMarksOnOpen(plan, loadMarks());
+    const next = await runForecast(toEnginePlan(plan), {
+      paths: 1000,
+      seed: plan.seed,
+      ...overlay.options,
+    });
     forecast = next;
     await saveFortuneForecast(next);
     if (persistEvent) await log("fortune_forecast_run");
@@ -665,7 +671,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.1",
+    version: "0.9.2",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,
