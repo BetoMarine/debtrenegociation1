@@ -2,7 +2,7 @@
  * Floor math + Step 2 routing. Pure module.
  * Rebuild still does fire triage + floor-first; the board is not gated on a funded floor.
  */
-import { EF_MILESTONE_ID, FIX_GOAL_NAME, FIX_MILESTONE_ID, isFireHandoff } from "../handoff.js";
+import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel, isFireHandoff } from "../handoff.js";
 import { emergencyCurrentHkd, milestoneRole, monthYearLabel, resolveMoney } from "./model.js";
 
 export const DEBT_HEAT_IDS = ["none", "paying", "heavy", "fdw"];
@@ -53,7 +53,7 @@ export function receiveFireHandoff(plan, handoff) {
   const picked = !!fromPack || alreadyPicked;
   const fix = {
     id: FIX_MILESTONE_ID,
-    name: FIX_GOAL_NAME,
+    name: fixGoalLabel({ months, picked }),
     amount: 0,
     months,
     stage: "fix",

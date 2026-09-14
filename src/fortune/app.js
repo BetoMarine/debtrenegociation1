@@ -2,6 +2,7 @@ import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
 import { applyCoachAction, boardCoachActions, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
+import { fixGoalLabel } from "../handoff.js";
 import {
   canOpenPlan,
   ensureEmergencyFund,
@@ -355,7 +356,9 @@ async function setFixMonths(n) {
   plan.fixMonths = months;
   plan.fixMonthsPicked = true;
   plan.milestones = (plan.milestones || []).map((m) =>
-    m.role === "fix" || m.id === "fix-renegotiate" ? { ...m, months, monthsKnown: true } : m,
+    m.role === "fix" || m.id === "fix-renegotiate"
+      ? { ...m, months, monthsKnown: true, name: fixGoalLabel({ months, picked: true }) }
+      : m,
   );
   await persistPlan("board");
   render({ keepScroll: true });
@@ -671,7 +674,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.2",
+    version: "0.9.3",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

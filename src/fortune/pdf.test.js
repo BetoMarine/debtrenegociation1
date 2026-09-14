@@ -56,6 +56,25 @@ describe("Fortune Teller PDF", () => {
     expect(lower).not.toContain("envizage");
   });
 
+  it("names a received Fix milestone with 3 months, date only as when", () => {
+    const rows = sheetRows(
+      {
+        ...samplePlan,
+        theme: "rebuild",
+        fixMonths: 3,
+        fixMonthsPicked: true,
+        milestones: [
+          { id: "fix-renegotiate", name: "Debt renegotiation", amount: 0, months: 3, stage: "fix", role: "fix" },
+          ...samplePlan.milestones,
+        ],
+      },
+      { ...sampleForecast, milestonePct: [null, 88, 40] },
+    );
+    expect(rows.milestones[0].name).toBe("Debt renegotiation · 3 months");
+    expect(rows.milestones[0].when).toMatch(/[A-Z][a-z]{2} 20\d\d/);
+    expect(rows.milestones[0].name).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
+  });
+
   it("marks a kill-test sheet as a hard fail, not a green success", () => {
     const rows = sheetRows(
       { ...newFortunePlan(), ...killTestInput(), milestones: killTestInput().milestones },

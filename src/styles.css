@@ -116,6 +116,10 @@ body {
   font-size: 14px;
 }
 
+.ft-fix-horizon .ft-row-hint {
+  opacity: 1;
+}
+
 .brand {
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -849,6 +853,15 @@ html.fortune-root body {
   display: block;
   font-size: 15px;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.ft-row-when {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .ft-row-hint {

@@ -96,4 +96,19 @@ describe("Fortune Teller plan model", () => {
     expect(plan.milestones.some((m) => m.stage === "invest" && /growth pot/i.test(m.name))).toBe(true);
     expect(Math.max(...plan.milestones.map((m) => m.amount))).toBeLessThan(50000);
   });
+
+  it("rewrites a stored Fix title so 3 or 6 months is on the name, not only a date", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      theme: "rebuild",
+      fixMonths: 3,
+      fixMonthsPicked: true,
+      milestones: [
+        { id: "fix-renegotiate", name: "Debt renegotiation", amount: 0, months: 3, stage: "fix", role: "fix" },
+      ],
+    });
+    const fix = plan.milestones.find((m) => m.role === "fix");
+    expect(fix.name).toBe("Debt renegotiation · 3 months");
+    expect(fix.name).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
+  });
 });

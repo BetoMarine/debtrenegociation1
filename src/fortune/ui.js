@@ -491,6 +491,10 @@ function renderStageRow(item, escapeHtml, hardFail) {
     ? `<button class="ft-row-handle" type="button" data-drag aria-label="${escapeHtml(t("dragHint"))}">⋮⋮</button>`
     : `<span class="ft-row-handle is-spacer" aria-hidden="true"></span>`;
   const hint = item.draggable ? `<em class="ft-row-hint">${escapeHtml(t("dragHint"))}</em>` : "";
+  const when =
+    item.whenLabel
+      ? `<em class="ft-row-when">${escapeHtml(item.whenLabel)}</em>`
+      : "";
   return `
     <div class="ft-row tone-${ringTone}${pending ? " is-pending" : ""}${item.draggable ? " is-goal" : ""}" data-row data-stage="${item.stage}" ${idAttr}>
       ${handle}
@@ -501,6 +505,7 @@ function renderStageRow(item, escapeHtml, hardFail) {
         </span>
         <span class="ft-row-text">
           <strong>${escapeHtml(item.name)}</strong>
+          ${when}
           ${hint}
         </span>
       </button>

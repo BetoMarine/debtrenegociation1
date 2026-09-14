@@ -8,6 +8,17 @@ export const FIX_GOAL_NAME = "Debt renegotiation";
 export const EF_GOAL_NAME = "Emergency fund";
 export const INVEST_PLACEHOLDER_NAME = "Suggested mix (after floor) — not a product";
 
+/**
+ * Fortune board / stored Fix title. Always says “3 months” or “6 months”
+ * (or both, until the user or pack picks). Never a calendar date like “Dec 2026”.
+ */
+export function fixGoalLabel({ months, picked } = {}) {
+  if (picked) {
+    return Number(months) === 6 ? `${FIX_GOAL_NAME} · 6 months` : `${FIX_GOAL_NAME} · 3 months`;
+  }
+  return `${FIX_GOAL_NAME} · 3 or 6 months`;
+}
+
 /** True once Right Door actually captured a situation tenor (not the new-pack default). */
 export function packStoredTenor(pack) {
   const sit = pack?.situation;

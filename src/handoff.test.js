@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FIX_GOAL_NAME,
+  fixGoalLabel,
   isFireHandoff,
   makeFireHandoff,
   packImpliedFixMonths,
@@ -9,6 +10,14 @@ import { receiveFireHandoff, receivedFixMilestone, ensureEmergencyFund } from ".
 import { newFortunePlan } from "./fortune/model.js";
 
 describe("Fire Fix handoff", () => {
+  it("names the Fix goal with 3 or 6 months, never a calendar date", () => {
+    expect(fixGoalLabel({ months: 3, picked: true })).toBe("Debt renegotiation · 3 months");
+    expect(fixGoalLabel({ months: 6, picked: true })).toBe("Debt renegotiation · 6 months");
+    expect(fixGoalLabel({ months: 3, picked: false })).toBe("Debt renegotiation · 3 or 6 months");
+    expect(fixGoalLabel({ months: 3, picked: true })).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
+    expect(FIX_GOAL_NAME).toBe("Debt renegotiation");
+  });
+
   it("Right Door creates the renegotiation milestone; Fortune does not invent it", () => {
     const fresh = newFortunePlan();
     expect(receivedFixMilestone(fresh)).toBeNull();
@@ -20,7 +29,7 @@ describe("Fire Fix handoff", () => {
     const received = receiveFireHandoff(fresh, created);
     const fix = receivedFixMilestone(received);
     expect(fix).toBeTruthy();
-    expect(fix.name).toMatch(/renegotiat/i);
+    expect(fix.name).toBe("Debt renegotiation · 6 months");
     expect(fix.months).toBe(6);
     expect(fix.stage).toBe("fix");
     expect(fix.source).toBe("right-door");
@@ -44,6 +53,7 @@ describe("Fire Fix handoff", () => {
     expect(fix.source).toBe("sunday");
     expect(received.fixMonthsPicked).toBe(false);
     expect(fix.months).toBe(3);
+    expect(fix.name).toBe("Debt renegotiation · 3 or 6 months");
   });
 
   it("keeps an emergency-fund milestone even when current amount is 0", () => {

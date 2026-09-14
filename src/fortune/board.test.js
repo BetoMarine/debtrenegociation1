@@ -35,14 +35,35 @@ describe("Fortune board chrome", () => {
   });
 
   it("labels Fix as debt renegotiation months, not an EF 3-month term", () => {
+    const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
       makeFireHandoff({ source: "right-door", months: 3 }),
     );
-    const html = renderStageStackHtml(stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }), escape);
-    expect(html).toMatch(/Debt renegotiation · 3 months/);
+    const html = renderStageStackHtml(
+      stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }, {}, from),
+      escape,
+    );
+    expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
+    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
     expect(html).not.toMatch(/Emergency fund · now HK\$0 \(3 mo\)/);
+    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+  });
+
+  it("labels a 6-month pack tenor on Fix and keeps the date secondary", () => {
+    const from = new Date(2026, 8, 14);
+    const handed = receiveFireHandoff(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 6 }),
+    );
+    const html = renderStageStackHtml(
+      stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }, {}, from),
+      escape,
+    );
+    expect(html).toMatch(/<strong>Debt renegotiation · 6 months<\/strong>/);
+    expect(html).toMatch(/class="ft-row-when">Mar 2027</);
+    expect(html).not.toMatch(/<strong>Mar 2027<\/strong>/);
   });
 
   it("keeps a thin Invest section on grow and labels the hold line", () => {

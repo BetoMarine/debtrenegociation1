@@ -2,8 +2,8 @@
  * Step 3 board: Fix → Stabilize → Plan → Invest as a vertical stage stack.
  * Pure module — stage rows, rollups, and labels. No DOM.
  */
-import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID } from "../handoff.js";
-import { emergencyCurrentHkd, isLivingGoal, milestoneRole } from "./model.js";
+import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
+import { emergencyCurrentHkd, isLivingGoal, milestoneRole, monthYearLabel } from "./model.js";
 import { fireFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 
 export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
@@ -26,8 +26,10 @@ export function inferStage(milestone) {
 }
 
 function shortName(item) {
-  if (item.kind === "floor") return "Floor";
+  if (item.kind === "floor") return "EF now";
   const name = String(item.name || "").trim();
+  // Fix titles carry “3 months” / “6 months” — do not drop that to a date or a stub.
+  if (item.kind === "action" || item.stage === "fix") return name;
   if (name.length <= 14) return name;
   const words = name.split(/\s+/);
   if (words.length > 2) return `${words.slice(0, 2).join(" ")}`;
@@ -55,7 +57,8 @@ export function journeyItems(plan, forecast, from = new Date()) {
       id: received.id,
       kind: "action",
       stage: "fix",
-      name: picked ? `Debt renegotiation · ${months} months` : "Debt renegotiation · 3 or 6 months",
+      name: fixGoalLabel({ months, picked }),
+      whenLabel: picked ? monthYearLabel(months, from) : "",
       months,
       amount: 0,
       pct: null,

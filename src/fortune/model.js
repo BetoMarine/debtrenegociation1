@@ -1,4 +1,4 @@
-import { EF_MILESTONE_ID, FIX_MILESTONE_ID } from "../handoff.js";
+import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
 import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
 import { TEMPLATE_IDS, getTemplate } from "./templates.js";
 
@@ -211,6 +211,14 @@ export function migrateFortunePlan(raw) {
       !!theme &&
       (milestones.length > 0 || raw.screen === "board"));
   const targetMonths = Number(raw.stabilizeTargetMonths) === 3 ? 3 : 6;
+  const fixMonths = Number(raw.fixMonths) === 6 ? 6 : 3;
+  const fixMonthsPicked = !!raw.fixMonthsPicked;
+  milestones.forEach((m, i) => {
+    if (milestoneRole(m) !== "fix") return;
+    const months = Number(m.months) === 6 || fixMonths === 6 ? 6 : 3;
+    const picked = fixMonthsPicked || !!m.monthsKnown;
+    milestones[i] = { ...m, months, name: fixGoalLabel({ months, picked }) };
+  });
   return {
     ...base,
     ...raw,
@@ -224,8 +232,8 @@ export function migrateFortunePlan(raw) {
     thinFloorWarned: !!raw.thinFloorWarned,
     stabilizeTargetMonths: targetMonths,
     stabilizeMonthsPicked: !!raw.stabilizeMonthsPicked,
-    fixMonths: Number(raw.fixMonths) === 6 ? 6 : 3,
-    fixMonthsPicked: !!raw.fixMonthsPicked,
+    fixMonths,
+    fixMonthsPicked,
     net: {
       emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
       floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),

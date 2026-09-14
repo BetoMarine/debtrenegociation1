@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { PDF_FOOTER_LEGAL, PDF_FOOTER_ORG, ft } from "./copy.js";
-import { hkd, monthYearLabel, netNeedNow, resolveMoney } from "./model.js";
+import { FIX_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
+import { hkd, milestoneRole, monthYearLabel, netNeedNow, resolveMoney } from "./model.js";
 import { TEMPLATE_DISCLAIMER, formatMuSigma, getTemplate } from "./templates.js";
 import { THEMES } from "./themes.js";
 
@@ -40,12 +41,17 @@ export function sheetRows(plan, forecast) {
     netMonths: String(plan.net?.emergencyMonths ?? "—"),
     netFloor: hkd(plan.net?.floorHkd),
     netNeed: hkd(netNeedNow(plan)),
-    milestones: (plan.milestones || []).slice(0, 6).map((m, i) => ({
-      name: m.name,
-      amount: hkd(m.amount),
-      when: monthYearLabel(m.months),
-      pct: forecast?.milestonePct?.[i] != null ? `${forecast.milestonePct[i]}%` : "—",
-    })),
+    milestones: (plan.milestones || []).slice(0, 6).map((m, i) => {
+      const fix = milestoneRole(m) === "fix" || m.id === FIX_MILESTONE_ID;
+      const tenor = Number(m.months) === 6 ? 6 : 3;
+      const picked = !!plan.fixMonthsPicked || !!m.monthsKnown;
+      return {
+        name: fix ? fixGoalLabel({ months: tenor, picked }) : m.name,
+        amount: hkd(m.amount),
+        when: monthYearLabel(m.months),
+        pct: forecast?.milestonePct?.[i] != null ? `${forecast.milestonePct[i]}%` : "—",
+      };
+    }),
     extra: Math.max(0, (plan.milestones || []).length - 6),
     execute: "Execute this plan elsewhere with a licensed intermediary.",
     notAdvice: "Not regulated advice. Not a product sale. Not a fund we sell.",
