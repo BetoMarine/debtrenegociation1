@@ -235,14 +235,16 @@ function shell(body) {
   root.innerHTML = "";
   const node = el(`
     <div class="shell">
-      <header class="top">
-        <div class="brand-block">
-          ${pylWordmarkHtml()}
-          <button class="brand" type="button" data-go="sunday-privacy">${escapeHtml(s("brand"))}</button>
+      <header class="top${isFortuneReferral() ? " is-from-fortune" : ""}">
+        ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml) : ""}
+        <div class="top-row">
+          <div class="brand-block">
+            ${pylWordmarkHtml()}
+            <button class="brand" type="button" data-go="sunday-privacy">${escapeHtml(s("brand"))}</button>
+          </div>
+          <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
         </div>
-        <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
       </header>
-      ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml, s("backToFortune")) : ""}
       <main></main>
       <footer class="footer">
         ${pylWordmarkHtml({ footer: true })}

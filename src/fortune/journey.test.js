@@ -9,6 +9,7 @@ import {
   journeyItems,
   JOURNEY_STAGES,
   layoutJourneyPins,
+  stackRows,
   stageRollup,
   stageStack,
   defaultOpenStages,
@@ -32,7 +33,7 @@ describe("Step 3 journey path", () => {
     expect(items[0].kind).toBe("today");
     expect(items[0].stage).toBe("fix");
     expect(items[1].stage).toBe("fix");
-    expect(items[1].name).toMatch(/renegotiat/i);
+    expect(items[1].name).toMatch(/Debt renegotiation · 3 months/);
     expect(items[1].months).toBe(3);
     expect(items.some((i) => i.stage === "stabilize" && /Emergency fund/i.test(i.name))).toBe(true);
     const living = items.filter((i) => i.kind === "goal");
@@ -150,6 +151,27 @@ describe("Step 3 vertical stage stack", () => {
     );
     const resorted = stageStack({ ...plan, milestones: flipped }, { netPct: 20, milestonePct: [40, 55, 60, 35] });
     expect(resorted.find((s) => s.id === "plan").rows.map((r) => r.id)).toEqual([...planIds].reverse());
+  });
+
+  it("puts 3 or 6 month debt renegotiation on Fix, not as the EF term", () => {
+    const base = applyTheme(
+      { ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy", stabilizeTargetMonths: 3 },
+      "rebuild",
+    );
+    const waiting = ensureFireSequence(base, makeFireHandoff({ source: "right-door", months: null }));
+    const waitingRows = stackRows(waiting, null);
+    const waitingFix = waitingRows.find((r) => r.stage === "fix");
+    const waitingEf = waitingRows.find((r) => r.kind === "floor");
+    expect(waitingFix.name).toBe("Debt renegotiation · 3 or 6 months");
+    expect(waitingFix.pickMonths).toBe(true);
+    expect(waitingEf.name).toMatch(/Emergency fund · now HK\$0/);
+    expect(waitingEf.name).not.toMatch(/\(3 mo\)/);
+    expect(waitingEf.name).not.toMatch(/renegotiat/i);
+
+    const picked = ensureFireSequence(base, makeFireHandoff({ source: "right-door", months: 6 }));
+    const pickedRows = stackRows(picked, null);
+    expect(pickedRows.find((r) => r.stage === "fix").name).toBe("Debt renegotiation · 6 months");
+    expect(pickedRows.find((r) => r.kind === "floor").name).toMatch(/Emergency fund · now HK\$0/);
   });
 
   it("keeps wrecked honesty and appends floor-first when the floor is thin", () => {

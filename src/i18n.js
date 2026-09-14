@@ -9,7 +9,7 @@ const zh = {
   save: "儲存在這部手機",
   done: "完成",
   optional: "可選",
-  version: "PoC v0.7.0",
+  version: "PoC v0.8.0",
   pylStudio: "Plan Your Life",
   localOnly:
     "我們不收集資料。信件包、照片、身分證號碼和金額只留在這部手機。沒有帳號。卸除就清走。我們不會寄給銀行。",
@@ -215,7 +215,7 @@ const en = {
   save: "Save on this phone",
   done: "Done",
   optional: "Optional",
-  version: "PoC v0.7.0",
+  version: "PoC v0.8.0",
   pylStudio: "Plan Your Life",
   localOnly:
     "We do not collect your data. Pack, photos, HKID, and amounts stay on this phone. No account. Uninstall wipes it. We do not send this to a bank.",

@@ -2,6 +2,8 @@ import { productHref } from "./paths.js";
 
 export const FROM_FORTUNE = "fortune";
 export const FROM_PARAM = "from";
+/** Header chip is English even when Right Door / Sunday Pack are in another language. */
+export const BACK_TO_FORTUNE_LABEL = "Back to Fortune Teller";
 const STORAGE_KEY = "pyl.from";
 
 function sessionStore() {
@@ -74,9 +76,9 @@ export function clearFortuneReferral(storage = sessionStore()) {
   }
 }
 
-export function fortuneReturnBarHtml(escapeHtml, label) {
+export function fortuneReturnBarHtml(escapeHtml, label = BACK_TO_FORTUNE_LABEL) {
   const href = escapeHtml(fortuneReturnHref());
-  const text = escapeHtml(label);
+  const text = escapeHtml(label || BACK_TO_FORTUNE_LABEL);
   return `<a class="from-fortune-bar" data-back-fortune href="${href}">${text}</a>`;
 }
 
