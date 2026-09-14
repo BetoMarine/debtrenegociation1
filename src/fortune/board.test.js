@@ -38,6 +38,7 @@ describe("Fortune board chrome", () => {
     expect(html).toContain('data-stage="invest"');
     expect(html).toMatch(/Suggested mix \(after floor\)/i);
     expect(html).not.toMatch(/Thin for now/i);
+    expect(html).not.toMatch(/fixedIncome|2800\.HK|\bREIT\b/i);
     const wrecked = applyTheme(newFortunePlan(), "rebuild");
     wrecked.money = { ...wrecked.money, savingsBand: "0", savings: 0 };
     const line = holdLineText(wrecked, { verdict: "wrecked", hardFail: true, livingPct: 2, netPct: 3 }, false);
