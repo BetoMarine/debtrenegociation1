@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { productHref } from "./paths.js";
 import {
+  BACK_TO_FORTUNE_LABEL,
   captureFortuneReferral,
   clearFortuneReferral,
   fortuneOutboundHref,
@@ -63,10 +64,12 @@ describe("Fortune referral", () => {
 
   it("points the return chip at Fortune, not a third chooser", () => {
     expect(fortuneReturnHref()).toBe(productHref("fortune"));
-    const bar = fortuneReturnBarHtml((s) => s, "Back to Fortune Teller");
+    expect(BACK_TO_FORTUNE_LABEL).toBe("Back to Fortune Teller");
+    const bar = fortuneReturnBarHtml((s) => s);
     expect(bar).toContain("data-back-fortune");
     expect(bar).toContain('href="./fortune/"');
     expect(bar).toMatch(/Back to Fortune Teller/);
+    expect(bar).not.toMatch(/返回/);
     expect(fortuneReturnCtaHtml((s) => s, "Back to Fortune Teller")).toContain("btn-primary");
   });
 });

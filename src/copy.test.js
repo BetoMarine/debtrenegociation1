@@ -115,6 +115,28 @@ describe("product copy", () => {
     expect(fortuneApp).not.toMatch(/fortuneOutboundHref\("right-door"\)/);
   });
 
+  it("bumps Right Door / Sunday Pack versions and keeps Back to Fortune Teller in the header", () => {
+    expect(STRINGS.en.version).toMatch(/0\.8\.0/);
+    expect(STRINGS.zh.version).toMatch(/0\.8\.0/);
+    expect(STRINGS.en.version).not.toMatch(/0\.7\.0/);
+    expect(SUNDAY_STRINGS.en.version).toMatch(/0\.8\.0/);
+    expect(SUNDAY_STRINGS.tl.version).toMatch(/0\.8\.0/);
+    expect(SUNDAY_STRINGS.id.version).toMatch(/0\.8\.0/);
+    const rd = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+    const sunday = readFileSync(new URL("./sunday/app.js", import.meta.url), "utf8");
+    for (const src of [rd, sunday]) {
+      const start = src.indexOf("<header");
+      const end = src.indexOf("</header>", start);
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      const header = src.slice(start, end);
+      expect(header).toContain("is-from-fortune");
+      expect(header).toContain("fortuneReturnBarHtml");
+      expect(header).toContain("<header");
+      expect(src.slice(src.indexOf("<footer"), src.indexOf("</footer>"))).not.toContain("fortuneReturnBarHtml");
+    }
+  });
+
   it("never claims the app emails Enrich or lenders for the helper", () => {
     const all = [
       ...walk(SUNDAY_STRINGS.en),

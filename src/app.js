@@ -132,14 +132,16 @@ function shell(body) {
   root.innerHTML = "";
   const node = el(`
     <div class="shell">
-      <header class="top">
-        <div class="brand-block">
-          ${pylWordmarkHtml()}
-          <button class="brand" type="button" data-go="home">${escapeHtml(s("appName"))}</button>
+      <header class="top${isFortuneReferral() ? " is-from-fortune" : ""}">
+        ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml) : ""}
+        <div class="top-row">
+          <div class="brand-block">
+            ${pylWordmarkHtml()}
+            <button class="brand" type="button" data-go="home">${escapeHtml(s("appName"))}</button>
+          </div>
+          <button class="lang" type="button" data-act="lang">${escapeHtml(s("langToggle"))}</button>
         </div>
-        <button class="lang" type="button" data-act="lang">${escapeHtml(s("langToggle"))}</button>
       </header>
-      ${isFortuneReferral() ? fortuneReturnBarHtml(escapeHtml, s("backToFortune")) : ""}
       <main></main>
       <footer class="footer">
         ${pylWordmarkHtml({ footer: true })}

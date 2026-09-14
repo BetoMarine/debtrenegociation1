@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { applyTheme, newFortunePlan } from "./model.js";
+import { makeFireHandoff } from "../handoff.js";
 import { stageStack } from "./journey.js";
+import { receiveFireHandoff } from "./stabilize.js";
 import { holdLineText, renderStageStackHtml } from "./ui.js";
 
 function escape(s) {
@@ -30,6 +32,17 @@ describe("Fortune board chrome", () => {
     expect(html).not.toContain("ft-beat");
     expect(html).toMatch(/First growth pot/i);
     expect(html).toMatch(/is-current/);
+  });
+
+  it("labels Fix as debt renegotiation months, not an EF 3-month term", () => {
+    const handed = receiveFireHandoff(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 3 }),
+    );
+    const html = renderStageStackHtml(stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }), escape);
+    expect(html).toMatch(/Debt renegotiation · 3 months/);
+    expect(html).toMatch(/Emergency fund · now HK\$/);
+    expect(html).not.toMatch(/Emergency fund · now HK\$0 \(3 mo\)/);
   });
 
   it("keeps a thin Invest section on grow and labels the hold line", () => {

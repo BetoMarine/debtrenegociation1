@@ -203,7 +203,7 @@ There is no server of your data. Vite only serves static files.
 
 Founder / testers with only an iPhone: after Pages is on, open **each** URL in Safari, then Share → Add to Home Screen. Confirm three icons, three titles.
 
-**Right Door:** https://betomarine.github.io/debtrenegociation1/ → privacy/start (正確的門). No chooser. Walk the bank hardship / IDRP letter flow.
+**Right Door:** https://betomarine.github.io/debtrenegociation1/ → privacy/start (正確的門). Footer version **PoC v0.8.0**. No chooser. Walk the bank hardship / IDRP letter flow. Direct open (no `from=fortune`) must **not** show Fortune header chrome.
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
@@ -214,7 +214,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 1. Open `/fortune/`. Privacy: three bullets + **Continue**. (Second open: skip Privacy, land on Step 1.)
 2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
 3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../?from=fortune`) and Sunday Pack (`../sunday/?from=fortune`) links. Set a 3- or 6-month floor + four me-now bands. Tap **Looks right — open my plan**.
-4. **Must-fix loop:** Heavy → **Open Right Door**. Header shows **Back to Fortune Teller** while you work (or leave) the pack. Tap it. Fortune lands on **Me today** with **Looks right — open my plan**. Open the board: **Fix** is debt renegotiation (3 or 6 months from the pack, or pick once), **Stabilize** is emergency fund (current amount, 0 allowed), Plan/Invest goals stay **visible**. Same loop for Sunday Pack fire link.
+4. **Must-fix loop:** Heavy → **Open Right Door**. The **header** (sticky, above the product title — not only a footer link) shows **Back to Fortune Teller** in English while you work or leave the pack. Right Door footer is **PoC v0.8.0**. Tap the header chip. Fortune lands on **Me today** with **Looks right — open my plan**. Open the board: **Fix** is **Debt renegotiation · 3 or 6 months** (pack tenor, or pick once on that row). **Stabilize** is emergency fund with the **current amount** (0 allowed) — the 3/6-month renegotiation term is not the EF label. Plan/Invest stay **visible**. Same header loop for Sunday Pack fire link. Direct RD/Sunday URLs have no Fortune bar.
 5. **Step 3:** vertical stage stack (Fix / Stabilize / Plan / Invest), not overlapping path pins. Living↔Net dials above; one-line hold status; sticky **You're in …**. All stages visible. Rebuild includes **Invest** (First growth pot / placeholder mix — not a product). Percentages wait on “…” / last value — never a fake 0% flash. Hard-fail coach is **one** next action (Fix or floor).
 6. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
 7. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.

@@ -55,7 +55,7 @@ export function journeyItems(plan, forecast, from = new Date()) {
       id: received.id,
       kind: "action",
       stage: "fix",
-      name: picked ? `Debt renegotiation (${months} mo)` : "Debt renegotiation",
+      name: picked ? `Debt renegotiation · ${months} months` : "Debt renegotiation · 3 or 6 months",
       months,
       amount: 0,
       pct: null,
@@ -151,8 +151,8 @@ export function stackRows(plan, forecast, from = new Date()) {
       const now = Number(item.amount) || 0;
       return {
         ...item,
-        name: `Emergency fund · now HK$${now.toLocaleString("en-HK")} (${item.months} mo)`,
-        shortName: `EF (${item.months} mo)`,
+        name: `Emergency fund · now HK$${now.toLocaleString("en-HK")}`,
+        shortName: "EF now",
       };
     });
 }
