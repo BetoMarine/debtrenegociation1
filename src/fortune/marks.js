@@ -5,7 +5,7 @@
 import fixtureMarksJson from "./fixtures/sleeve-marks.json";
 import { getTemplate } from "./templates.js";
 import {
-  INTERIM_TARGET_WEIGHTS,
+  HOUSE_TARGET_WEIGHTS,
   MARK_SOURCES,
   SLEEVE_IDS,
   newMasterPortfolio,
@@ -13,8 +13,12 @@ import {
 } from "./masterPortfolio.js";
 
 /**
- * Placeholder tickers for a later Finnhub cut. Unused in 0.9.2.
- * Do not fetch. Do not put an API key in this repo.
+ * Projection proxies for illustration only. Unused until Finnhub; no API key.
+ * Do not fetch.
+ *
+ * Locked (15 Sep 2026 by Beto): stocks 2800.HK, fixedIncome 2819.HK, cash CASH.
+ * Interim: reit 0823.HK — single-name proxy until Hang Seng REIT index/ETF is
+ * confirmed before live Finnhub.
  */
 export const SLEEVE_TICKERS = {
   stocks: "2800.HK",
@@ -73,13 +77,13 @@ function weightSum(weights) {
 }
 
 /**
- * House-mix μ (and σ when every sleeve has one) from sleeve returns × interim weights.
+ * House-mix μ (and σ when every sleeve has one) from sleeve returns × locked house targets.
  * Invalid weights or marks → null (caller keeps template μ).
  */
-export function deriveInvestMuSigma(marks, weights = INTERIM_TARGET_WEIGHTS) {
+export function deriveInvestMuSigma(marks, weights = HOUSE_TARGET_WEIGHTS) {
   const normalized = marks?.sleeves ? marks : normalizeMarks(marks);
   if (!normalized) return null;
-  const w = weights && typeof weights === "object" ? weights : INTERIM_TARGET_WEIGHTS;
+  const w = weights && typeof weights === "object" ? weights : HOUSE_TARGET_WEIGHTS;
   const sum = weightSum(w);
   if (!(sum > 0) || Math.abs(sum - 1) > WEIGHT_SUM_TOLERANCE) return null;
 
@@ -101,7 +105,7 @@ export function deriveInvestMuSigma(marks, weights = INTERIM_TARGET_WEIGHTS) {
 }
 
 /** Overlay keeps the user's template id / copy; only μ/σ move. */
-export function overlayInvestTemplate(plan, marks, weights = INTERIM_TARGET_WEIGHTS) {
+export function overlayInvestTemplate(plan, marks, weights = HOUSE_TARGET_WEIGHTS) {
   const derived = deriveInvestMuSigma(marks, weights);
   if (!derived) return null;
   const base = getTemplate(plan?.templateId);
