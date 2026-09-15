@@ -291,7 +291,7 @@ describe("FT-OVERLAP-01", () => {
 
 describe("FT-VER-01", () => {
   it("unit slice: Fortune version and HTML shell stay Fortune after an RD/Sunday path", () => {
-    expect(APP_VERSION).toMatch(/0\.9\.6/);
+    expect(APP_VERSION).toMatch(/0\.9\.7/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(STRINGS.en.version).toMatch(/0\.8\.0/);
