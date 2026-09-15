@@ -9,7 +9,7 @@ import {
 import { CASH_BENCHMARK, TEMPLATES } from "./templates.js";
 
 describe("Fortune Teller Monte Carlo", () => {
-  it("hard-fails the absurd kill-test: 0 income, 0 savings, HK$15M house", () => {
+  it("FT-FAIL-01: hard-fails the absurd kill-test: 0 income, 0 savings, HK$15M house", () => {
     const forecast = runMonteCarlo(killTestInput(), { paths: 400, seed: 1 });
     expect(forecast.livingPct).toBeLessThan(5);
     expect(forecast.netPct).toBeLessThan(5);

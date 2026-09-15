@@ -96,7 +96,12 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.stackFoot).toMatch(/no path pins/i);
     expect(FORTUNE_STRINGS.en.stageEmpty.invest).toMatch(/still on the board/i);
     expect(FORTUNE_STRINGS.en.youAreIn).toMatch(/you're in \{stage\}/i);
-    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.5/);
+    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.6/);
+    expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
+    expect(FORTUNE_STRINGS.en.sooner).toMatch(/sooner/i);
+    expect(FORTUNE_STRINGS.en.later).toMatch(/later/i);
+    expect(FORTUNE_STRINGS.en.dragHint).toMatch(/move in time/i);
+    expect(FORTUNE_STRINGS.en.stackFoot).toMatch(/overlap/i);
     expect(FORTUNE_STRINGS.en.startLead).not.toMatch(/years to retirement/i);
     expect(FORTUNE_STRINGS.en.themes.rebuild.label).toMatch(/I need to rebuild/i);
     expect(FORTUNE_STRINGS.en.themes.steady.label).toMatch(/steady/i);
@@ -109,6 +114,7 @@ describe("product copy", () => {
     expect(all).toMatch(/not regulated advice/i);
     const fortuneApp = readFileSync(new URL("./fortune/app.js", import.meta.url), "utf8");
     expect(fortuneApp).toMatch(/function fortuneFooter/);
+    expect(fortuneApp).toMatch(/APP_VERSION/);
     expect(fortuneApp).toMatch(/productHref\("right-door"\)/);
     expect(fortuneApp).toMatch(/productHref\("sunday"\)/);
     expect(fortuneApp).toMatch(/clearFortuneReferral\(\)/);

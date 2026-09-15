@@ -138,22 +138,24 @@ describe("Step 3 vertical stage stack", () => {
     expect(stageRollup([{ pct: null }, { pct: undefined }])).toBeNull();
   });
 
-  it("keeps Invest on a rebuild board and reorders living goals inside a stage", () => {
+  it("keeps Invest on a rebuild board and sorts living goals by time inside a stage", () => {
     const plan = applyTheme(newFortunePlan(), "rebuild");
     const stack = stageStack(plan, { netPct: 20, milestonePct: [40, 55, 60, 35] });
     expect(stack.find((s) => s.id === "invest").thin).toBe(false);
     expect(stack.find((s) => s.id === "invest").rows.some((r) => /growth pot/i.test(r.name))).toBe(true);
     const planIds = stack.find((s) => s.id === "plan").rows.map((r) => r.id);
     expect(planIds.length).toBeGreaterThanOrEqual(2);
+    const months = stack.find((s) => s.id === "plan").rows.map((r) => r.months);
+    expect(months).toEqual([...months].sort((a, b) => a - b));
     const flipped = applyStageOrder(plan.milestones, "plan", [...planIds].reverse());
     expect(flipped.find((m) => m.id === planIds[0]).boardOrder).toBeGreaterThan(
       flipped.find((m) => m.id === planIds[planIds.length - 1]).boardOrder,
     );
     const resorted = stageStack({ ...plan, milestones: flipped }, { netPct: 20, milestonePct: [40, 55, 60, 35] });
-    expect(resorted.find((s) => s.id === "plan").rows.map((r) => r.id)).toEqual([...planIds].reverse());
+    expect(resorted.find((s) => s.id === "plan").rows.map((r) => r.id)).toEqual(planIds);
   });
 
-  it("puts 3 or 6 month debt renegotiation on Fix, not as the EF term", () => {
+  it("FT-DATE-01: puts 3 or 6 month debt renegotiation on Fix, not as the EF term", () => {
     const base = applyTheme(
       { ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy", stabilizeTargetMonths: 3 },
       "rebuild",

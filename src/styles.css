@@ -727,6 +727,10 @@ html.fortune-root body {
   color: var(--muted);
 }
 
+.ft-stage-overlap {
+  color: var(--pyl-purple);
+}
+
 .ft-stage-body {
   padding: 0 8px 10px;
 }
@@ -748,6 +752,12 @@ html.fortune-root body {
   border-radius: 14px;
 }
 
+.ft-row-main,
+.ft-row-time,
+.ft-fix-horizon {
+  grid-column: 2;
+}
+
 .ft-row.is-drag {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
   border-color: var(--pyl-purple);
@@ -766,7 +776,7 @@ html.fortune-root body {
   line-height: 1;
   opacity: 0;
   touch-action: none;
-  cursor: grab;
+  cursor: ns-resize;
 }
 
 .ft-row-handle.is-spacer {
@@ -781,6 +791,12 @@ html.fortune-root body {
 }
 
 @media (hover: none) {
+  .ft-row.is-goal .ft-row-handle {
+    opacity: 0.45;
+  }
+  .ft-row.is-goal .ft-row-hint {
+    opacity: 1;
+  }
   .ft-row:active .ft-row-handle,
   .ft-row.is-drag .ft-row-handle {
     opacity: 0.55;
@@ -862,6 +878,30 @@ html.fortune-root body {
   font-style: normal;
   font-size: 11px;
   color: var(--muted);
+}
+
+.ft-row-time {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.ft-time-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ft-time-btn:active {
+  border-color: var(--pyl-purple);
+  background: #fff;
 }
 
 .ft-row-hint {

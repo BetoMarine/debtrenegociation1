@@ -1,0 +1,126 @@
+{
+  "product": "fortune-teller",
+  "liveUrl": "https://betomarine.github.io/debtrenegociation1/fortune/",
+  "process": {
+    "bobFirst": "npm test (this catalog + Fortune unit tests)",
+    "maddyAfter": "Safari QA only after Bob is green",
+    "doNotReopen": "Linda Firm /pyl/ DRAFT shelf"
+  },
+  "requiredIds": [
+    "FT-DATE-01",
+    "FT-EF-01",
+    "FT-LOOP-01",
+    "FT-ENTRY-01",
+    "FT-FAIL-01",
+    "FT-DRAG-01",
+    "FT-OVERLAP-01",
+    "FT-VER-01"
+  ],
+  "cases": [
+    {
+      "id": "FT-DATE-01",
+      "title": "Every board row has a date or range",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": null,
+      "expect": "whenLabel / date present for Fix, Stabilize, Plan, and Invest rows. Fix title stays Debt renegotiation · 3 or 6 months (calendar date is secondary, never the strong title).",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/board.test.js",
+        "src/fortune/journey.test.js"
+      ]
+    },
+    {
+      "id": "FT-EF-01",
+      "title": "Growth-pot pin must not mutate emergency fund",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": null,
+      "expect": "Editing or pinning First growth pot does not change EF amount; board keeps one growth pot in Invest, not a duplicate Plan row.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/goals.test.js"
+      ]
+    },
+    {
+      "id": "FT-LOOP-01",
+      "title": "Must-fix loop: Fortune → Right Door / Sunday → Back to Fortune",
+      "status": "safari_manual",
+      "automation": "unit_slice",
+      "liveRequires": "safari",
+      "expect": "Heavy fire link carries ?from=fortune. Header chip Back to Fortune Teller. Return lands on Me today with Looks right — open my plan. Fortune footer stays Fortune's PoC version (not Right Door v0.8.0) without a hard refresh. Board Fix is Debt renegotiation · 3 or 6 months. Live path: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/refer.test.js",
+        "src/handoff.test.js"
+      ]
+    },
+    {
+      "id": "FT-ENTRY-01",
+      "title": "Every later open lands on Step 1 (Me today)",
+      "status": "safari_manual",
+      "automation": "unit_slice",
+      "liveRequires": "safari",
+      "expect": "After Privacy is accepted once, every open is Step 1. Looks right — open my plan is one tap to the board; picking a card still walks Step 2. No auto-skip. Live path: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/stabilize.test.js",
+        "src/fortune/model.test.js"
+      ]
+    },
+    {
+      "id": "FT-FAIL-01",
+      "title": "Absurd 0 / 0 / huge house hard-fails",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": null,
+      "expect": "0 income, 0 savings, HK$15M+ house: hardFail, wrecked dials, does not hold, no you're-set.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/engine.test.js",
+        "src/fortune/coach.test.js",
+        "src/fortune/stabilize.test.js"
+      ]
+    },
+    {
+      "id": "FT-DRAG-01",
+      "title": "Drag living goals in time within a stage",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": "safari",
+      "expect": "Sooner / Later (and vertical handle) update milestone.months on living goals. Stage stays put; phase end is max(months) and can extend. Fix/EF are not user-invented. Dates stay on the row. Live gesture: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/time.test.js",
+        "src/fortune/board.test.js",
+        "src/fortune/engine.test.js"
+      ]
+    },
+    {
+      "id": "FT-OVERLAP-01",
+      "title": "Soft phase overlap on the stage stack",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": "safari",
+      "expect": "Fix → Stabilize → Plan → Invest is priority order, not hard walls. Stabilize may start at the end of Fix; Plan/Invest months may sit inside an earlier window without changing stage. Home board stays the vertical stack — no overlapping path-pin chart. Live overlap hint: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/time.test.js",
+        "src/fortune/journey.test.js"
+      ]
+    },
+    {
+      "id": "FT-VER-01",
+      "title": "Fortune footer version survives Right Door / Sunday return",
+      "status": "safari_manual",
+      "automation": "unit_slice",
+      "liveRequires": "safari",
+      "expect": "Fortune footer shows PoC v0.9.x. Open Right Door or Sunday Pack, tap Back to Fortune Teller. Fortune footer is still Fortune's version (never RD/Sunday PoC v0.8.0) without a hard refresh.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/pwa-shell.test.js",
+        "src/copy.test.js"
+      ]
+    }
+  ]
+}

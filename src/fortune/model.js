@@ -125,6 +125,33 @@ export function parseGoalAmount(raw) {
   return Math.max(0, Math.round(Number(String(raw ?? "").replace(/[^\d.]/g, "")) || 0));
 }
 
+/** Milestone target tenor. 1–240 months from today. */
+export function clampGoalMonths(n) {
+  return Math.max(1, Math.min(240, Math.round(Number(n) || 1)));
+}
+
+/**
+ * Drag a living goal in time. Stage stays put (moves are within a phase).
+ * Fix / EF are not user-invented here — RD/Sunday own Fix; EF stays distinct.
+ */
+export function setLivingGoalMonths(plan, goalId, months) {
+  if (!plan || !goalId) return plan;
+  const found = (plan.milestones || []).find((m) => m.id === goalId);
+  if (!found || milestoneRole(found) !== "living") return plan;
+  return upsertLivingGoal(
+    plan,
+    { name: found.name, amount: found.amount, months: clampGoalMonths(months) },
+    found.id,
+  );
+}
+
+export function shiftLivingGoalMonths(plan, goalId, delta) {
+  const found = (plan.milestones || []).find((m) => m.id === goalId);
+  if (!found || milestoneRole(found) !== "living") return plan;
+  const current = clampGoalMonths(found.months);
+  return setLivingGoalMonths(plan, goalId, current + Math.round(Number(delta) || 0));
+}
+
 export function emergencySnapshot(plan) {
   const floor = (plan?.milestones || []).find((m) => milestoneRole(m) === "floor") || null;
   return {
@@ -262,7 +289,7 @@ export function emptyDraftGoal() {
 export function normalizeMilestone(raw, index = 0) {
   const role = milestoneRole(raw);
   const amount = Math.max(0, Math.round(Number(raw?.amount) || 0));
-  const months = Math.max(1, Math.min(240, Math.round(Number(raw?.months) || 12)));
+  const months = clampGoalMonths(raw?.months || 12);
   const out = {
     id: livingMilestoneId(raw, role, index),
     name: String(raw?.name || "Living goal").trim().slice(0, 80) || "Living goal",

@@ -1,7 +1,32 @@
 <!doctype html>
-<html lang="zh-Hant-HK">
+<html lang="zh-Hant-HK" data-pyl-app="right-door">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      /* pyl-shell-guard */
+      (function () {
+        var expected = document.documentElement.getAttribute("data-pyl-app");
+        var path = location.pathname || "";
+        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        if (expected === app) return;
+        document.documentElement.style.visibility = "hidden";
+        function go() {
+          location.reload();
+        }
+        if (!("serviceWorker" in navigator)) {
+          go();
+          return;
+        }
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+        }).then(function () {
+          if (!self.caches || !caches.keys) return;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          });
+        }).then(go, go);
+      })();
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"

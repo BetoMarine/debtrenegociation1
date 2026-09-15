@@ -51,7 +51,25 @@ describe("Fortune board chrome", () => {
     expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
   });
 
-  it("puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
+  it("puts Sooner / Later on living goals and a date on every row", () => {
+    const from = new Date(2026, 8, 14);
+    const handed = receiveFireHandoff(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 3 }),
+    );
+    const html = renderStageStackHtml(
+      stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }, {}, from),
+      escape,
+    );
+    expect(html).toMatch(/>Sooner</);
+    expect(html).toMatch(/>Later</);
+    expect(html).toMatch(/data-time-delta="-1"/);
+    expect(html).toMatch(/class="ft-row-when">[^<]+</);
+    expect(html).toMatch(/data-horizon=/);
+    expect(html).toMatch(/to /);
+  });
+
+  it("FT-DATE-01: puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
     const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),

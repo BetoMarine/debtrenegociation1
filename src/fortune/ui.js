@@ -496,8 +496,15 @@ function renderStageRow(item, escapeHtml, hardFail) {
     item.whenLabel
       ? `<em class="ft-row-when">${escapeHtml(item.whenLabel)}</em>`
       : "";
+  const time =
+    item.draggable
+      ? `<span class="ft-row-time">
+          <button class="ft-time-btn" type="button" data-time-delta="-1" data-time-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("sooner"))}">${escapeHtml(t("sooner"))}</button>
+          <button class="ft-time-btn" type="button" data-time-delta="1" data-time-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("later"))}">${escapeHtml(t("later"))}</button>
+        </span>`
+      : "";
   return `
-    <div class="ft-row tone-${ringTone}${pending ? " is-pending" : ""}${item.draggable ? " is-goal" : ""}" data-row data-stage="${item.stage}" ${idAttr}>
+    <div class="ft-row tone-${ringTone}${pending ? " is-pending" : ""}${item.draggable ? " is-goal" : ""}" data-row data-stage="${item.stage}" data-months="${escapeHtml(item.months ?? "")}" ${idAttr}>
       ${handle}
       <button class="ft-row-main" type="button" ${action} aria-label="${escapeHtml(item.name)} ${shown}">
         <span class="ft-row-dial" style="${pctStyle}">
@@ -510,6 +517,7 @@ function renderStageRow(item, escapeHtml, hardFail) {
           ${hint}
         </span>
       </button>
+      ${time}
       ${pick}
     </div>
   `;
@@ -526,6 +534,18 @@ export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
       const rollupReady = section.rollup != null;
       const meta = showNow ? t("stageNow") : rollupReady ? `${section.rollup}%` : "…";
       const rollupLabel = showNow ? "" : `<em>${escapeHtml(t("stageRollup"))}</em>`;
+      const until =
+        section.horizonLabel
+          ? `<em class="ft-stage-until" data-horizon="${escapeHtml(section.horizon ?? "")}">${escapeHtml(
+              t("stageUntil", { when: section.horizonLabel }),
+            )}</em>`
+          : "";
+      const overlap =
+        section.overlapsPrevious && section.overlapsStage
+          ? `<em class="ft-stage-overlap" data-overlap="${escapeHtml(section.overlapsStage)}">${escapeHtml(
+              t("overlapsPrev", { stage: stageCopy(section.overlapsStage) }),
+            )}</em>`
+          : "";
       const body = section.thin
         ? `<p class="tiny ft-stage-empty">${escapeHtml(t(`stageEmpty.${section.id}`))}</p>`
         : section.rows.map((row) => renderStageRow(row, escapeHtml, hardFail)).join("");
@@ -536,6 +556,8 @@ export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
             <span class="ft-stage-meta" data-rollup>
               <strong>${escapeHtml(meta)}</strong>
               ${rollupLabel}
+              ${until}
+              ${overlap}
             </span>
           </button>
           <div class="ft-stage-body" ${section.expanded ? "" : "hidden"}>${body}</div>
