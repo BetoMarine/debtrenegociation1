@@ -754,6 +754,7 @@ function renderAdjust(host) {
   const body = el(
     `<div class="stack ft-adjust"><p class="kicker">${escapeHtml(t("adjustCta"))}</p><h1>${escapeHtml(t("adjustTitle"))}</h1><p class="lede">${escapeHtml(t("adjustLead"))}</p></div>`,
   );
+  body.insertAdjacentHTML("beforeend", renderCrumb(host));
   body.append(el(`<p class="tag">${escapeHtml(t("templateTitle"))}</p>`));
   body.append(el(`<p class="tiny">${escapeHtml(t("templatesHint"))}</p>`));
   TEMPLATE_IDS.forEach((id) => {
@@ -802,6 +803,7 @@ function renderAdjust(host) {
     `),
   );
   host.shellFortune(body);
+  body.querySelector('[data-act="dismiss-crumb"]')?.addEventListener("click", () => host.dismissCrumb());
   body.querySelectorAll("[data-template]").forEach((btn) => {
     btn.addEventListener("click", () => host.pickTemplate(btn.dataset.template));
   });
