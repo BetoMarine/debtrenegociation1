@@ -24,8 +24,8 @@ function rebuildBoard(currentHkd = 25000) {
   return persistLike(seeded);
 }
 
-describe("Growth pot pin vs emergency fund", () => {
-  it("editing the First growth pot amount does not change EF amount or EF goal", () => {
+describe("Growth pot pin vs emergency fund [FT-EF-01]", () => {
+  it("FT-EF-01: editing the First growth pot amount does not change EF amount or EF goal", () => {
     const plan = rebuildBoard(25000);
     const before = emergencySnapshot(plan);
     const pot = plan.milestones.find((m) => /first growth pot/i.test(m.name));

@@ -69,7 +69,7 @@ describe("Fortune board chrome", () => {
     expect(html).toMatch(/to /);
   });
 
-  it("puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
+  it("FT-DATE-01: puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
     const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
