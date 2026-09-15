@@ -51,7 +51,7 @@ describe("Fortune board chrome", () => {
     expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
   });
 
-  it("puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
+  it("FT-DATE-01: puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
     const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),

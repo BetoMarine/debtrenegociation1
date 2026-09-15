@@ -207,7 +207,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.4). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.4). No chooser. Case ids live in `fortune/test-cases/`. **Bob** runs `npm test` before **Maddy** Safari QA. Live LOOP / ENTRY still need Safari.
 
 **Full-story demo (iPhone Safari):**
 
@@ -242,6 +242,7 @@ Old bookmarks that still use `#/sunday-privacy` (and other `sunday-*` hashes) on
 index.html              Right Door HTML + apple-mobile-web-app-title
 sunday/index.html       Sunday Pack HTML + its own title / manifest
 fortune/index.html      Fortune Teller HTML + its own title / manifest
+fortune/test-cases/     Fortune cases (Bob `npm test` before Maddy Safari QA)
 src/app.js              Right Door screens only
 src/sunday/             Sunday Pack app, copy, door, PDF, screens
 src/fortune/            Fortune Teller app, owned Monte Carlo engine, PDF
