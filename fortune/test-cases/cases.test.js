@@ -15,9 +15,11 @@ import {
   emergencySnapshot,
   migrateFortunePlan,
   newFortunePlan,
+  setLivingGoalMonths,
+  shiftLivingGoalMonths,
   upsertLivingGoal,
 } from "../../src/fortune/model.js";
-import { holdStatus, stageStack, stackRows } from "../../src/fortune/journey.js";
+import { holdStatus, monthsFromDrag, stageStack, stackRows } from "../../src/fortune/journey.js";
 import { canOpenPlan, ensureFireSequence, gateFortuneScreen, nextAfterStart, receiveFireHandoff } from "../../src/fortune/stabilize.js";
 import { holdLineText, renderStageStackHtml } from "../../src/fortune/ui.js";
 
@@ -77,8 +79,12 @@ describe("Fortune test-case catalog", () => {
     expect(byId("FT-ENTRY-01").status).toBe("safari_manual");
     expect(byId("FT-LOOP-01").liveRequires).toBe("safari");
     expect(byId("FT-ENTRY-01").liveRequires).toBe("safari");
-    expect(byId("FT-DRAG-01").status).toBe("not_built");
-    expect(byId("FT-OVERLAP-01").status).toBe("not_built");
+    expect(byId("FT-DRAG-01").status).toBe("automated");
+    expect(byId("FT-OVERLAP-01").status).toBe("automated");
+    expect(byId("FT-DRAG-01").liveRequires).toBe("safari");
+    expect(byId("FT-OVERLAP-01").liveRequires).toBe("safari");
+    expect(byId("FT-DRAG-01").automation).toBe("unit");
+    expect(byId("FT-OVERLAP-01").automation).toBe("unit");
   });
 });
 
@@ -226,23 +232,52 @@ describe("FT-ENTRY-01", () => {
 });
 
 describe("FT-DRAG-01", () => {
-  it("is cataloged as not_built", () => {
-    expect(byId("FT-DRAG-01").status).toBe("not_built");
-    expect(byId("FT-DRAG-01").automation).toBe("none");
+  it("shifts living-goal months inside the same stage and extends phase end", () => {
+    const plan = persistLike(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 6 }),
+    );
+    const visit = plan.milestones.find((m) => /family visit/i.test(m.name));
+    const before = stageStack(plan, null).find((s) => s.id === "plan");
+    const next = persistLike(shiftLivingGoalMonths(plan, visit.id, 12));
+    const moved = next.milestones.find((m) => m.id === visit.id);
+    expect(moved.months).toBe(visit.months + 12);
+    expect(moved.stage).toBe("plan");
+    expect(stageStack(next, null).find((s) => s.id === "plan").horizon).toBe(before.horizon + 12);
+    expect(monthsFromDrag(8, 36)).toBe(11);
+    expect(setLivingGoalMonths(plan, plan.milestones.find((m) => m.role === "fix").id, 18)).toBe(plan);
+
+    const html = renderStageStackHtml(stageStack(plan, { netPct: 22, milestonePct: [40, 55, 60, 35] }), escape);
+    expect(html).toMatch(/>Sooner</);
+    expect(html).toMatch(/>Later</);
+    expect(html).not.toMatch(/<div class="ft-timeline"/);
   });
 
-  it.skip("not_built: drag-to-reorder living goal rows on the board", () => {
-    expect(byId("FT-DRAG-01").status).toBe("not_built");
+  it.skip("live Safari: Sooner / Later and handle scrub months on a Plan row (Maddy after Bob)", () => {
+    expect(byId("FT-DRAG-01").liveRequires).toBe("safari");
   });
 });
 
 describe("FT-OVERLAP-01", () => {
-  it("is cataloged as not_built (no overlapping path-pin home board)", () => {
-    expect(byId("FT-OVERLAP-01").status).toBe("not_built");
-    expect(byId("FT-OVERLAP-01").automation).toBe("none");
+  it("allows Plan months inside the Fix/Stabilize window without changing stage or resurrecting path pins", () => {
+    const plan = persistLike(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 6 }),
+    );
+    const phone = plan.milestones.find((m) => /phone/i.test(m.name));
+    const overlapped = persistLike(setLivingGoalMonths(plan, phone.id, 4));
+    expect(overlapped.milestones.find((m) => m.id === phone.id).stage).toBe("plan");
+    const stack = stageStack(overlapped, { netPct: 20, milestonePct: [40, 55, 60, 35] });
+    expect(stack.map((s) => s.id)).toEqual(["fix", "stabilize", "plan", "invest"]);
+    expect(stack.find((s) => s.id === "stabilize").overlapsPrevious).toBe(true);
+    expect(stack.find((s) => s.id === "plan").overlapsPrevious).toBe(true);
+    const html = renderStageStackHtml(stack, escape);
+    expect(html).toMatch(/overlaps Stabilize/);
+    expect(html).not.toContain("ft-timeline");
+    expect(html).not.toContain("ft-beat");
   });
 
-  it.skip("not_built: overlapping path pins are out of the Fortune home board", () => {
-    expect(byId("FT-OVERLAP-01").status).toBe("not_built");
+  it.skip("live Safari: Plan Sooner into Stabilize shows overlaps hint; stack stays the home board (Maddy after Bob)", () => {
+    expect(byId("FT-OVERLAP-01").liveRequires).toBe("safari");
   });
 });

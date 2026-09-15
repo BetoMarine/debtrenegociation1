@@ -3,14 +3,41 @@
  * Pure module — stage rows, rollups, and labels. No DOM.
  */
 import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
-import { emergencyCurrentHkd, isLivingGoal, milestoneRole, monthYearLabel } from "./model.js";
+import { clampGoalMonths, emergencyCurrentHkd, isLivingGoal, milestoneRole, monthYearLabel } from "./model.js";
 import { fireFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 
 export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
 
+/** Vertical drag on a row handle: down = later, up = sooner. Phone-sized. */
+export const TIME_DRAG_PX_PER_MONTH = 12;
+
 export function stageRank(stage) {
   const i = JOURNEY_STAGES.indexOf(stage);
   return i < 0 ? JOURNEY_STAGES.indexOf("plan") : i;
+}
+
+/** Map a pointer drag (px) onto a new months value. Does not change stage. */
+export function monthsFromDrag(startMonths, deltaY, pxPerMonth = TIME_DRAG_PX_PER_MONTH) {
+  const px = Number(pxPerMonth) > 0 ? Number(pxPerMonth) : TIME_DRAG_PX_PER_MONTH;
+  const delta = Math.round(Number(deltaY) / px);
+  return clampGoalMonths((Number(startMonths) || 12) + delta);
+}
+
+function rowTenors(rows) {
+  return (rows || [])
+    .map((row) => Math.round(Number(row?.months)))
+    .filter((n) => Number.isFinite(n) && n >= 1);
+}
+
+/** Phase end = max(months) of goals in the stage. Empty stage → null. */
+export function stageHorizonMonths(rows) {
+  const months = rowTenors(rows);
+  return months.length ? Math.max(...months) : null;
+}
+
+export function stageStartMonths(rows) {
+  const months = rowTenors(rows);
+  return months.length ? Math.min(...months) : null;
 }
 
 /** Sequence is priority, not hiding — Plan/Invest stay open with Fix + EF. */
@@ -153,10 +180,12 @@ export function layoutJourneyPins(items) {
 
 function stackRowOrder(a, b) {
   if (!!a.draggable !== !!b.draggable) return a.draggable ? 1 : -1;
+  const months = (Number(a.months) || 0) - (Number(b.months) || 0);
+  if (months) return months;
   const ao = Number(a.boardOrder);
   const bo = Number(b.boardOrder);
   if (Number.isFinite(ao) && Number.isFinite(bo) && ao !== bo) return ao - bo;
-  return a.months - b.months || a.name.localeCompare(b.name);
+  return a.name.localeCompare(b.name);
 }
 
 /** Rows for the vertical stack: no Today pin, floor labeled with months. */
@@ -192,6 +221,8 @@ export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
   const here = currentStage(plan, forecast);
   const rows = stackRows(plan, forecast, from);
   const openSet = open instanceof Set ? open : null;
+  let prevEnd = null;
+  let prevId = null;
   return JOURNEY_STAGES.map((id, index) => {
     let stageRows = rows.filter((row) => row.stage === id).sort(stackRowOrder);
     if (id === "invest" && stageRows.length === 0) {
@@ -210,7 +241,10 @@ export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
       ];
     }
     const current = here === id;
-    return {
+    const startMonths = stageStartMonths(stageRows);
+    const horizon = stageHorizonMonths(stageRows);
+    const overlapsPrevious = prevEnd != null && startMonths != null && startMonths <= prevEnd;
+    const section = {
       id,
       index: index + 1,
       total: JOURNEY_STAGES.length,
@@ -219,7 +253,15 @@ export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
       rollup: stageRollup(stageRows),
       rows: stageRows,
       thin: stageRows.length === 0,
+      startMonths,
+      horizon,
+      horizonLabel: horizon != null ? monthYearLabel(horizon, from) : "",
+      overlapsPrevious,
+      overlapsStage: overlapsPrevious ? prevId : null,
     };
+    prevEnd = horizon;
+    prevId = id;
+    return section;
   });
 }
 

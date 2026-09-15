@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.4";
+export const APP_VERSION = "PoC v0.9.5";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -148,8 +148,12 @@ const en = {
   stageRollup: "stage rollup",
   stageNow: "Now",
   holdFloorFirst: "floor first",
-  stackFoot: "Goals = rows + % rings. No path pins.",
-  dragHint: "Drag to reorder",
+  stackFoot: "Goals = rows + % rings. Drag in time; stages may overlap. No path pins.",
+  dragHint: "Drag to move in time",
+  sooner: "Sooner",
+  later: "Later",
+  stageUntil: "to {when}",
+  overlapsPrev: "overlaps {stage}",
   stageEmpty: {
     fix: "No fire to fix on this path.",
     stabilize: "Set a floor to stabilize.",

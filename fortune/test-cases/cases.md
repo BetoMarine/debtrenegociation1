@@ -58,14 +58,22 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Maddy (optional live):** Add a huge house on a 0/0 rebuild board; confirm honesty line.
 
-## FT-DRAG-01 — drag reorder
+## FT-DRAG-01 — drag living goals in time
 
-**Status:** not_built
+**Status:** automated (`npm test`); live gesture still **Safari** (Maddy after Bob)
 
-Reserved for light drag-to-reorder on living goal rows. Programmatic `applyStageOrder` exists; gesture + Safari QA is not a Fortune test case yet. Do not fail Bob for this id.
+**Expect:** Living rows have **Sooner / Later** (44px) plus a vertical ⋮⋮ handle. Tapping or dragging updates `milestone.months`. The goal stays in its stage. Phase end = `max(months)` of that stage and can extend. Fix stays RD/Sunday 3/6 (user does not invent Fix). EF stays distinct. Dates/tenors remain on the row (FT-DATE-01).
 
-## FT-OVERLAP-01 — overlapping path pins
+**Bob:** catalog + `src/fortune/time.test.js` + board HTML for Sooner/Later. Engine already models later dates as higher success %.
 
-**Status:** not_built
+**Maddy:** iPhone Safari. On a Plan row tap **Later** — date moves forward, stays in Plan. **Sooner** pulls it earlier. Handle up/down scrubs months.
 
-Reserved. Step 3 is the vertical Fix → Stabilize → Plan → Invest stack. Do not bring back overlapping path pins as the home board. Do not fail Bob for this id.
+## FT-OVERLAP-01 — soft phase overlap
+
+**Status:** automated (`npm test`); live overlap hint still **Safari** (Maddy after Bob)
+
+**Expect:** Spine Fix → Stabilize → Plan → Invest is **priority**, not hard non-overlapping walls. Stabilize can start at the end of Fix. A Plan goal may sit inside the Fix/Stabilize window and remain Plan. Invest may overlap Plan. Home board is still the **vertical stage stack** — do not resurrect overlapping path pins.
+
+**Bob:** catalog + `src/fortune/time.test.js` (overlap flags, stage unchanged).
+
+**Maddy:** Safari. Pull a Plan goal Sooner into the Stabilize window. Confirm **overlaps Stabilize** on the Plan header; goal does not jump stage.

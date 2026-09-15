@@ -12,7 +12,7 @@ import {
   nextAfterStart,
   stabilizeTargetMonths,
 } from "./stabilize.js";
-import { applyStageOrder, currentStage, defaultOpenStages, holdStatus, stageStack } from "./journey.js";
+import { currentStage, defaultOpenStages, holdStatus, monthsFromDrag, rowWhenLabel, stageStack } from "./journey.js";
 import { FORTUNE_SCREENS, dialTone, holdLineText, renderFortune } from "./ui.js";
 import {
   applyTheme,
@@ -25,6 +25,8 @@ import {
   toEnginePlan,
   upsertLivingGoal,
   isLivingGoal,
+  shiftLivingGoalMonths,
+  setLivingGoalMonths,
 } from "./model.js";
 import { applyInvestMarksOnOpen, loadMarks } from "./marks.js";
 import { buildFortunePdf } from "./pdf.js";
@@ -281,7 +283,8 @@ function host() {
     clearPlan,
     bindStageStack,
     toggleStage,
-    reorderStage,
+    shiftGoalTime,
+    setGoalTime,
     openStages,
     applyCoach,
     setFixMonths,
@@ -514,6 +517,26 @@ function refreshCompare() {
   compare = compareSaveBorrow(toEnginePlan(plan), id, { paths: 800, seed: plan.seed });
 }
 
+async function shiftGoalTime(id, delta) {
+  const before = (plan.milestones || []).find((m) => m.id === id);
+  plan = shiftLivingGoalMonths(plan, id, delta);
+  const after = (plan.milestones || []).find((m) => m.id === id);
+  if (!before || !after || Number(before.months) === Number(after.months)) return;
+  await persistPlan("board");
+  render({ keepScroll: true });
+  if (isBoardUnlocked(plan)) queueForecast({ persistEvent: false });
+}
+
+async function setGoalTime(id, months) {
+  const before = (plan.milestones || []).find((m) => m.id === id);
+  plan = setLivingGoalMonths(plan, id, months);
+  const after = (plan.milestones || []).find((m) => m.id === id);
+  if (!before || !after || Number(before.months) === Number(after.months)) return;
+  await persistPlan("board");
+  render({ keepScroll: true });
+  if (isBoardUnlocked(plan)) queueForecast({ persistEvent: false });
+}
+
 function toggleStage(id) {
   if (!openStages) openStages = defaultOpenStages();
   if (openStages.has(id)) openStages.delete(id);
@@ -521,10 +544,12 @@ function toggleStage(id) {
   render({ keepScroll: true });
 }
 
-async function reorderStage(stage, orderedIds) {
-  plan.milestones = applyStageOrder(plan.milestones, stage, orderedIds);
-  await persistPlan("board");
-  render({ keepScroll: true });
+function liveWhenLabel(row, months) {
+  const when = row.querySelector(".ft-row-when");
+  if (!when) return;
+  const kind = row.classList.contains("is-goal") ? "goal" : "action";
+  when.textContent = rowWhenLabel({ kind, months: Number(months) || 1 });
+  row.dataset.months = String(months);
 }
 
 function bindStageStack(stack) {
@@ -532,30 +557,38 @@ function bindStageStack(stack) {
   stack.querySelectorAll("[data-toggle-stage]").forEach((btn) => {
     btn.addEventListener("click", () => toggleStage(btn.dataset.toggleStage));
   });
+  stack.querySelectorAll("[data-time-delta]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = btn.dataset.timeId;
+      const delta = Number(btn.dataset.timeDelta);
+      if (!id || !Number.isFinite(delta) || !delta) return;
+      shiftGoalTime(id, delta);
+    });
+  });
   stack.querySelectorAll("[data-drag]").forEach((handle) => {
     handle.addEventListener("pointerdown", (event) => {
       const row = handle.closest("[data-row]");
-      if (!row) return;
+      if (!row || !row.dataset.chip) return;
       event.preventDefault();
       event.stopPropagation();
       handle.setPointerCapture?.(event.pointerId);
       row.classList.add("is-drag");
-      const stage = row.dataset.stage;
-      const start = [...row.parentElement.querySelectorAll("[data-row][data-chip]")].map((node) => node.dataset.chip);
+      const startY = event.clientY;
+      const startMonths = Math.max(1, Math.round(Number(row.dataset.months) || 12));
+      let nextMonths = startMonths;
       const onMove = (ev) => {
-        const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-row][data-chip]");
-        if (!over || over === row || over.dataset.stage !== stage) return;
-        const box = over.getBoundingClientRect();
-        if (ev.clientY < box.top + box.height / 2) over.before(row);
-        else over.after(row);
+        nextMonths = monthsFromDrag(startMonths, ev.clientY - startY);
+        liveWhenLabel(row, nextMonths);
       };
       const onUp = async () => {
         row.classList.remove("is-drag");
         handle.removeEventListener("pointermove", onMove);
         handle.removeEventListener("pointerup", onUp);
-        const ids = [...row.parentElement.querySelectorAll("[data-row][data-chip]")].map((node) => node.dataset.chip);
-        if (ids.join() === start.join()) return;
-        await reorderStage(stage, ids);
+        handle.releasePointerCapture?.(event.pointerId);
+        if (nextMonths === startMonths) return;
+        await setGoalTime(row.dataset.chip, nextMonths);
       };
       handle.addEventListener("pointermove", onMove);
       handle.addEventListener("pointerup", onUp);
@@ -666,7 +699,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.4",
+    version: "0.9.5",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

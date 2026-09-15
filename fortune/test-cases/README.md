@@ -14,7 +14,7 @@ Standing process: **cases live in this folder and must be runnable.** Do not kee
 npm test
 ```
 
-Vitest picks up `fortune/test-cases/cases.test.js`. Automated ids (`FT-DATE-01`, `FT-EF-01`, `FT-FAIL-01`) execute real assertions. `FT-LOOP-01` / `FT-ENTRY-01` keep a unit slice where one exists; the live path is still Safari. `FT-DRAG-01` / `FT-OVERLAP-01` are cataloged as `not_built` (skipped product checks, not failures).
+Vitest picks up `fortune/test-cases/cases.test.js`. Automated ids (`FT-DATE-01`, `FT-EF-01`, `FT-FAIL-01`, `FT-DRAG-01`, `FT-OVERLAP-01`) execute real assertions. `FT-LOOP-01` / `FT-ENTRY-01` keep a unit slice where one exists; the live path is still Safari. `FT-DRAG-01` / `FT-OVERLAP-01` also want a Safari glance after Bob is green (Sooner/Later + overlap hint).
 
 ## Files
 

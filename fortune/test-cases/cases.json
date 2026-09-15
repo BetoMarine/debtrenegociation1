@@ -83,21 +83,30 @@
     },
     {
       "id": "FT-DRAG-01",
-      "title": "Drag-to-reorder goal rows",
-      "status": "not_built",
-      "automation": "none",
-      "liveRequires": null,
-      "expect": "Light drag-to-reorder on living goal rows without hiding Invest. Not built as a Fortune test case yet (programmatic stage order exists; gesture QA is out).",
-      "tests": ["fortune/test-cases/cases.test.js"]
+      "title": "Drag living goals in time within a stage",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": "safari",
+      "expect": "Sooner / Later (and vertical handle) update milestone.months on living goals. Stage stays put; phase end is max(months) and can extend. Fix/EF are not user-invented. Dates stay on the row. Live gesture: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/time.test.js",
+        "src/fortune/board.test.js",
+        "src/fortune/engine.test.js"
+      ]
     },
     {
       "id": "FT-OVERLAP-01",
-      "title": "Overlapping path pins",
-      "status": "not_built",
-      "automation": "none",
-      "liveRequires": null,
-      "expect": "Reserved. Home board is the vertical stage stack, not overlapping path pins. Do not resurrect a multi-pin chart as Step 3.",
-      "tests": ["fortune/test-cases/cases.test.js"]
+      "title": "Soft phase overlap on the stage stack",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": "safari",
+      "expect": "Fix → Stabilize → Plan → Invest is priority order, not hard walls. Stabilize may start at the end of Fix; Plan/Invest months may sit inside an earlier window without changing stage. Home board stays the vertical stack — no overlapping path-pin chart. Live overlap hint: Safari.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/time.test.js",
+        "src/fortune/journey.test.js"
+      ]
     }
   ]
 }
