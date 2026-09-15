@@ -153,7 +153,7 @@ describe("Step 3 vertical stage stack", () => {
     expect(resorted.find((s) => s.id === "plan").rows.map((r) => r.id)).toEqual([...planIds].reverse());
   });
 
-  it("puts 3 or 6 month debt renegotiation on Fix, not as the EF term", () => {
+  it("FT-DATE-01: puts 3 or 6 month debt renegotiation on Fix, not as the EF term", () => {
     const base = applyTheme(
       { ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy", stabilizeTargetMonths: 3 },
       "rebuild",
