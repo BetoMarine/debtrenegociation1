@@ -26,8 +26,8 @@ const BOOKS = {
     id: "firm",
     family: "A",
     leverageNotional: 1,
-    fiWeight: 0.5,
-    holdings: familyAHoldings({ stocks: 0.3, fixedIncome: 0.5, reit: 0.1, cash: 0.1 }),
+    fiWeight: 0.25,
+    holdings: familyAHoldings({ stocks: 0.48, fixedIncome: 0.25, reit: 0.15, cash: 0.12 }),
   },
   balanced: {
     id: "balanced",

@@ -75,13 +75,17 @@ describe("Fortune growth-pot shelf lock", () => {
     expect(TEMPLATES.frontier.sigma).toBe(0.45);
   });
 
-  it("keeps FI% falling Firm → Balanced → Growth → Frontier", () => {
+  it("locks Firm FI under Balanced while Growth/Frontier keep falling FI", () => {
     const fi = TEMPLATE_IDS.map((id) => mixFiPercent(TEMPLATES[id].mix));
-    expect(fi).toEqual([50, 30, 5, 0]);
-    for (let i = 1; i < fi.length; i += 1) {
-      expect(fi[i]).toBeLessThan(fi[i - 1]);
-    }
-    expect(bookForTemplate("firm").fiWeight).toBeGreaterThan(bookForTemplate("balanced").fiWeight);
+    expect(fi).toEqual([25, 30, 5, 0]);
+    expect(TEMPLATES.firm.mix).toBe("48% stocks · 25% FI · 15% REIT · 12% cash");
+    const firmHoldings = Object.fromEntries(bookForTemplate("firm").holdings.map((h) => [h.sleeve, h.weight]));
+    expect(firmHoldings).toEqual({ stocks: 0.48, fixedIncome: 0.25, reit: 0.15, cash: 0.12 });
+    expect(bookForTemplate("firm").fiWeight).toBe(0.25);
+    expect(bookForTemplate("firm").fiWeight).toBeLessThan(bookForTemplate("balanced").fiWeight);
+    expect(firmHoldings.stocks).toBeLessThan(
+      bookForTemplate("balanced").holdings.find((h) => h.sleeve === "stocks").weight,
+    );
     expect(bookForTemplate("balanced").fiWeight).toBeGreaterThan(bookForTemplate("growth").fiWeight);
     expect(bookForTemplate("growth").fiWeight).toBeGreaterThan(bookForTemplate("frontier").fiWeight);
     expect(bookForTemplate("frontier").fiWeight).toBe(0);

@@ -8,8 +8,8 @@ export const TEMPLATES = {
     label: "Firm",
     mu: 0.12,
     sigma: 0.16,
-    mix: "30% stocks · 50% FI · 10% REIT · 10% cash",
-    note: "Not a deposit. A market path with more FI than Balanced. Not a fund we sell.",
+    mix: "48% stocks · 25% FI · 15% REIT · 12% cash",
+    note: "Not a deposit. Equity-led, not bond-safe. Not a fund we sell.",
   },
   balanced: {
     id: "balanced",
