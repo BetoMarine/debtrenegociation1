@@ -96,7 +96,7 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.stackFoot).toMatch(/no path pins/i);
     expect(FORTUNE_STRINGS.en.stageEmpty.invest).toMatch(/still on the board/i);
     expect(FORTUNE_STRINGS.en.youAreIn).toMatch(/you're in \{stage\}/i);
-    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.6/);
+    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.7/);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(FORTUNE_STRINGS.en.sooner).toMatch(/sooner/i);
     expect(FORTUNE_STRINGS.en.later).toMatch(/later/i);
