@@ -21,6 +21,7 @@ import {
   stabilizeSnapshot,
 } from "./stabilize.js";
 import { TEMPLATE_DISCLAIMER, TEMPLATE_IDS, TEMPLATES, formatMuSigma } from "./templates.js";
+import { resolveTemplatePick } from "./strategyBooks.js";
 
 export const FORTUNE_SCREENS = [
   "start",
@@ -757,12 +758,15 @@ function renderAdjust(host) {
   body.append(el(`<p class="tiny">${escapeHtml(t("templatesHint"))}</p>`));
   TEMPLATE_IDS.forEach((id) => {
     const tmpl = TEMPLATES[id];
+    const pick = resolveTemplatePick(plan, id);
+    const gated = !pick.ok && pick.reason === "floor";
     const btn = el(`
-      <button class="${choiceClass(plan.templateId === id)} ft-template" type="button" data-template="${id}">
+      <button class="${choiceClass(plan.templateId === id)} ft-template${gated ? " is-gated" : ""}" type="button" data-template="${id}" ${gated ? 'aria-disabled="true"' : ""}>
         <strong>${escapeHtml(tmpl.label)}</strong>
         <span class="hint">${escapeHtml(formatMuSigma(tmpl))}</span>
         <span class="hint">${escapeHtml(tmpl.mix)}</span>
-        <span class="tiny">${escapeHtml(TEMPLATE_DISCLAIMER)}</span>
+        <span class="tiny">${escapeHtml(tmpl.note || TEMPLATE_DISCLAIMER)}</span>
+        ${gated ? `<span class="tiny">${escapeHtml(t("templateGatedHint"))}</span>` : ""}
       </button>
     `);
     body.append(btn);

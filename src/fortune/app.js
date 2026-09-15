@@ -27,6 +27,7 @@ import {
   isLivingGoal,
 } from "./model.js";
 import { applyInvestMarksOnOpen, loadMarks } from "./marks.js";
+import { resolveTemplatePick } from "./strategyBooks.js";
 import { buildFortunePdf } from "./pdf.js";
 import { runForecast } from "./simulate.js";
 import {
@@ -430,9 +431,18 @@ async function saveNet(net) {
 }
 
 async function pickTemplate(id) {
+  const pick = resolveTemplatePick(plan, id);
+  if (!pick.ok) {
+    if (pick.reason === "floor") crumb = CRUMB_KEYS.templateFloor;
+    render({ keepScroll: true });
+    return;
+  }
+  if (pick.warnFrontier && plan.templateId !== pick.templateId) {
+    if (!confirm(ft("templateFrontierWarn"))) return;
+  }
   const prev = plan.templateId;
-  plan.templateId = id;
-  if (prev !== id && shouldShowCrumb(ui, CRUMB_KEYS.compound)) {
+  plan.templateId = pick.templateId;
+  if (prev !== pick.templateId && shouldShowCrumb(ui, CRUMB_KEYS.compound)) {
     crumb = CRUMB_KEYS.compound;
     ui = markCrumb(ui, CRUMB_KEYS.compound);
     await persistUi();
@@ -481,6 +491,15 @@ async function applyCoach(key) {
     return;
   }
   const before = forecast ? { livingPct: forecast.livingPct, netPct: forecast.netPct } : { livingPct: 0, netPct: 0 };
+  if (action.id === "template") {
+    const pick = resolveTemplatePick(plan, action.templateId);
+    if (!pick.ok) {
+      if (pick.reason === "floor") crumb = CRUMB_KEYS.templateFloor;
+      render({ keepScroll: true });
+      return;
+    }
+    if (pick.warnFrontier && plan.templateId !== pick.templateId && !confirm(ft("templateFrontierWarn"))) return;
+  }
   plan = applyCoachAction(plan, action);
   await persistPlan("board");
   await runAndPersistForecast({ persistEvent: true, keepScroll: true });
@@ -666,7 +685,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.4",
+    version: "0.9.5",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

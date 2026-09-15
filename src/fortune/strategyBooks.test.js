@@ -1,0 +1,139 @@
+import { describe, expect, it } from "vitest";
+import { applyTheme, migrateFortunePlan, newFortunePlan } from "./model.js";
+import { isStabilizeReady } from "./stabilize.js";
+import {
+  bookForTemplate,
+  isGatedTemplate,
+  planningMu,
+  resolveTemplatePick,
+} from "./strategyBooks.js";
+import {
+  TEMPLATE_IDS,
+  TEMPLATES,
+  canonicalTemplateId,
+  getTemplate,
+  mixFiPercent,
+} from "./templates.js";
+
+function thinRebuild(overrides = {}) {
+  return {
+    ...applyTheme(newFortunePlan(), "rebuild"),
+    money: {
+      incomeMonthly: 22000,
+      spendMonthly: 18000,
+      savings: 0,
+      debts: 400000,
+      incomeBand: "15_30",
+      spendBand: "10_20",
+      savingsBand: "0",
+      debtsBand: "400_1m",
+    },
+    net: { emergencyMonths: 6, floorHkd: 120000, currentHkd: 0 },
+    templateId: "balanced",
+    ...overrides,
+  };
+}
+
+function fundedFloor(overrides = {}) {
+  return {
+    ...applyTheme(newFortunePlan(), "grow"),
+    money: {
+      incomeMonthly: 100000,
+      spendMonthly: 42000,
+      savings: 600000,
+      debts: 0,
+      incomeBand: "80_120",
+      spendBand: "35_50",
+      savingsBand: "400_800",
+      debtsBand: "0",
+    },
+    net: { emergencyMonths: 6, floorHkd: 250000, currentHkd: 600000 },
+    templateId: "balanced",
+    ...overrides,
+  };
+}
+
+describe("Fortune growth-pot shelf lock", () => {
+  it("renames Steady → Firm and maps legacy ids on load", () => {
+    expect(TEMPLATE_IDS).toEqual(["firm", "balanced", "growth", "frontier"]);
+    expect(TEMPLATES.steady).toBeUndefined();
+    expect(TEMPLATES.firm.label).toBe("Firm");
+    expect(canonicalTemplateId("steady")).toBe("firm");
+    expect(getTemplate("steady")).toEqual(TEMPLATES.firm);
+    expect(migrateFortunePlan({ ...newFortunePlan(), templateId: "steady" }).templateId).toBe("firm");
+  });
+
+  it("locks planning μ / assumed swing", () => {
+    expect(planningMu("firm")).toBe(0.12);
+    expect(planningMu("steady")).toBe(0.12);
+    expect(planningMu("balanced")).toBe(0.15);
+    expect(planningMu("growth")).toBe(0.2);
+    expect(planningMu("frontier")).toBe(0.35);
+    expect(TEMPLATES.firm.sigma).toBe(0.16);
+    expect(TEMPLATES.balanced.sigma).toBe(0.2);
+    expect(TEMPLATES.growth.sigma).toBe(0.28);
+    expect(TEMPLATES.frontier.sigma).toBe(0.45);
+  });
+
+  it("keeps FI% falling Firm → Balanced → Growth → Frontier", () => {
+    const fi = TEMPLATE_IDS.map((id) => mixFiPercent(TEMPLATES[id].mix));
+    expect(fi).toEqual([50, 30, 5, 0]);
+    for (let i = 1; i < fi.length; i += 1) {
+      expect(fi[i]).toBeLessThan(fi[i - 1]);
+    }
+    expect(bookForTemplate("firm").fiWeight).toBeGreaterThan(bookForTemplate("balanced").fiWeight);
+    expect(bookForTemplate("balanced").fiWeight).toBeGreaterThan(bookForTemplate("growth").fiWeight);
+    expect(bookForTemplate("growth").fiWeight).toBeGreaterThan(bookForTemplate("frontier").fiWeight);
+    expect(bookForTemplate("frontier").fiWeight).toBe(0);
+    expect(TEMPLATES.frontier.mix).not.toMatch(/[1-9]\d*\s*%\s*FI/);
+  });
+
+  it("shares Family A DNA for Firm/Balanced and separates Growth/Frontier", () => {
+    const firm = bookForTemplate("firm");
+    const balanced = bookForTemplate("balanced");
+    const growth = bookForTemplate("growth");
+    const frontier = bookForTemplate("frontier");
+    expect(firm.family).toBe("A");
+    expect(balanced.family).toBe("A");
+    expect(firm.holdings.map((h) => h.symbol)).toEqual(balanced.holdings.map((h) => h.symbol));
+    expect(firm.leverageNotional).toBe(1);
+    expect(growth.family).toBe("B");
+    expect(growth.leverageNotional).toBe(1.25);
+    expect(frontier.family).toBe("C");
+    expect(frontier.leverageNotional).toBe(2);
+    const books = [firm, balanced, growth, frontier];
+    books.forEach((book) => {
+      const sum = book.holdings.reduce((acc, h) => acc + h.weight, 0);
+      expect(sum).toBeCloseTo(1, 10);
+      const blob = JSON.stringify(book);
+      expect(blob).toMatch(/Projection proxy/i);
+      expect(blob).not.toMatch(/buy list|buy-list|Finnhub|apiKey/i);
+    });
+    expect(TEMPLATES.firm.note).toMatch(/not a deposit/i);
+    expect(TEMPLATES.growth.note).toMatch(/lever/i);
+    expect(TEMPLATES.frontier.note).toMatch(/speculative/i);
+    TEMPLATE_IDS.forEach((id) => {
+      expect(TEMPLATES[id].note).toMatch(/not a fund we sell/i);
+    });
+  });
+
+  it("blocks Growth/Frontier until the EF floor is ready", () => {
+    const thin = thinRebuild();
+    const funded = fundedFloor();
+    expect(isStabilizeReady(thin)).toBe(false);
+    expect(isStabilizeReady(funded)).toBe(true);
+    expect(isGatedTemplate("growth")).toBe(true);
+    expect(isGatedTemplate("frontier")).toBe(true);
+    expect(isGatedTemplate("firm")).toBe(false);
+    expect(resolveTemplatePick(thin, "growth")).toEqual({ ok: false, templateId: "growth", reason: "floor" });
+    expect(resolveTemplatePick(thin, "frontier").ok).toBe(false);
+    expect(resolveTemplatePick(thin, "firm")).toMatchObject({ ok: true, templateId: "firm" });
+    expect(resolveTemplatePick(funded, "growth")).toMatchObject({ ok: true, templateId: "growth" });
+    expect(resolveTemplatePick(funded, "frontier")).toEqual({
+      ok: true,
+      templateId: "frontier",
+      warnFrontier: true,
+    });
+    expect(resolveTemplatePick(thin, "steady").templateId).toBe("firm");
+  });
+});

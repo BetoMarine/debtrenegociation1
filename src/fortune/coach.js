@@ -4,7 +4,9 @@
  */
 import { hkd, isLivingGoal, resolveMoney } from "./model.js";
 import { needsFireCard, receivedFixMilestone } from "./stabilize.js";
-import { TEMPLATES } from "./templates.js";
+import { stabilizeSnapshot } from "./stabilize.js";
+import { resolveTemplatePick } from "./strategyBooks.js";
+import { TEMPLATES, canonicalTemplateId } from "./templates.js";
 
 export function shouldShowCoach(forecast) {
   if (!forecast) return false;
@@ -37,9 +39,12 @@ export function focusMilestone(plan, forecast) {
   return breakingMilestones(plan, forecast, 1)[0] || null;
 }
 
-function nextGrowthTemplate(templateId) {
-  if (templateId === "steady") return "growth";
-  if (templateId === "balanced") return "frontier";
+function nextGrowthTemplate(plan) {
+  const id = canonicalTemplateId(plan?.templateId);
+  const ready = !!stabilizeSnapshot(plan).ready;
+  if (id === "firm") return "balanced";
+  if (id === "balanced") return ready ? "growth" : null;
+  if (id === "growth") return ready ? "frontier" : null;
   return null;
 }
 
@@ -89,7 +94,7 @@ export function coachActions(plan, forecast) {
     });
   }
 
-  const nextT = nextGrowthTemplate(plan?.templateId);
+  const nextT = nextGrowthTemplate(plan);
   if (nextT) {
     const tmpl = TEMPLATES[nextT];
     actions.push({
@@ -191,7 +196,8 @@ export function applyCoachAction(plan, action) {
     });
   }
   if (action.id === "template" && action.templateId) {
-    next.templateId = action.templateId;
+    const pick = resolveTemplatePick(next, action.templateId);
+    if (pick.ok) next.templateId = pick.templateId;
   }
   if (action.id === "soften-net") {
     next.net.emergencyMonths = Math.max(0, Math.round(Number(next.net.emergencyMonths) || 0) - 2);

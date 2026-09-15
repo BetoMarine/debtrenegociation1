@@ -910,6 +910,10 @@ html.fortune-root body {
   gap: 2px;
 }
 
+.ft-template.is-gated {
+  opacity: 0.55;
+}
+
 .ft-check {
   display: flex;
   align-items: center;

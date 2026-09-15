@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.4). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.5). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -103,7 +103,7 @@ Stored in **separate IndexedDB keys** (`fortunePlan`, `fortuneForecast`, `fortun
    - **Rebuild** → debt-on-fire triage. Heavy / helper heat shows Right Door (`../`) and Sunday Pack (`../sunday/`) links (FDW prefers Sunday Pack). Then floor-first: 3 or 6 months + four “me now” bands. Fixing is the first goal. One Continue to the board (a thin floor is allowed; honesty lives on Step 3).
    - **Steady** → light four-field snapshot, skippable, onto the board. No fire tooling.
    - **Grow** → add one living goal (or skip) onto the board. Rebuild still does **not** dump a HK$1.5M house.
-4. **Step 3 · Your new life** — Living % vs Security-net % **above** the board, a one-line “holds” / “does not hold — yet”, sticky **You're in {stage}**, and four vertical sections **Fix → Stabilize → Plan → Invest**. **All stages start open** (sequence is priority, not hiding — Plan/Invest stay visible while Fix / EF are in progress). Headers still collapse on tap. Each goal is a **row with a % ring**. Stage header % is a **stage rollup**, not a single goal. **Invest** stays on the board even when thin (placeholder: “Suggested mix (after floor) — not a product”; no brokerage / fund picker). House-mix sleeve marks (synthetic fixture in v0.9.2) refresh Invest-bucket growth/% **behind the scenes** on next open; mix disclosure UI is out of scope. No multi-pin path chart as the home board. Coach is one line + 1–3 chips. **Adjust** holds mixes, ~4.5% price-rise, shuffle, save-vs-borrow, PDF, export. Light drag-to-reorder on goal rows. Live Finnhub marks and mix disclosure are **not** in this cut.
+4. **Step 3 · Your new life** — Living % vs Security-net % **above** the board, a one-line “holds” / “does not hold — yet”, sticky **You're in {stage}**, and four vertical sections **Fix → Stabilize → Plan → Invest**. **All stages start open** (sequence is priority, not hiding — Plan/Invest stay visible while Fix / EF are in progress). Headers still collapse on tap. Each goal is a **row with a % ring**. Stage header % is a **stage rollup**, not a single goal. **Invest** stays on the board even when thin (placeholder: “Suggested mix (after floor) — not a product”; no brokerage / fund picker). Silent house-mix marks stay a floor-honest ~5% overlay (locked cash 25 / FI 40 / stocks 25 / REIT 10) until Stabilize; after the floor holds they follow the selected Adjust card (Firm 12% / Balanced 15% / Growth 20% / Frontier 35%). Mix disclosure UI is out of scope. No multi-pin path chart as the home board. Coach is one line + 1–3 chips. **Adjust** holds mixes, ~4.5% price-rise, shuffle, save-vs-borrow, PDF, export. Light drag-to-reorder on goal rows. Live Finnhub marks and mix disclosure are **not** in this cut.
 
 Rebuild seeds a *modest* living pack (phone / course / small visit) plus a strong net. Client-side forecast: monthly steps, ~1000 paths, seeded. Goal success = funded by the target date on that path. Living dial = share of living milestones succeeding. Net dial = security-net success. A later `POST /simulate` can replace `src/fortune/simulate.js` without changing the UI.
 
@@ -207,7 +207,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.4). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.5). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
@@ -219,7 +219,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 6. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
 7. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 
-Other checks: press/hover a goal row for quiet drag chrome; reorder does not hide Invest. **Adjust** → Steady → Frontier. Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
+Other checks: press/hover a goal row for quiet drag chrome; reorder does not hide Invest. **Adjust** → Firm → Frontier (Growth/Frontier only after the floor holds; Frontier warns before apply). Save-vs-borrow. PDF footer (not advice / not HSBC). Right Door and Sunday Pack URLs unchanged.
 
 Sunday Pack happy path: tick privacy → language → none of the red flags → situation → add one loan → remittance 40/35/25 → Enrich card → create PDF → share or download. Confirm the footer says **not affiliated with Enrich**. Crisis path: tick passport held against will and confirm 999 / HELP / consulate buttons are `tel:` / WhatsApp, not a message sent by the app. Right Door at the root URL must still run its own bank pack (separate store). `/pyl/` is a DRAFT shelf for QA (banner on top; production planyourlife.tech not swapped). It must show two Live cards (Right Door, Sunday Pack) with Open links, Fortune Teller as Testing with no Open CTA, Offshore as Research, Digital twin as Ideation with no description, Fix→Stabilize→Plan→Invest (“Only after the floor holds”), and no raw “IDRP”.
 

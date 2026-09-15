@@ -133,4 +133,28 @@ describe("Rebuild coach", () => {
     expect(boardCoachActions(empty, wrecked)).toHaveLength(1);
     expect(boardCoachActions(empty, wrecked)[0].id).toBe("edit-money");
   });
+
+  it("does not offer Growth or Frontier while the floor is thin", () => {
+    const plan = {
+      ...newFortunePlan(),
+      templateId: "balanced",
+      money: {
+        incomeBand: "30_50",
+        spendBand: "20_35",
+        savingsBand: "0",
+        debtsBand: "0",
+        incomeMonthly: 22000,
+        spendMonthly: 18000,
+        savings: 0,
+        debts: 0,
+      },
+      net: { emergencyMonths: 6, floorHkd: 120000 },
+      milestones: [{ id: "trip", name: "Trip", amount: 40000, months: 18 }],
+    };
+    const forecast = { hardFail: false, verdict: "stretched", livingPct: 40, netPct: 20 };
+    const actions = coachActions(plan, forecast);
+    expect(actions.some((a) => a.templateId === "growth" || a.templateId === "frontier")).toBe(false);
+    const skipped = applyCoachAction(plan, { id: "template", templateId: "growth" });
+    expect(skipped.templateId).toBe("balanced");
+  });
 });

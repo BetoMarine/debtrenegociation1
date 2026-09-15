@@ -1,37 +1,39 @@
 /** Portfolio templates are benchmarks, not products we sell. */
 
+export const LEGACY_TEMPLATE_MAP = { steady: "firm" };
+
 export const TEMPLATES = {
-  steady: {
-    id: "steady",
-    label: "Steady",
-    mu: 0.035,
-    sigma: 0.05,
-    mix: "20% growth-like · 60% FI · 20% cash",
-    note: "Smoother path. Less upside, less wreckage.",
+  firm: {
+    id: "firm",
+    label: "Firm",
+    mu: 0.12,
+    sigma: 0.16,
+    mix: "30% stocks · 50% FI · 10% REIT · 10% cash",
+    note: "Not a deposit. A market path with more FI than Balanced. Not a fund we sell.",
   },
   balanced: {
     id: "balanced",
     label: "Balanced",
-    mu: 0.055,
-    sigma: 0.1,
-    mix: "50% growth-like · 40% FI · 10% cash",
-    note: "A middle path. Still a benchmark, not a product.",
+    mu: 0.15,
+    sigma: 0.2,
+    mix: "50% stocks · 30% FI · 12% REIT · 8% cash",
+    note: "Shared public core with Firm, different weights. Not a fund we sell.",
   },
   growth: {
     id: "growth",
     label: "Growth",
-    mu: 0.08,
-    sigma: 0.16,
-    mix: "75% growth-like · 20% FI · 5% cash",
-    note: "More swing. Living goals may land earlier — or miss.",
+    mu: 0.2,
+    sigma: 0.28,
+    mix: "70% global+HK growth · 20% high-beta · 5% FI · 5% cash",
+    note: "Illustrates a ~1.25× levered equity sleeve. Swing can be sharp. Not a fund we sell.",
   },
   frontier: {
     id: "frontier",
     label: "Frontier",
-    mu: 0.11,
-    sigma: 0.24,
-    mix: "40% tech-AI-like · 40% FI · 20% cash",
-    note: "Illustrative mix only. Not a fund we sell.",
+    mu: 0.35,
+    sigma: 0.45,
+    mix: "55% growth core · 40% tech/AI-like · 5% cash · 0% FI",
+    note: "Speculative. Illustrates ~2× leverage and concentrated tech/AI-like risk. Not a fund we sell.",
   },
 };
 
@@ -49,12 +51,23 @@ export const CASH_BENCHMARK = {
 
 export const TEMPLATE_DISCLAIMER = "Illustrative, not a fund we sell.";
 
+export function canonicalTemplateId(id) {
+  const mapped = LEGACY_TEMPLATE_MAP[id] || id;
+  return TEMPLATE_IDS.includes(mapped) ? mapped : "balanced";
+}
+
 export function getTemplate(id) {
-  return TEMPLATES[id] || TEMPLATES.balanced;
+  return TEMPLATES[canonicalTemplateId(id)];
 }
 
 export function formatMuSigma(template) {
   const mu = ((template?.mu ?? 0) * 100).toFixed(1);
   const sig = ((template?.sigma ?? 0) * 100).toFixed(0);
   return `Assumed ${mu}% a year · ${sig}% swing`;
+}
+
+/** FI share from a mix string. Missing “N% FI” reads as 0 (Frontier). */
+export function mixFiPercent(mix) {
+  const hit = String(mix || "").match(/(\d+(?:\.\d+)?)\s*%\s*FI\b/i);
+  return hit ? Number(hit[1]) : 0;
 }
