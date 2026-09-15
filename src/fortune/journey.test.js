@@ -163,16 +163,18 @@ describe("Step 3 vertical stage stack", () => {
     const waitingFix = waitingRows.find((r) => r.stage === "fix");
     const waitingEf = waitingRows.find((r) => r.kind === "floor");
     expect(waitingFix.name).toBe("Debt renegotiation · 3 or 6 months");
-    expect(waitingFix.whenLabel).toBeFalsy();
+    expect(waitingFix.whenLabel).toBe("3–6 months");
     expect(waitingFix.pickMonths).toBe(true);
     expect(waitingEf.name).toMatch(/Emergency fund · now HK\$0/);
     expect(waitingEf.name).not.toMatch(/\(3 mo\)/);
     expect(waitingEf.name).not.toMatch(/renegotiat/i);
+    expect(waitingEf.whenLabel).toMatch(/^by [A-Z][a-z]{2} 20\d\d$/);
 
     const picked = ensureFireSequence(base, makeFireHandoff({ source: "right-door", months: 6 }));
     const pickedRows = stackRows(picked, null, new Date(2026, 8, 14));
     expect(pickedRows.find((r) => r.stage === "fix").name).toBe("Debt renegotiation · 6 months");
     expect(pickedRows.find((r) => r.stage === "fix").whenLabel).toBe("Mar 2027");
+    expect(pickedRows.find((r) => r.kind === "floor").whenLabel).toMatch(/^by [A-Z][a-z]{2} 20\d\d$/);
     expect(pickedRows.find((r) => r.kind === "floor").name).toMatch(/Emergency fund · now HK\$0/);
   });
 

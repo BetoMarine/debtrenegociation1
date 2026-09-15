@@ -36,6 +36,17 @@ function shortName(item) {
   return `${name.slice(0, 13)}…`;
 }
 
+/** Date or range shown under every board row. Never replaces the Fix 3/6-month title. */
+export function rowWhenLabel(item, from = new Date()) {
+  if (!item) return "";
+  if (item.kind === "action" && item.pickMonths) return "3–6 months";
+  const months = Math.max(1, Math.round(Number(item.months) || 0));
+  if (!Number.isFinite(months) || months < 1) return "";
+  const date = monthYearLabel(months, from);
+  if (item.kind === "action") return date;
+  return `by ${date}`;
+}
+
 function itemPct(raw) {
   return raw != null && Number.isFinite(Number(raw)) ? Math.round(Number(raw)) : null;
 }
@@ -58,7 +69,6 @@ export function journeyItems(plan, forecast, from = new Date()) {
       kind: "action",
       stage: "fix",
       name: fixGoalLabel({ months, picked }),
-      whenLabel: picked ? monthYearLabel(months, from) : "",
       months,
       amount: 0,
       pct: null,
@@ -123,7 +133,11 @@ export function journeyItems(plan, forecast, from = new Date()) {
     pct: null,
     draggable: false,
   });
-  return items.map((item) => ({ ...item, shortName: shortName(item) }));
+  return items.map((item) => ({
+    ...item,
+    shortName: shortName(item),
+    whenLabel: item.kind === "today" ? monthYearLabel(0, from) : rowWhenLabel(item, from),
+  }));
 }
 
 /** Even columns — kept for tests / any leftover path layout. Not the home board. */
@@ -191,6 +205,7 @@ export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
           amount: 0,
           pct: null,
           draggable: false,
+          whenLabel: rowWhenLabel({ kind: "placeholder", months: 36 }, from),
         },
       ];
     }

@@ -51,6 +51,29 @@ describe("Fortune board chrome", () => {
     expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
   });
 
+  it("puts a date or range on every Fix / Stabilize / Plan / Invest row", () => {
+    const from = new Date(2026, 8, 14);
+    const handed = receiveFireHandoff(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 3 }),
+    );
+    const html = renderStageStackHtml(
+      stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }, {}, from),
+      escape,
+    );
+    const rows = html.match(/<div class="ft-row[\s\S]*?<\/div>/g) || [];
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    rows.forEach((row) => {
+      expect(row).toMatch(/class="ft-row-when">[^<]+</);
+    });
+    expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
+    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
+    expect(html).toMatch(/Emergency fund · now HK\$/);
+    expect(html).toMatch(/First growth pot[\s\S]*?class="ft-row-when">by /);
+    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).not.toMatch(/<strong>by /);
+  });
+
   it("labels a 6-month pack tenor on Fix and keeps the date secondary", () => {
     const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(

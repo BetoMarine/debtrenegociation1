@@ -104,10 +104,108 @@ function inferStage(raw) {
 }
 
 export function milestoneRole(raw) {
-  if (raw?.role === "fix" || raw?.id === FIX_MILESTONE_ID) return "fix";
-  if (raw?.role === "floor" || raw?.id === EF_MILESTONE_ID) return "floor";
+  if (raw?.role === "fix") return "fix";
+  if (raw?.role === "floor") return "floor";
   if (raw?.role === "placeholder") return "placeholder";
+  if (raw?.role === "living") return "living";
+  if (raw?.id === FIX_MILESTONE_ID) return "fix";
+  if (raw?.id === EF_MILESTONE_ID) return "floor";
   return "living";
+}
+
+function livingMilestoneId(raw, role, index) {
+  const requested = raw?.id;
+  if (role === "fix") return FIX_MILESTONE_ID;
+  if (role === "floor") return EF_MILESTONE_ID;
+  if (requested && requested !== FIX_MILESTONE_ID && requested !== EF_MILESTONE_ID) return requested;
+  return newId(`g${index}`);
+}
+
+export function parseGoalAmount(raw) {
+  return Math.max(0, Math.round(Number(String(raw ?? "").replace(/[^\d.]/g, "")) || 0));
+}
+
+export function emergencySnapshot(plan) {
+  const floor = (plan?.milestones || []).find((m) => milestoneRole(m) === "floor") || null;
+  return {
+    currentHkd: plan?.net?.currentHkd ?? null,
+    floorHkd: plan?.net?.floorHkd ?? null,
+    emergencyMonths: plan?.net?.emergencyMonths ?? null,
+    floorId: floor?.id || EF_MILESTONE_ID,
+    floorAmount: floor ? Math.max(0, Math.round(Number(floor.amount) || 0)) : emergencyCurrentHkd(plan),
+    floorName: floor?.name || "Emergency fund",
+  };
+}
+
+function isFirstGrowthPot(m) {
+  return milestoneRole(m) === "living" && /^first growth pot$/i.test(String(m.name || "").trim());
+}
+
+function isDefaultFirstGrowthPot(m) {
+  return isFirstGrowthPot(m) && Number(m.amount) === 25000 && Number(m.months) === 36;
+}
+
+function restoreAndDedupeGrowthPots(milestones) {
+  const next = (milestones || []).map((m) =>
+    isFirstGrowthPot(m) && m.stage !== "invest" ? { ...m, stage: "invest" } : m,
+  );
+  const potIdx = [];
+  next.forEach((m, i) => {
+    if (isFirstGrowthPot(m)) potIdx.push(i);
+  });
+  if (potIdx.length <= 1) return next;
+  const custom = potIdx.filter((i) => !isDefaultFirstGrowthPot(next[i]));
+  const keep = new Set(custom.length ? custom : [potIdx[0]]);
+  return next.filter((_, i) => !potIdx.includes(i) || keep.has(i));
+}
+
+/**
+ * Pin / edit a Plan–Invest living goal. Never writes EF / Fix ids or net fields.
+ * Upserts by id so a second "Pin this goal" cannot append a duplicate row.
+ */
+export function upsertLivingGoal(plan, raw, editingId = null) {
+  if (!plan) return plan;
+  const existing = editingId ? (plan.milestones || []).find((m) => m.id === editingId) : null;
+  if (existing && (milestoneRole(existing) === "floor" || milestoneRole(existing) === "fix")) {
+    return plan;
+  }
+  const frozenNet = {
+    emergencyMonths: plan.net?.emergencyMonths,
+    floorHkd: plan.net?.floorHkd,
+    currentHkd: plan.net?.currentHkd ?? null,
+  };
+  const next = normalizeMilestone(
+    {
+      ...(existing || {}),
+      id: existing?.id,
+      name: raw?.name,
+      amount: parseGoalAmount(raw?.amount),
+      months: raw?.months,
+      role: "living",
+      stage: existing?.stage,
+      boardOrder: existing?.boardOrder,
+      source: existing?.source,
+      monthsKnown: existing?.monthsKnown,
+    },
+    (plan.milestones || []).length,
+  );
+  next.role = "living";
+  if (next.id === EF_MILESTONE_ID || next.id === FIX_MILESTONE_ID) next.id = newId("g");
+  if (existing?.stage && JOURNEY_STAGES.includes(existing.stage)) next.stage = existing.stage;
+
+  const milestones = [...(plan.milestones || [])];
+  const idx = existing ? milestones.findIndex((m) => m.id === existing.id) : milestones.findIndex((m) => m.id === next.id);
+  if (idx >= 0) milestones[idx] = next;
+  else milestones.push(next);
+
+  return {
+    ...plan,
+    milestones,
+    net: { ...(plan.net || {}), ...frozenNet },
+    compareMilestoneId: plan.compareMilestoneId && plan.compareMilestoneId !== EF_MILESTONE_ID
+      ? plan.compareMilestoneId
+      : next.id,
+  };
 }
 
 export function isLivingGoal(raw) {
@@ -166,7 +264,7 @@ export function normalizeMilestone(raw, index = 0) {
   const amount = Math.max(0, Math.round(Number(raw?.amount) || 0));
   const months = Math.max(1, Math.min(240, Math.round(Number(raw?.months) || 12)));
   const out = {
-    id: raw?.id || (role === "fix" ? FIX_MILESTONE_ID : role === "floor" ? EF_MILESTONE_ID : newId(`g${index}`)),
+    id: livingMilestoneId(raw, role, index),
     name: String(raw?.name || "Living goal").trim().slice(0, 80) || "Living goal",
     amount,
     months,
@@ -194,10 +292,11 @@ export function migrateFortunePlan(raw) {
     }
     if (!BANDS[key].some((b) => b.id === money[key])) money[key] = base.money[key];
   });
-  const milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
+  let milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
   const net = raw.net || base.net;
   const theme = canonicalThemeId(raw.theme);
-  if (theme === "rebuild" && !milestones.some((m) => m.stage === "invest")) {
+  milestones = restoreAndDedupeGrowthPots(milestones);
+  if (theme === "rebuild" && !milestones.some((m) => m.stage === "invest" && milestoneRole(m) === "living")) {
     milestones.push(
       normalizeMilestone({ name: "First growth pot", amount: 25000, months: 36, stage: "invest" }, milestones.length),
     );

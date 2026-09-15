@@ -1,6 +1,6 @@
 # 正確的門 · Right Door · Sunday Pack · Fortune Teller
 
-Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.3). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
+Three **separate** free Hong Kong consumer tools from Plan Your Life (PoC v0.9.4). Each has its own URL, Safari Add-to-Home-Screen title, and manifest. There is **no shared chooser**. Shared brand: purple `#7e22ce`, teal `#06b6d4`, purple→teal primary CTA, light canvas, small **Plan Your Life** wordmark. Legal disclaimers stay in compact footers / privacy cards.
 
 1. **Right Door** — a banked borrower prepares a hardship / Interbank Debt Relief Plan (IDRP) pack **on their phone** and **sends it themselves**.
 2. **Sunday Pack** — a foreign domestic worker screens red flags, lists debts in bands, and splits remittance into a **1-page counsellor briefing** she creates and shares herself.
@@ -207,7 +207,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 
 **Sunday Pack:** https://betomarine.github.io/debtrenegociation1/sunday/ → privacy checkbox (Sunday Pack). No chooser.
 
-**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.3). No chooser.
+**Fortune Teller:** https://betomarine.github.io/debtrenegociation1/fortune/ → Fortune Teller (PoC v0.9.4). No chooser.
 
 **Full-story demo (iPhone Safari):**
 
@@ -215,7 +215,7 @@ Founder / testers with only an iPhone: after Pages is on, open **each** URL in S
 2. **Step 1:** three tall cards. **I need to rebuild** is first (tag: Start here). Tap it. You must **not** land on a peak-career house board.
 3. **Step 2:** pick **Heavy or missing payments**. Confirm Right Door (`../?from=fortune`) and Sunday Pack (`../sunday/?from=fortune`) links. Set a 3- or 6-month floor + four me-now bands. Tap **Looks right — open my plan**.
 4. **Must-fix loop:** Heavy → **Open Right Door**. The **header** (sticky, above the product title — not only a footer link) shows **Back to Fortune Teller** in English while you work or leave the pack. Right Door footer is **PoC v0.8.0**. Tap the header chip. Fortune lands on **Me today** with **Looks right — open my plan**. Open the board: **Fix** is labeled **Debt renegotiation · 3 months** or **Debt renegotiation · 6 months** (pack tenor, or pick once — a calendar date like Dec 2026 stays secondary). **Stabilize** is emergency fund with the **current amount** (0 allowed) — the 3/6-month renegotiation term is not the EF label. Plan/Invest stay **visible**. Same header loop for Sunday Pack fire link. Direct RD/Sunday URLs have no Fortune bar.
-5. **Step 3:** vertical stage stack (Fix / Stabilize / Plan / Invest), not overlapping path pins. Living↔Net dials above; one-line hold status; sticky **You're in …**. All stages visible. Rebuild includes **Invest** (First growth pot / placeholder mix — not a product). Percentages wait on “…” / last value — never a fake 0% flash. Hard-fail coach is **one** next action (Fix or floor).
+5. **Step 3:** vertical stage stack (Fix / Stabilize / Plan / Invest), not overlapping path pins. Living↔Net dials above; one-line hold status; sticky **You're in …**. All stages visible. **Every Fix / Stabilize / Plan / Invest row shows a date or range** under the name (Fix keeps **Debt renegotiation · 3 or 6 months** on the title; the calendar date stays secondary). Rebuild includes **Invest** (First growth pot / placeholder mix — not a product). Open **First growth pot**, change the amount, **Pin this goal**: the emergency-fund **now HK$** must not change, and the board must not grow a second First growth pot. Percentages wait on “…” / last value — never a fake 0% flash. Hard-fail coach is **one** next action (Fix or floor).
 6. Reload `/fortune/`. You must land on **Step 1**, not the board. Confirm **Looks right — open my plan** (one tap) returns to Step 3. Picking a different card still walks Step 2.
 7. Honesty check: 0 income, 0 savings, add a HK$15M house (via Add a goal / Adjust) still hard-fails; coach stays.
 

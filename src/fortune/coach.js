@@ -2,7 +2,7 @@
  * Rebuild coach: honest fail plus one-tap next steps.
  * Pure module — no DOM. Used by the board and unit tests.
  */
-import { hkd, resolveMoney } from "./model.js";
+import { hkd, isLivingGoal, resolveMoney } from "./model.js";
 import { needsFireCard, receivedFixMilestone } from "./stabilize.js";
 import { TEMPLATES } from "./templates.js";
 
@@ -178,14 +178,15 @@ export function applyCoachAction(plan, action) {
   };
   if (action.id === "delay") {
     const m = next.milestones.find((x) => x.id === action.goalId);
-    if (m) m.months = Math.min(240, Math.max(1, Math.round(Number(m.months) || 1) + 12));
+    if (m && isLivingGoal(m)) m.months = Math.min(240, Math.max(1, Math.round(Number(m.months) || 1) + 12));
   }
   if (action.id === "cut") {
     const m = next.milestones.find((x) => x.id === action.goalId);
-    if (m) m.amount = Math.max(0, Math.round((Number(m.amount) || 0) * 0.8));
+    if (m && isLivingGoal(m)) m.amount = Math.max(0, Math.round((Number(m.amount) || 0) * 0.8));
   }
   if (action.id === "push-all") {
     next.milestones.forEach((m) => {
+      if (!isLivingGoal(m)) return;
       m.months = Math.min(240, Math.max(1, Math.round(Number(m.months) || 1) + 6));
     });
   }

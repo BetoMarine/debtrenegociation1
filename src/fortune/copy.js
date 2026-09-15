@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.3";
+export const APP_VERSION = "PoC v0.9.4";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";

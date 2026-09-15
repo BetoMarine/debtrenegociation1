@@ -21,9 +21,10 @@ import {
   migrateFortunePlan,
   migrateUiState,
   newFortunePlan,
-  normalizeMilestone,
   resolveMoney,
   toEnginePlan,
+  upsertLivingGoal,
+  isLivingGoal,
 } from "./model.js";
 import { applyInvestMarksOnOpen, loadMarks } from "./marks.js";
 import { buildFortunePdf } from "./pdf.js";
@@ -390,18 +391,7 @@ function editGoal(id) {
 }
 
 async function saveGoal(raw) {
-  const next = normalizeMilestone({
-    id: editingGoalId || undefined,
-    name: raw.name,
-    amount: Number(String(raw.amount).replace(/[^\d.]/g, "")),
-    months: raw.months,
-  });
-  if (editingGoalId) {
-    plan.milestones = plan.milestones.map((m) => (m.id === editingGoalId ? next : m));
-  } else {
-    plan.milestones = [...plan.milestones, next];
-  }
-  if (!plan.compareMilestoneId) plan.compareMilestoneId = next.id;
+  plan = upsertLivingGoal(plan, raw, editingGoalId || null);
   editingGoalId = null;
   draftGoal = emptyDraftGoal();
   plan.boardReached = true;
@@ -413,6 +403,8 @@ async function saveGoal(raw) {
 
 async function deleteGoal() {
   if (!editingGoalId) return;
+  const victim = plan.milestones.find((m) => m.id === editingGoalId);
+  if (victim && !isLivingGoal(victim)) return;
   plan.milestones = plan.milestones.filter((m) => m.id !== editingGoalId);
   if (plan.compareMilestoneId === editingGoalId) {
     plan.compareMilestoneId = plan.milestones[0]?.id || null;
@@ -674,7 +666,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.3",
+    version: "0.9.4",
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

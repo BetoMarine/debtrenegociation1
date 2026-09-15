@@ -86,7 +86,13 @@ export function ensureEmergencyFund(plan) {
     role: "floor",
     boardOrder: 0,
   };
-  const rest = (plan.milestones || []).filter((m) => milestoneRole(m) !== "floor");
+  const rest = (plan.milestones || [])
+    .filter((m) => milestoneRole(m) !== "floor")
+    .map((m, i) => {
+      if (m.id !== EF_MILESTONE_ID && m.id !== FIX_MILESTONE_ID) return m;
+      if (milestoneRole(m) === "fix") return m;
+      return { ...m, id: `g_efsteal_${i}_${String(m.id || "x").slice(-6)}` };
+    });
   return {
     ...plan,
     milestones: [...rest.filter((m) => milestoneRole(m) === "fix"), floor, ...rest.filter((m) => milestoneRole(m) !== "fix")],
