@@ -1,6 +1,6 @@
 import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
 import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
-import { TEMPLATE_IDS, getTemplate } from "./templates.js";
+import { TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
 
 export const INCOME_BANDS = [
   { id: "0", label: "None — HK$0", value: 0 },
@@ -368,7 +368,7 @@ export function migrateFortunePlan(raw) {
           ? Math.max(0, Math.round(Number(net.currentHkd)))
           : null,
     },
-    templateId: TEMPLATE_IDS.includes(raw.templateId) ? raw.templateId : "balanced",
+    templateId: canonicalTemplateId(raw.templateId),
     inflationOn: raw.inflationOn !== false,
     seed: Number(raw.seed) || base.seed,
     theme,
@@ -459,4 +459,4 @@ export function migrateUiState(raw) {
   };
 }
 
-export { THEMES, THEME_IDS, canonicalThemeId, getTheme, TEMPLATE_IDS, getTemplate };
+export { THEMES, THEME_IDS, canonicalThemeId, getTheme, TEMPLATE_IDS, canonicalTemplateId, getTemplate };

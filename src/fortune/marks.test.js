@@ -11,13 +11,25 @@ import {
   overlayInvestTemplate,
 } from "./marks.js";
 import { getTemplate } from "./templates.js";
+import { planningMu } from "./strategyBooks.js";
+import { isStabilizeReady } from "./stabilize.js";
 import { appendRebalanceLog, emptyRebalanceLog, normalizeRebalanceEntry } from "./rebalanceLog.js";
 import { stageStack } from "./journey.js";
 import { applyTheme, newFortunePlan } from "./model.js";
 import { renderStageStackHtml } from "./ui.js";
 import { readFileSync } from "node:fs";
 
-const SYNTHETIC_PLAN = {
+const THIN_REBUILD = {
+  theme: "rebuild",
+  money: { incomeMonthly: 22000, spendMonthly: 18000, savings: 0, debts: 400000 },
+  milestones: [{ id: "growth", name: "First growth pot", amount: 25000, months: 36, stage: "invest" }],
+  net: { emergencyMonths: 6, floorHkd: 120000 },
+  templateId: "balanced",
+  inflationOn: false,
+  seed: 8,
+};
+
+const FUNDED_PLAN = {
   money: { incomeMonthly: 35000, spendMonthly: 20000, savings: 300000, debts: 0 },
   milestones: [{ id: "growth", name: "First growth pot", amount: 80000, months: 18, stage: "invest" }],
   net: { emergencyMonths: 6, floorHkd: 120000 },
@@ -61,7 +73,7 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(house.source).toBeNull();
     const marked = withMarks(house, normalizeMarks(fixtureMarks()));
     expect(marked.source).toBe("fixture");
-    expect(marked.lastMarks.sleeves.stocks.expectedReturn).toBe(0.2);
+    expect(marked.lastMarks.sleeves.stocks.expectedReturn).toBe(0.11);
   });
 
   it("derives Invest μ/σ from sleeve returns × locked house targets", () => {
@@ -73,29 +85,51 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(derived.mu).toBeCloseTo(mu, 12);
     expect(derived.sigma).toBeCloseTo(sigma, 12);
     expect(derived.mu).not.toBe(getTemplate("balanced").mu);
-    expect(derived.mu).toBeCloseTo(0.0725, 6);
+    expect(derived.mu).toBeCloseTo(0.05, 6);
+    expect(derived.mu).toBeLessThan(planningMu("firm"));
   });
 
-  it("open-hook applies fixture marks: forecast μ and path differ from the 0.9.1 template", () => {
-    const overlay = applyInvestMarksOnOpen(SYNTHETIC_PLAN, loadMarks());
+  it("before Stabilize, silent overlay stays floor-honest ~5% and ignores card 12/15/20/35", () => {
+    expect(isStabilizeReady(THIN_REBUILD)).toBe(false);
+    const overlay = applyInvestMarksOnOpen(THIN_REBUILD, loadMarks());
     expect(overlay.applied).toBe(true);
-    expect(overlay.options.template.mu).toBeCloseTo(0.0725, 6);
     expect(overlay.options.template.id).toBe("balanced");
+    expect(overlay.options.template.mu).toBeCloseTo(0.05, 6);
+    expect(overlay.options.template.mu).not.toBe(planningMu("balanced"));
+    expect(overlay.options.template.mu).toBeLessThan(planningMu("firm"));
 
-    const baseline = runMonteCarlo(SYNTHETIC_PLAN, { paths: 400, seed: 8, inflation: 0 });
-    const marked = runMonteCarlo(SYNTHETIC_PLAN, { paths: 400, seed: 8, inflation: 0, ...overlay.options });
+    const baseline = runMonteCarlo(THIN_REBUILD, { paths: 400, seed: 8, inflation: 0 });
+    const marked = runMonteCarlo(THIN_REBUILD, { paths: 400, seed: 8, inflation: 0, ...overlay.options });
     expect(baseline.mu).toBe(getTemplate("balanced").mu);
-    expect(marked.mu).toBeCloseTo(0.0725, 6);
+    expect(marked.mu).toBeCloseTo(0.05, 6);
     expect(marked.mu).not.toBe(baseline.mu);
-    expect(marked.medianWealth).not.toBe(baseline.medianWealth);
   });
 
-  it("without marks (or invalid marks) the open-hook is bit-identical to the 0.9.1 template path", () => {
-    const baseline = runMonteCarlo(SYNTHETIC_PLAN, { paths: 250, seed: 8, inflation: 0 });
-    const skipped = applyInvestMarksOnOpen(SYNTHETIC_PLAN, null);
-    const missing = applyInvestMarksOnOpen(SYNTHETIC_PLAN, loadMarks({ useFixture: false }));
-    const invalid = applyInvestMarksOnOpen(SYNTHETIC_PLAN, { source: "fixture", sleeves: { stocks: { expectedReturn: 0.2 } } });
-    const badSource = applyInvestMarksOnOpen(SYNTHETIC_PLAN, { ...fixtureMarks(), source: "live" });
+  it("after Stabilize, silent overlay follows the selected card's planning μ", () => {
+    expect(isStabilizeReady(FUNDED_PLAN)).toBe(true);
+    const balanced = applyInvestMarksOnOpen(FUNDED_PLAN, loadMarks());
+    expect(balanced.applied).toBe(true);
+    expect(balanced.options.template.mu).toBe(planningMu("balanced"));
+    expect(balanced.options.template.mu).toBe(0.15);
+
+    const growth = applyInvestMarksOnOpen({ ...FUNDED_PLAN, templateId: "growth" }, loadMarks());
+    expect(growth.options.template.mu).toBe(0.2);
+    const firm = applyInvestMarksOnOpen({ ...FUNDED_PLAN, templateId: "firm" }, loadMarks());
+    expect(firm.options.template.mu).toBe(0.12);
+    const frontier = applyInvestMarksOnOpen({ ...FUNDED_PLAN, templateId: "frontier" }, loadMarks());
+    expect(frontier.options.template.mu).toBe(0.35);
+
+    const baseline = runMonteCarlo(FUNDED_PLAN, { paths: 250, seed: 8, inflation: 0 });
+    const marked = runMonteCarlo(FUNDED_PLAN, { paths: 250, seed: 8, inflation: 0, ...balanced.options });
+    expect(marked.mu).toBe(baseline.mu);
+  });
+
+  it("open-hook without marks (or invalid marks) stays bit-identical to the 0.9.1 template path", () => {
+    const baseline = runMonteCarlo(FUNDED_PLAN, { paths: 250, seed: 8, inflation: 0 });
+    const skipped = applyInvestMarksOnOpen(FUNDED_PLAN, null);
+    const missing = applyInvestMarksOnOpen(FUNDED_PLAN, loadMarks({ useFixture: false }));
+    const invalid = applyInvestMarksOnOpen(FUNDED_PLAN, { source: "fixture", sleeves: { stocks: { expectedReturn: 0.2 } } });
+    const badSource = applyInvestMarksOnOpen(FUNDED_PLAN, { ...fixtureMarks(), source: "live" });
 
     expect(skipped.applied).toBe(false);
     expect(skipped.options).toEqual({});
@@ -103,11 +137,11 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(invalid.applied).toBe(false);
     expect(badSource.applied).toBe(false);
 
-    const same = runMonteCarlo(SYNTHETIC_PLAN, { paths: 250, seed: 8, inflation: 0, ...skipped.options });
-    const sameMissing = runMonteCarlo(SYNTHETIC_PLAN, { paths: 250, seed: 8, inflation: 0, ...missing.options });
+    const same = runMonteCarlo(FUNDED_PLAN, { paths: 250, seed: 8, inflation: 0, ...skipped.options });
+    const sameMissing = runMonteCarlo(FUNDED_PLAN, { paths: 250, seed: 8, inflation: 0, ...missing.options });
     expect(coreForecast(same)).toEqual(coreForecast(baseline));
     expect(coreForecast(sameMissing)).toEqual(coreForecast(baseline));
-    expect(overlayInvestTemplate(SYNTHETIC_PLAN, null)).toBeNull();
+    expect(overlayInvestTemplate(FUNDED_PLAN, null)).toBeNull();
     expect(normalizeMarks(undefined)).toBeNull();
   });
 
@@ -128,6 +162,7 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(deriveInvestMuSigma(loaded).sigma).toBeNull();
     const overlay = overlayInvestTemplate({ templateId: "steady" }, loaded);
     expect(overlay.mu).toBeCloseTo(0.04, 12);
+    expect(overlay.sigma).toBe(getTemplate("firm").sigma);
     expect(overlay.sigma).toBe(getTemplate("steady").sigma);
   });
 

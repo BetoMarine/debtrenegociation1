@@ -103,6 +103,22 @@ describe("Fortune Teller Monte Carlo", () => {
     expect(sooner.netPct).toBeLessThanOrEqual(later.netPct);
   });
 
+  it("legacy templateId steady still runs as Firm", () => {
+    const forecast = runMonteCarlo(
+      {
+        money: { incomeMonthly: 40000, spendMonthly: 20000, savings: 200000, debts: 0 },
+        milestones: [{ id: "trip", name: "Trip", amount: 30000, months: 12 }],
+        net: { emergencyMonths: 4, floorHkd: 80000 },
+        templateId: "steady",
+        inflationOn: false,
+        seed: 5,
+      },
+      { paths: 80, seed: 5, inflation: 0 },
+    );
+    expect(forecast.templateId).toBe("firm");
+    expect(forecast.mu).toBe(TEMPLATES.firm.mu);
+  });
+
   it("templates change the projection: higher μ raises median terminal wealth", () => {
     const plan = {
       money: { incomeMonthly: 40000, spendMonthly: 20000, savings: 200000, debts: 0 },
@@ -111,10 +127,10 @@ describe("Fortune Teller Monte Carlo", () => {
       inflationOn: false,
       seed: 5,
     };
-    const steady = runMonteCarlo(plan, { paths: 600, seed: 5, template: TEMPLATES.steady, inflation: 0 });
+    const firm = runMonteCarlo(plan, { paths: 600, seed: 5, template: TEMPLATES.firm, inflation: 0 });
     const frontier = runMonteCarlo(plan, { paths: 600, seed: 5, template: TEMPLATES.frontier, inflation: 0 });
-    expect(frontier.medianWealth).toBeGreaterThan(steady.medianWealth);
-    expect(frontier.mu).toBeGreaterThan(steady.mu);
+    expect(frontier.medianWealth).toBeGreaterThan(firm.medianWealth);
+    expect(frontier.mu).toBeGreaterThan(firm.mu);
   });
 
   it("seeded runs are deterministic", () => {

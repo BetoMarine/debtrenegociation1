@@ -191,7 +191,10 @@ const en = {
   adjustTitle: "Adjust",
   adjustLead: "Mix, floor, and extras. Not on the main path.",
   templateTitle: "Portfolio mix",
-  templatesHint: "Benchmarks only. Not a fund we sell.",
+  templatesHint: "Benchmarks only. Not a fund we sell. Growth and Frontier wait until the floor holds.",
+  templateGatedHint: "After the floor holds.",
+  templateFrontierWarn:
+    "Frontier is speculative. It illustrates about 2× leverage and concentrated tech/AI-like risk. Paths can swing hard. Not a fund we sell. Use this mix?",
   inflationLabel: "Price rise (~4.5% a year)",
   shuffle: "Shuffle the paths",
   compareCta: "Save vs borrow one goal",

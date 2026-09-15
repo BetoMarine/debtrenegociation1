@@ -197,6 +197,11 @@ export function stabilizeSnapshot(plan, from = new Date()) {
   };
 }
 
+/** Emergency floor is funded — Growth/Frontier and post-Stabilize card μ may apply. */
+export function isStabilizeReady(plan, from) {
+  return !!stabilizeSnapshot(plan, from).ready;
+}
+
 export function isBoardUnlocked(plan) {
   return !!(plan?.boardReached || plan?.phase2Unlocked || plan?.phase2Override);
 }

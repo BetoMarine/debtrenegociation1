@@ -3,6 +3,8 @@
  * Load only — no live ticker, no Finnhub call, no API key.
  */
 import fixtureMarksJson from "./fixtures/sleeve-marks.json";
+import { isStabilizeReady } from "./stabilize.js";
+import { planningMu } from "./strategyBooks.js";
 import { getTemplate } from "./templates.js";
 import {
   HOUSE_TARGET_WEIGHTS,
@@ -104,17 +106,32 @@ export function deriveInvestMuSigma(marks, weights = HOUSE_TARGET_WEIGHTS) {
   return { mu, sigma: sigmaComplete ? sigma : null };
 }
 
-/** Overlay keeps the user's template id / copy; only μ/σ move. */
+/**
+ * Overlay keeps the user's template id / copy; only μ/σ move.
+ * Before Stabilize: locked house-mix floor index (~5% from fixture × 25/40/25/10).
+ * After Stabilize: selected card's planning μ (12 / 15 / 20 / 35).
+ */
 export function overlayInvestTemplate(plan, marks, weights = HOUSE_TARGET_WEIGHTS) {
-  const derived = deriveInvestMuSigma(marks, weights);
-  if (!derived) return null;
+  const normalized = marks?.sleeves ? marks : normalizeMarks(marks);
+  if (!normalized?.sleeves) return null;
   const base = getTemplate(plan?.templateId);
+  if (isStabilizeReady(plan)) {
+    return {
+      ...base,
+      mu: planningMu(plan?.templateId),
+      sigma: base.sigma,
+      marksSource: normalized.source || marks?.source || null,
+      marksAsOf: normalized.asOf || marks?.asOf || null,
+    };
+  }
+  const derived = deriveInvestMuSigma(normalized, weights);
+  if (!derived) return null;
   return {
     ...base,
     mu: derived.mu,
     sigma: derived.sigma == null ? base.sigma : derived.sigma,
-    marksSource: marks.source || null,
-    marksAsOf: marks.asOf || null,
+    marksSource: normalized.source || marks?.source || null,
+    marksAsOf: normalized.asOf || marks?.asOf || null,
   };
 }
 

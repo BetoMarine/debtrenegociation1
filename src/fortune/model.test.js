@@ -111,4 +111,17 @@ describe("Fortune Teller plan model", () => {
     expect(fix.name).toBe("Debt renegotiation · 3 months");
     expect(fix.name).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
   });
+
+  it("migrates a stored Steady mix to Firm so old plans keep a shelf card", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      templateId: "steady",
+    });
+    expect(plan.templateId).toBe("firm");
+    const unknown = migrateFortunePlan({
+      ...newFortunePlan(),
+      templateId: "mystery",
+    });
+    expect(unknown.templateId).toBe("balanced");
+  });
 });
