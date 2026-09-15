@@ -1,27 +1,27 @@
 /**
- * House master portfolio — projection-only. Never custody.
- * Mix disclosure UI is out of scope for 0.9.2; this model feeds silent Invest μ.
+ * House master portfolio — projection-only. Never custody. Not advice.
+ * Mix disclosure UI is out of scope; this model feeds silent Invest μ.
  */
 
 export const SLEEVE_IDS = ["stocks", "fixedIncome", "reit", "cash"];
 
 /**
- * Interim target weights until Beto/Linda lock the house mix.
- * Not a product we sell. Not advice. Projection-only.
+ * LOCKED house targets — 15 Sep 2026 by Beto.
+ * Projection-only. Not custody. Not advice. Not a product we sell.
  *
  *   cash        0.25
  *   fixedIncome 0.40
  *   stocks      0.25
  *   reit        0.10
  */
-export const INTERIM_TARGET_WEIGHTS = {
+export const HOUSE_TARGET_WEIGHTS = {
   cash: 0.25,
   fixedIncome: 0.4,
   stocks: 0.25,
   reit: 0.1,
 };
 
-/** lastMarks.source — "finnhub" is reserved; 0.9.2 never fetches. */
+/** lastMarks.source — "finnhub" is reserved; this cut never fetches. */
 export const MARK_SOURCES = ["fixture", "parked", "finnhub", "manual"];
 
 export function emptyLastMarks() {
@@ -40,8 +40,8 @@ export function emptyLastMarks() {
 export function newMasterPortfolio() {
   return {
     sleeveIds: [...SLEEVE_IDS],
-    /** Interim until Beto/Linda lock. */
-    targetWeights: { ...INTERIM_TARGET_WEIGHTS },
+    /** LOCKED house targets — 15 Sep 2026 by Beto. Projection-only. */
+    targetWeights: { ...HOUSE_TARGET_WEIGHTS },
     lastMarks: null,
     asOf: null,
     source: null,

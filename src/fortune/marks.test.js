@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runMonteCarlo } from "./engine.js";
-import { INTERIM_TARGET_WEIGHTS, MARK_SOURCES, SLEEVE_IDS, newMasterPortfolio, withMarks } from "./masterPortfolio.js";
+import { HOUSE_TARGET_WEIGHTS, MARK_SOURCES, SLEEVE_IDS, newMasterPortfolio, withMarks } from "./masterPortfolio.js";
 import {
   SLEEVE_TICKERS,
   applyInvestMarksOnOpen,
@@ -49,7 +49,7 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(MARK_SOURCES).toEqual(["fixture", "parked", "finnhub", "manual"]);
   });
 
-  it("keeps interim weights until Beto/Linda lock (cash 0.25, FI 0.40, stocks 0.25, reit 0.10)", () => {
+  it("keeps locked house targets (cash 0.25, FI 0.40, stocks 0.25, reit 0.10)", () => {
     const house = newMasterPortfolio();
     expect(house.targetWeights).toEqual({
       cash: 0.25,
@@ -64,9 +64,9 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(marked.lastMarks.sleeves.stocks.expectedReturn).toBe(0.2);
   });
 
-  it("derives Invest μ/σ from sleeve returns × interim weights", () => {
-    const derived = deriveInvestMuSigma(fixtureMarks(), INTERIM_TARGET_WEIGHTS);
-    const w = INTERIM_TARGET_WEIGHTS;
+  it("derives Invest μ/σ from sleeve returns × locked house targets", () => {
+    const derived = deriveInvestMuSigma(fixtureMarks(), HOUSE_TARGET_WEIGHTS);
+    const w = HOUSE_TARGET_WEIGHTS;
     const s = fixtureMarks().sleeves;
     const mu = w.stocks * s.stocks.expectedReturn + w.fixedIncome * s.fixedIncome.expectedReturn + w.reit * s.reit.expectedReturn + w.cash * s.cash.expectedReturn;
     const sigma = w.stocks * s.stocks.sigma + w.fixedIncome * s.fixedIncome.sigma + w.reit * s.reit.sigma + w.cash * s.cash.sigma;
@@ -131,16 +131,26 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
     expect(overlay.sigma).toBe(getTemplate("steady").sigma);
   });
 
-  it("keeps placeholder tickers unused — no Finnhub client, no secrets", () => {
-    expect(SLEEVE_TICKERS.stocks).toMatch(/\.HK$/);
-    expect(SLEEVE_TICKERS.reit).toMatch(/\.HK$/);
+  it("keeps locked/interim projection proxies unused — no Finnhub client, no secrets", () => {
+    expect(SLEEVE_TICKERS).toEqual({
+      stocks: "2800.HK",
+      fixedIncome: "2819.HK",
+      reit: "0823.HK",
+      cash: "CASH",
+    });
     const marksSrc = readFileSync(new URL("./marks.js", import.meta.url), "utf8");
     const masterSrc = readFileSync(new URL("./masterPortfolio.js", import.meta.url), "utf8");
     const appSrc = readFileSync(new URL("./app.js", import.meta.url), "utf8");
-    expect(marksSrc).toMatch(/Placeholder tickers/);
+    expect(marksSrc).toMatch(/Locked \(15 Sep 2026 by Beto\): stocks 2800\.HK, fixedIncome 2819\.HK, cash CASH/);
+    expect(marksSrc).toMatch(/Interim: reit 0823\.HK/);
+    expect(marksSrc).toMatch(/Hang Seng REIT/);
+    expect(marksSrc).toMatch(/illustration only/i);
     expect(marksSrc).not.toMatch(/finnhub\.com/i);
     expect(marksSrc).not.toMatch(/apiKey|API_KEY|secret/i);
-    expect(masterSrc).toMatch(/Interim until Beto\/Linda lock/);
+    expect(masterSrc).toMatch(/LOCKED house targets/);
+    expect(masterSrc).toMatch(/15 Sep 2026 by Beto/);
+    expect(masterSrc).toMatch(/Projection-only\. Not custody\. Not advice/);
+    expect(masterSrc).not.toMatch(/INTERIM_TARGET_WEIGHTS/);
     expect(appSrc).toMatch(/applyInvestMarksOnOpen/);
     expect(appSrc).toMatch(/loadMarks\(\)/);
     expect(appSrc).not.toMatch(/finnhub\.com/i);
@@ -160,8 +170,8 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
 
 describe("rebalance log (shape only)", () => {
   it("appends {at, reason, fromWeights, toWeights} and ignores invalid rows", () => {
-    const fromWeights = { ...INTERIM_TARGET_WEIGHTS };
-    const toWeights = { ...INTERIM_TARGET_WEIGHTS, cash: 0.2, stocks: 0.3 };
+    const fromWeights = { ...HOUSE_TARGET_WEIGHTS };
+    const toWeights = { ...HOUSE_TARGET_WEIGHTS, cash: 0.2, stocks: 0.3 };
     const first = appendRebalanceLog(emptyRebalanceLog(), {
       at: 1,
       reason: "manual",
