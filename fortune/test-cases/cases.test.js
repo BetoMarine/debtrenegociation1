@@ -22,6 +22,9 @@ import {
 import { holdStatus, monthsFromDrag, stageStack, stackRows } from "../../src/fortune/journey.js";
 import { canOpenPlan, ensureFireSequence, gateFortuneScreen, nextAfterStart, receiveFireHandoff } from "../../src/fortune/stabilize.js";
 import { holdLineText, renderStageStackHtml } from "../../src/fortune/ui.js";
+import { htmlShellForPath } from "../../src/pwa-shell.js";
+import { APP_VERSION, FORTUNE_STRINGS } from "../../src/fortune/copy.js";
+import { STRINGS } from "../../src/i18n.js";
 
 const catalog = JSON.parse(readFileSync(new URL("./cases.json", import.meta.url), "utf8"));
 const casesMd = readFileSync(new URL("./cases.md", import.meta.url), "utf8");
@@ -33,6 +36,7 @@ const REQUIRED = [
   "FT-FAIL-01",
   "FT-DRAG-01",
   "FT-OVERLAP-01",
+  "FT-VER-01",
 ];
 
 function byId(id) {
@@ -85,6 +89,9 @@ describe("Fortune test-case catalog", () => {
     expect(byId("FT-OVERLAP-01").liveRequires).toBe("safari");
     expect(byId("FT-DRAG-01").automation).toBe("unit");
     expect(byId("FT-OVERLAP-01").automation).toBe("unit");
+    expect(byId("FT-VER-01").status).toBe("safari_manual");
+    expect(byId("FT-VER-01").liveRequires).toBe("safari");
+    expect(byId("FT-VER-01").automation).toBe("unit_slice");
   });
 });
 
@@ -279,5 +286,23 @@ describe("FT-OVERLAP-01", () => {
 
   it.skip("live Safari: Plan Sooner into Stabilize shows overlaps hint; stack stays the home board (Maddy after Bob)", () => {
     expect(byId("FT-OVERLAP-01").liveRequires).toBe("safari");
+  });
+});
+
+describe("FT-VER-01", () => {
+  it("unit slice: Fortune version and HTML shell stay Fortune after an RD/Sunday path", () => {
+    expect(APP_VERSION).toMatch(/0\.9\.6/);
+    expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
+    expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
+    expect(STRINGS.en.version).toMatch(/0\.8\.0/);
+    expect(htmlShellForPath("/fortune/")).toBe("fortune/index.html");
+    expect(htmlShellForPath("/debtrenegociation1/fortune")).toBe("fortune/index.html");
+    expect(htmlShellForPath("/sunday/")).toBe("sunday/index.html");
+    expect(htmlShellForPath("/")).toBe("index.html");
+    expect(htmlShellForPath("/fortune/")).not.toBe(htmlShellForPath("/"));
+  });
+
+  it.skip("live Safari: Fortune footer v0.9.x → RD → Back → Fortune footer still Fortune, no hard refresh", () => {
+    expect(byId("FT-VER-01").liveRequires).toBe("safari");
   });
 });

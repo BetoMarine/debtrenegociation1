@@ -1,6 +1,6 @@
 import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
 import { applyCoachAction, boardCoachActions, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
-import { ft } from "./copy.js";
+import { APP_VERSION, ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
 import { fixGoalLabel } from "../handoff.js";
 import {
@@ -699,7 +699,7 @@ async function handlePdf(mode) {
 async function exportJson() {
   const payload = {
     product: "fortune-teller",
-    version: "0.9.5",
+    version: APP_VERSION.replace(/^PoC v/, ""),
     exportedAt: new Date().toISOString(),
     plan,
     forecast,

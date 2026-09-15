@@ -13,7 +13,8 @@
     "FT-ENTRY-01",
     "FT-FAIL-01",
     "FT-DRAG-01",
-    "FT-OVERLAP-01"
+    "FT-OVERLAP-01",
+    "FT-VER-01"
   ],
   "cases": [
     {
@@ -47,7 +48,7 @@
       "status": "safari_manual",
       "automation": "unit_slice",
       "liveRequires": "safari",
-      "expect": "Heavy fire link carries ?from=fortune. Header chip Back to Fortune Teller. Return lands on Me today with Looks right — open my plan. Board Fix is Debt renegotiation · 3 or 6 months. Live path: Safari.",
+      "expect": "Heavy fire link carries ?from=fortune. Header chip Back to Fortune Teller. Return lands on Me today with Looks right — open my plan. Fortune footer stays Fortune's PoC version (not Right Door v0.8.0) without a hard refresh. Board Fix is Debt renegotiation · 3 or 6 months. Live path: Safari.",
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/refer.test.js",
@@ -106,6 +107,19 @@
         "fortune/test-cases/cases.test.js",
         "src/fortune/time.test.js",
         "src/fortune/journey.test.js"
+      ]
+    },
+    {
+      "id": "FT-VER-01",
+      "title": "Fortune footer version survives Right Door / Sunday return",
+      "status": "safari_manual",
+      "automation": "unit_slice",
+      "liveRequires": "safari",
+      "expect": "Fortune footer shows PoC v0.9.x. Open Right Door or Sunday Pack, tap Back to Fortune Teller. Fortune footer is still Fortune's version (never RD/Sunday PoC v0.8.0) without a hard refresh.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/pwa-shell.test.js",
+        "src/copy.test.js"
       ]
     }
   ]

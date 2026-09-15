@@ -21,6 +21,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: false,
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       includeAssets: [
         "icons/icon-192.png",
         "icons/icon-512.png",
@@ -33,11 +36,8 @@ export default defineConfig({
         "fortune/apple-touch-icon.png",
       ],
       manifest: false,
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
-        navigateFallback: "index.html",
-        navigateFallbackDenylist: [/\/sunday(?:\/|$)/, /\/fortune(?:\/|$)/, /\/pyl(?:\/|$)/],
-        runtimeCaching: [],
       },
     }),
   ],
