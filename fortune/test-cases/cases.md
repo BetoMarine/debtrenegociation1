@@ -30,7 +30,7 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 1. Fortune Rebuild → Heavy / missing payments.
 2. **Open Right Door** (`../?from=fortune`). Header (not only footer) shows **Back to Fortune Teller** in English.
-3. Tap the header chip. Fortune is **Me today** with **Looks right — open my plan**.
+3. Tap the header chip. Fortune is **Me today** with **Looks right — open my plan**. Footer stays Fortune **PoC v0.9.x**, not Right Door **PoC v0.8.0**, with no hard refresh (FT-VER-01).
 4. Open the board: Fix is **Debt renegotiation · 3 months** or **6 months** (or pick once). Stabilize is emergency fund at current amount (0 allowed). Plan/Invest stay visible.
 5. Same header loop for Sunday Pack. Direct RD/Sunday URLs have no Fortune bar.
 
@@ -77,3 +77,18 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 **Bob:** catalog + `src/fortune/time.test.js` (overlap flags, stage unchanged).
 
 **Maddy:** Safari. Pull a Plan goal Sooner into the Stabilize window. Confirm **overlaps Stabilize** on the Plan header; goal does not jump stage.
+
+## FT-VER-01 — Fortune version stamp after RD / Sunday
+
+**Status:** safari_manual (unit slice in `npm test`; **live needs Safari**)
+
+**Expect:**
+
+1. Open `/fortune/`. Footer is **PoC v0.9.6** (Fortune), not **PoC v0.8.0**.
+2. Fortune → Right Door (header **Back to Fortune Teller**). Right Door footer is **PoC v0.8.0**.
+3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.6** — no hard refresh.
+4. Same return from Sunday Pack.
+
+**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.6 and RD/Sunday stay 0.8.0.
+
+**Maddy:** iPhone Safari on live `/fortune/`. Chrome-in-app does not count.

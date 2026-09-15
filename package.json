@@ -1,6 +1,6 @@
 {
   "name": "right-door",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "private": true,
   "description": "Right Door, Sunday Pack, and Fortune Teller — three separate on-device HK tools from Plan Your Life",
   "type": "module",
@@ -17,6 +17,9 @@
   "devDependencies": {
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^0.21.1",
-    "vitest": "^3.0.8"
+    "vitest": "^3.0.8",
+    "workbox-core": "^7.3.0",
+    "workbox-precaching": "^7.3.0",
+    "workbox-routing": "^7.3.0"
   }
 }
