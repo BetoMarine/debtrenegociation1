@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { applyTheme, migrateFortunePlan, newFortunePlan, resolveMoney, THEME_IDS, THEMES, toEnginePlan } from "./model.js";
+import {
+  applyTheme,
+  FIRST_GROWTH_POT_AMOUNT,
+  LEGACY_FIRST_GROWTH_POT_AMOUNT,
+  migrateFortunePlan,
+  newFortunePlan,
+  resolveMoney,
+  THEME_IDS,
+  THEMES,
+  toEnginePlan,
+} from "./model.js";
 import { nextAfterStart, gateFortuneScreen, isBoardUnlocked } from "./stabilize.js";
 
 describe("Fortune Teller plan model", () => {
@@ -48,12 +58,16 @@ describe("Fortune Teller plan model", () => {
   it("puts I need to rebuild first, with a modest seed pack, not a house fantasy", () => {
     expect(THEME_IDS).toEqual(["rebuild", "steady", "grow"]);
     expect(THEMES.rebuild.label).toMatch(/rebuild/i);
-    const amounts = THEMES.rebuild.milestones.map((m) => m.amount);
-    expect(Math.max(...amounts)).toBeLessThan(50000);
+    const planGoals = THEMES.rebuild.milestones.filter((m) => m.stage !== "invest");
+    expect(Math.max(...planGoals.map((m) => m.amount))).toBeLessThan(50000);
+    expect(THEMES.rebuild.milestones.find((m) => m.stage === "invest").amount).toBe(FIRST_GROWTH_POT_AMOUNT);
     expect(THEMES.rebuild.milestones.some((m) => /house/i.test(m.name))).toBe(false);
     expect(THEMES.rebuild.net.emergencyMonths).toBeGreaterThanOrEqual(6);
     const seeded = applyTheme(newFortunePlan(), "rebuild");
-    expect(seeded.milestones.every((m) => m.amount < 50000)).toBe(true);
+    expect(seeded.milestones.filter((m) => m.stage !== "invest").every((m) => m.amount < 50000)).toBe(true);
+    expect(seeded.milestones.some((m) => /first growth pot/i.test(m.name) && m.amount === FIRST_GROWTH_POT_AMOUNT)).toBe(
+      true,
+    );
     const midStory = { ...newFortunePlan(), privacyAccepted: true, theme: "rebuild" };
     expect(nextAfterStart(midStory)).toBe("where");
     expect(nextAfterStart({ ...midStory, debtHeat: "heavy" })).toBe("where");
@@ -87,14 +101,37 @@ describe("Fortune Teller plan model", () => {
     expect(gateFortuneScreen("board", { privacyAccepted: true, theme: "grow", boardReached: true })).toBe("board");
   });
 
-  it("adds a modest Invest beat to rebuild plans that never had one", () => {
+  it("adds a First growth pot to rebuild plans that never had one, sized so leftover 5–10k beats cash", () => {
     const plan = migrateFortunePlan({
       ...newFortunePlan(),
       theme: "rebuild",
       milestones: [{ id: "phone", name: "Phone", amount: 4000, months: 8, stage: "plan" }],
     });
-    expect(plan.milestones.some((m) => m.stage === "invest" && /growth pot/i.test(m.name))).toBe(true);
-    expect(Math.max(...plan.milestones.map((m) => m.amount))).toBeLessThan(50000);
+    const pot = plan.milestones.find((m) => m.stage === "invest" && /growth pot/i.test(m.name));
+    expect(pot).toBeTruthy();
+    expect(pot.amount).toBe(FIRST_GROWTH_POT_AMOUNT);
+    expect(plan.milestones.filter((m) => m.stage !== "invest").every((m) => m.amount < 50000)).toBe(true);
+  });
+
+  it("rewrites a stored HK$25,000 default pot so leftover 5–10k still shows a real BOOST sooner", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      theme: "rebuild",
+      milestones: [
+        { id: "phone", name: "Phone", amount: 4000, months: 8, stage: "plan" },
+        {
+          id: "growth",
+          name: "First growth pot",
+          amount: LEGACY_FIRST_GROWTH_POT_AMOUNT,
+          months: 36,
+          stage: "invest",
+        },
+      ],
+    });
+    const pots = plan.milestones.filter((m) => /first growth pot/i.test(m.name));
+    expect(pots).toHaveLength(1);
+    expect(pots[0].amount).toBe(FIRST_GROWTH_POT_AMOUNT);
+    expect(pots[0].stage).toBe("invest");
   });
 
   it("rewrites a stored Fix title so 3 or 6 months is on the name, not only a date", () => {
@@ -110,6 +147,31 @@ describe("Fortune Teller plan model", () => {
     const fix = plan.milestones.find((m) => m.role === "fix");
     expect(fix.name).toBe("Debt renegotiation · 3 months");
     expect(fix.name).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
+  });
+
+  it("keeps a user 6-month pick when the pack milestone still says 3", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      theme: "rebuild",
+      fixMonths: 6,
+      fixMonthsPicked: true,
+      fixMonthsUserPicked: true,
+      milestones: [
+        {
+          id: "fix-renegotiate",
+          name: "Debt renegotiation · 3 months",
+          amount: 0,
+          months: 3,
+          stage: "fix",
+          role: "fix",
+          monthsKnown: true,
+        },
+      ],
+    });
+    const fix = plan.milestones.find((m) => m.role === "fix");
+    expect(plan.fixMonths).toBe(6);
+    expect(fix.months).toBe(6);
+    expect(fix.name).toBe("Debt renegotiation · 6 months");
   });
 
   it("migrates a stored Steady mix to Firm so old plans keep a shelf card", () => {

@@ -2,6 +2,16 @@
 
 export const THEME_IDS = ["rebuild", "steady", "grow"];
 
+/**
+ * Rebuild Invest seed. HK$25,000 vs leftover 5–10k (HK$7,500) lands in the same
+ * month under cash 1.2% and Firm/Balanced μ. HK$180,000 is long enough that
+ * silent 5% is 1 month sooner and Firm 12% / Balanced 15% are 2 months sooner.
+ * Not a house; Plan goals stay modest.
+ */
+export const FIRST_GROWTH_POT_AMOUNT = 180000;
+export const FIRST_GROWTH_POT_MONTHS = 36;
+export const LEGACY_FIRST_GROWTH_POT_AMOUNT = 25000;
+
 export const LEGACY_THEME_MAP = {
   young_family: "steady",
   empty_nest: "steady",
@@ -27,7 +37,7 @@ export const THEMES = {
       { name: "Replace a worn-out phone", amount: 4000, months: 8, stage: "plan" },
       { name: "Skills course", amount: 12000, months: 14, stage: "plan" },
       { name: "Small family visit", amount: 18000, months: 18, stage: "plan" },
-      { name: "First growth pot", amount: 25000, months: 36, stage: "invest" },
+      { name: "First growth pot", amount: FIRST_GROWTH_POT_AMOUNT, months: FIRST_GROWTH_POT_MONTHS, stage: "invest" },
     ],
     net: { emergencyMonths: 6, floorHkd: 120000 },
   },

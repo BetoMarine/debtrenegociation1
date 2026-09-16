@@ -21,7 +21,8 @@ import {
 } from "../../src/fortune/model.js";
 import { holdStatus, monthsFromDrag, stageStack, stackRows } from "../../src/fortune/journey.js";
 import { canOpenPlan, ensureFireSequence, gateFortuneScreen, nextAfterStart, receiveFireHandoff } from "../../src/fortune/stabilize.js";
-import { holdLineText, renderStageStackHtml } from "../../src/fortune/ui.js";
+import { holdLineText, renderPlanJourneyHtml, renderStageStackHtml } from "../../src/fortune/ui.js";
+import { isReadableCalendarWhen, planSchedule, planTimeline, projectShelfGrowth } from "../../src/fortune/timeline.js";
 import { htmlShellForPath } from "../../src/pwa-shell.js";
 import { APP_VERSION, FORTUNE_STRINGS } from "../../src/fortune/copy.js";
 import { STRINGS } from "../../src/i18n.js";
@@ -31,6 +32,8 @@ const casesMd = readFileSync(new URL("./cases.md", import.meta.url), "utf8");
 const REQUIRED = [
   "FT-DATE-01",
   "FT-EF-01",
+  "FT-EF-02",
+  "FT-INVEST-01",
   "FT-LOOP-01",
   "FT-ENTRY-01",
   "FT-FAIL-01",
@@ -78,6 +81,8 @@ describe("Fortune test-case catalog", () => {
     expect(catalog.process.maddyAfter).toMatch(/Safari/i);
     expect(byId("FT-DATE-01").status).toBe("automated");
     expect(byId("FT-EF-01").status).toBe("automated");
+    expect(byId("FT-EF-02").status).toBe("automated");
+    expect(byId("FT-INVEST-01").status).toBe("automated");
     expect(byId("FT-FAIL-01").status).toBe("automated");
     expect(byId("FT-LOOP-01").status).toBe("safari_manual");
     expect(byId("FT-ENTRY-01").status).toBe("safari_manual");
@@ -96,25 +101,27 @@ describe("Fortune test-case catalog", () => {
 });
 
 describe("FT-DATE-01", () => {
-  it("puts whenLabel / date on every milestone row and keeps Fix months on the title", () => {
+  it("puts readable calendar dates on the journey and every stage row — never tenor-only whenLabels", () => {
     const from = new Date(2026, 8, 14);
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
       makeFireHandoff({ source: "right-door", months: 3 }),
     );
-    const stack = stageStack(handed, { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 }, {}, from);
+    const forecast = { netPct: 22, milestonePct: [40, 55, 60, 35], livingPct: 38 };
+    const stack = stageStack(handed, forecast, {}, from);
     const rows = stack.flatMap((stage) => stage.rows);
     expect(rows.length).toBeGreaterThanOrEqual(4);
     rows.forEach((row) => {
-      expect(row.whenLabel, row.name).toMatch(/\S/);
+      expect(isReadableCalendarWhen(row.whenLabel), row.name).toBe(true);
+      expect(row.whenLabel).not.toMatch(/3–6 months/);
     });
     const fix = rows.find((r) => r.stage === "fix");
     const floor = rows.find((r) => r.kind === "floor");
     const pot = rows.find((r) => /growth pot/i.test(r.name));
     expect(fix.name).toBe("Debt renegotiation · 3 months");
-    expect(fix.whenLabel).toBe("Dec 2026");
-    expect(floor.whenLabel).toMatch(/^by [A-Z][a-z]{2} 20\d\d$/);
-    expect(pot.whenLabel).toMatch(/^by /);
+    expect(fix.whenLabel).toBe("Sep 2026 → Dec 2026");
+    expect(floor.whenLabel).toMatch(/Start |Complete now/);
+    expect(pot.whenLabel).toMatch(/Start saving /);
 
     const html = renderStageStackHtml(stack, escape);
     const htmlRows = html.match(/<div class="ft-row[\s\S]*?<\/div>/g) || [];
@@ -123,7 +130,15 @@ describe("FT-DATE-01", () => {
       expect(row).toMatch(/class="ft-row-when">[^<]+</);
     });
     expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
-    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Dec 2026<\/strong>/);
+
+    const timeline = planTimeline(handed, forecast, from);
+    const journey = renderPlanJourneyHtml(timeline, escape);
+    expect(journey).toContain("data-journey");
+    expect(journey).toMatch(/Sep 2026 → Dec 2026/);
+    expect(journey).toMatch(/data-fact="end"/);
+    expect(journey).not.toMatch(/3–6 months/);
+    expect(journey).not.toMatch(/data-kind="now"/);
 
     const waiting = stackRows(
       ensureFireSequence(
@@ -133,7 +148,8 @@ describe("FT-DATE-01", () => {
       null,
       from,
     );
-    expect(waiting.find((r) => r.stage === "fix").whenLabel).toBe("3–6 months");
+    expect(waiting.find((r) => r.stage === "fix").whenLabel).toBe("Sep 2026 → Mar 2027");
+    expect(isReadableCalendarWhen(waiting.find((r) => r.stage === "fix").whenLabel)).toBe(true);
   });
 });
 
@@ -172,6 +188,75 @@ describe("FT-EF-01", () => {
     );
     expect(emergencyCurrentHkd(blocked)).toBe(25000);
     expect(blocked.milestones.filter((m) => /first growth pot/i.test(m.name))).toHaveLength(1);
+  });
+});
+
+describe("FT-EF-02", () => {
+  it("shows emergency-fund start and complete calendar dates on the journey", () => {
+    const from = new Date(2026, 8, 14);
+    const seeded = applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild");
+    seeded.money = {
+      ...seeded.money,
+      incomeMonthly: 40000,
+      spendMonthly: 20000,
+      leftoverMonthly: 20000,
+      savings: 0,
+      debts: 0,
+    };
+    seeded.net = { ...seeded.net, currentHkd: 0, floorHkd: 120000, emergencyMonths: 6 };
+    seeded.moneyCapturedAtStabilize = true;
+    const plan = persistLike(seeded, makeFireHandoff({ source: "right-door", months: 6 }));
+    const { ef, fix } = planSchedule(plan, null, from);
+    expect(ef.targetMonths).toBe(6);
+    expect(ef.startMonths).toBe(fix.endMonths);
+    expect(ef.whenLabel).toBe("Start Mar 2027 · complete Sep 2027");
+    const html = renderPlanJourneyHtml(planTimeline(plan, { netPct: 22, milestonePct: [] }, from), escape);
+    expect(html).toMatch(/Start Mar 2027 · complete Sep 2027/);
+    expect(html).toMatch(/data-fact="start"/);
+    expect(html).toMatch(/data-fact="complete"/);
+    expect(html).not.toMatch(/>Stabilize</);
+  });
+});
+
+describe("FT-INVEST-01", () => {
+  it("shows Invest start saving, enough-to-start, and a shelf μ growth line", () => {
+    const from = new Date(2026, 8, 14);
+    const seeded = applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild");
+    seeded.money = {
+      ...seeded.money,
+      incomeMonthly: 27500,
+      spendMonthly: 20000,
+      leftoverMonthly: 7500,
+      savings: 0,
+      debts: 0,
+    };
+    seeded.net = { ...seeded.net, currentHkd: 0, floorHkd: 120000, emergencyMonths: 6 };
+    seeded.moneyCapturedAtStabilize = true;
+    const plan = persistLike(seeded, makeFireHandoff({ source: "right-door", months: 6 }));
+    const { invest } = planSchedule(plan, null, from);
+    expect(invest.startSaveLabel).toBe("Jul 2028");
+    expect(invest.enoughLabel).toBe("Sep 2029");
+    expect(projectShelfGrowth(25000, 36, 0.15)).toBe(38022);
+    expect(invest.boost.soonerMonths).toBeGreaterThan(0);
+    expect(invest.growthLine).toMatch(/sooner by .+ than cash-only/i);
+    expect(invest.growthLine).not.toMatch(/same month as cash-only/i);
+    expect(invest.growthLine).toMatch(/if you invest this/i);
+    expect(invest.growthLine).toMatch(/Illustrative under assumed return/);
+    expect(invest.growthLine).not.toMatch(/custody|we hold|buy list|we invest for you/i);
+    const html = renderPlanJourneyHtml(planTimeline(plan, { netPct: 22, milestonePct: [] }, from), escape);
+    expect(html).toMatch(/Start saving Jul 2028 · enough Sep 2029/);
+    expect(html).toMatch(/Enough to invest/);
+    expect(html).toMatch(/Invest start/);
+    expect(html).toMatch(/HK\$180,000 · Sep 2029/);
+    expect(html).toMatch(/sooner by /);
+    expect(html).not.toMatch(/Same month as cash-only/);
+    expect(html).toMatch(/data-journey-growth/);
+    expect(html).toMatch(/Illustrative under assumed return/);
+    expect(html).toMatch(/you act elsewhere/);
+    expect(html).toMatch(/Projection only/);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/Illustrative under assumed return/);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/you act elsewhere/i);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).not.toMatch(/we invest for you/);
   });
 });
 
@@ -279,7 +364,7 @@ describe("FT-OVERLAP-01", () => {
     expect(stack.find((s) => s.id === "stabilize").overlapsPrevious).toBe(true);
     expect(stack.find((s) => s.id === "plan").overlapsPrevious).toBe(true);
     const html = renderStageStackHtml(stack, escape);
-    expect(html).toMatch(/overlaps Stabilize/);
+    expect(html).toMatch(/also during Stabilize/);
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");
   });
@@ -291,7 +376,7 @@ describe("FT-OVERLAP-01", () => {
 
 describe("FT-VER-01", () => {
   it("unit slice: Fortune version and HTML shell stay Fortune after an RD/Sunday path", () => {
-    expect(APP_VERSION).toMatch(/0\.9\.7/);
+    expect(APP_VERSION).toMatch(/0\.9\.12/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(STRINGS.en.version).toMatch(/0\.8\.0/);

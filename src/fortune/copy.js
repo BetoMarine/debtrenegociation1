@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.7";
+export const APP_VERSION = "PoC v0.9.12";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -23,6 +23,8 @@ const en = {
   localOnly:
     "This plan stays on this phone. No account required. Uninstall wipes it. We do not upload your numbers.",
   footerCompact: "On this phone · not advice · not a sale. Not affiliated with HSBC.",
+  previewSwHint:
+    "Preview PoC v0.9.12. If the footer is older, in the Safari console: navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>location.reload())",
   otherToolsRight: "Right Door",
   otherToolsSunday: "Sunday Pack",
   otherToolsLabel: "Other tools from Plan Your Life",
@@ -64,11 +66,11 @@ const en = {
   themes: {
     rebuild: {
       label: "I need to rebuild",
-      blurb: "Fix first. Then a floor.",
+      blurb: "Fix first. Then an emergency fund.",
     },
     steady: {
       label: "I'm steady",
-      blurb: "Hold the floor. Then plan.",
+      blurb: "Hold the emergency fund. Then plan.",
     },
     grow: {
       label: "I want to grow",
@@ -78,8 +80,8 @@ const en = {
 
   nextKicker: "Step 2 · Correct actions",
   nextRebuildTitle: "Fix first.",
-  nextRebuildLead: "If debt is on fire, open the right tool. Then set a floor.",
-  nextSteadyTitle: "Hold the floor.",
+  nextRebuildLead: "If debt is on fire, open the right tool. Then set an emergency fund.",
+  nextSteadyTitle: "Hold the emergency fund.",
   nextSteadyLead: "A light snapshot. Skip if you want the board now.",
   nextGrowTitle: "Add a goal.",
   nextGrowLead: "Pin one living goal on the path from today.",
@@ -107,12 +109,12 @@ const en = {
   fireRightDoor: "Open Right Door",
   fireSunday: "Open Sunday Pack",
   fireHint: "Links only. We do not email a bank or a lender. Come back — your plan stays here.",
-  fixPickHint: "3 or 6 months. Pick once.",
+  fixPickHint: "3 or 6 months. This changes when Fix ends.",
   efNow: "Emergency fund now (HKD)",
   efNowHint: "What you have today. 0 is allowed — this milestone stays.",
-  investPlaceholder: "Suggested mix (after floor) — not a product",
+  investPlaceholder: "Suggested mix (after the emergency fund) — not a product",
 
-  floorLabel: "Your floor",
+  floorLabel: "Emergency fund",
   stabilizeMonths3: "3 months",
   stabilizeMonths6: "6 months",
   backWhere: "Back to today",
@@ -120,7 +122,7 @@ const en = {
   livingDial: "Living",
   netDial: "Security-net",
   livingHint: "Goals funded on time",
-  netHint: "Floor still standing",
+  netHint: "Emergency fund still standing",
   dialsKicker: "Living and the net",
 
   verdicts: {
@@ -130,7 +132,7 @@ const en = {
     net_heavy: "The net is safer. Living is at risk.",
     shared: "This plan holds.",
   },
-  wreckedDetail: "The floor and these goals cannot share the pot yet.",
+  wreckedDetail: "The emergency fund and these goals cannot share the pot yet.",
   notSet: "A sketch of trade-offs — never “you're set.”",
 
   coachTitle: "Does not hold — yet.",
@@ -141,22 +143,42 @@ const en = {
 
   boardKicker: "Step 3 · Your new life",
   boardTitle: "Your new life",
-  timelineTitle: "Stages",
-  timelineHint: "Each row is a chance it works.",
+  timelineTitle: "Your plan",
+  timelineHint: "Start, finish, and what happens if you move a goal.",
+  journeyFix: "Fix",
+  journeyEf: "Emergency fund",
+  journeyPlan: "Goals",
+  journeyInvest: "Invest",
+  journeyStart: "Start",
+  journeyEnd: "End",
+  journeyComplete: "Complete",
+  journeyFixAssumed: "6 months assumed — pick 3 or 6.",
+  journeyEfMonths: "{n} months of spending",
+  journeyEfStuck: "Needs leftover to finish.",
+  journeyStartSave: "Start saving",
+  journeyThreshold: "Enough to invest",
+  journeyInvestStart: "Invest start",
+  journeyShelf: "Mix",
+  journeyMix: "Mix",
+  journeyBoost: "Vs cash-only",
+  journeyPot: "At cash-only date",
+  journeyGrowthNote:
+    "Illustrative under assumed return. Projection only. Not a product. Not custody. You act elsewhere — Fortune does not invest for you.",
+  stackDetail: "Same path, in more detail",
   youAreIn: "You're in {stage}",
   youAreInCount: "{n} of {total}",
-  stageRollup: "stage rollup",
-  stageNow: "Now",
-  holdFloorFirst: "floor first",
-  stackFoot: "Goals = rows + % rings. Drag in time; stages may overlap. No path pins.",
+  stageRollup: "",
+  stageNow: "You're here",
+  holdFloorFirst: "emergency fund first",
+  stackFoot: "Your plan is the timeline. Stages below are the same path with more detail. Drag a goal to move its date.",
   dragHint: "Drag to move in time",
   sooner: "Sooner",
   later: "Later",
-  stageUntil: "to {when}",
-  overlapsPrev: "overlaps {stage}",
+  stageUntil: "through {when}",
+  overlapsPrev: "also during {stage}",
   stageEmpty: {
     fix: "No fire to fix on this path.",
-    stabilize: "Set a floor to stabilize.",
+    stabilize: "Set an emergency fund to stabilize.",
     plan: "Add a living goal to this stage.",
     invest: "Thin for now — still on the board.",
   },
@@ -184,15 +206,15 @@ const en = {
 
   netEditTitle: "Security net",
   netMonths: "Emergency months",
-  netFloor: "Floor (HKD)",
-  netHintEdit: "Months of spending to stand on, or a HKD floor.",
+  netFloor: "Target amount (HKD)",
+  netHintEdit: "Months of spending to stand on, or a HKD amount.",
   saveNet: "Save the net",
 
   adjustTitle: "Adjust",
-  adjustLead: "Mix, floor, and extras. Not on the main path.",
+  adjustLead: "Mix, emergency fund, and extras. Not on the main path.",
   templateTitle: "Portfolio mix",
-  templatesHint: "Benchmarks only. Not a fund we sell. Growth and Frontier wait until the floor holds.",
-  templateGatedHint: "After the floor holds.",
+  templatesHint: "Benchmarks only. Not a fund we sell. Growth and Frontier wait until the emergency fund holds.",
+  templateGatedHint: "After the emergency fund holds.",
   templateFrontierWarn:
     "Frontier is speculative. It illustrates about 2× leverage and concentrated tech/AI-like risk. Paths can swing hard. Not a fund we sell. Use this mix?",
   inflationLabel: "Price rise (~4.5% a year)",

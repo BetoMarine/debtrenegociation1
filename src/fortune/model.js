@@ -1,5 +1,13 @@
 import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
-import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
+import {
+  THEMES,
+  THEME_IDS,
+  canonicalThemeId,
+  getTheme,
+  FIRST_GROWTH_POT_AMOUNT,
+  FIRST_GROWTH_POT_MONTHS,
+  LEGACY_FIRST_GROWTH_POT_AMOUNT,
+} from "./themes.js";
 import { TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
 
 export const INCOME_BANDS = [
@@ -169,7 +177,19 @@ function isFirstGrowthPot(m) {
 }
 
 function isDefaultFirstGrowthPot(m) {
-  return isFirstGrowthPot(m) && Number(m.amount) === 25000 && Number(m.months) === 36;
+  return (
+    isFirstGrowthPot(m) &&
+    Number(m.amount) === FIRST_GROWTH_POT_AMOUNT &&
+    Number(m.months) === FIRST_GROWTH_POT_MONTHS
+  );
+}
+
+function isLegacyDefaultFirstGrowthPot(m) {
+  return (
+    isFirstGrowthPot(m) &&
+    Number(m.amount) === LEGACY_FIRST_GROWTH_POT_AMOUNT &&
+    Number(m.months) === FIRST_GROWTH_POT_MONTHS
+  );
 }
 
 function restoreAndDedupeGrowthPots(milestones) {
@@ -261,8 +281,9 @@ export function newFortunePlan() {
     thinFloorWarned: false,
     stabilizeTargetMonths: 6,
     stabilizeMonthsPicked: false,
-    fixMonths: 3,
+    fixMonths: 6,
     fixMonthsPicked: false,
+    fixMonthsUserPicked: false,
     money: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -322,10 +343,21 @@ export function migrateFortunePlan(raw) {
   let milestones = Array.isArray(raw.milestones) ? raw.milestones.map(normalizeMilestone) : [];
   const net = raw.net || base.net;
   const theme = canonicalThemeId(raw.theme);
+  milestones = milestones.map((m) =>
+    isLegacyDefaultFirstGrowthPot(m) ? { ...m, amount: FIRST_GROWTH_POT_AMOUNT } : m,
+  );
   milestones = restoreAndDedupeGrowthPots(milestones);
   if (theme === "rebuild" && !milestones.some((m) => m.stage === "invest" && milestoneRole(m) === "living")) {
     milestones.push(
-      normalizeMilestone({ name: "First growth pot", amount: 25000, months: 36, stage: "invest" }, milestones.length),
+      normalizeMilestone(
+        {
+          name: "First growth pot",
+          amount: FIRST_GROWTH_POT_AMOUNT,
+          months: FIRST_GROWTH_POT_MONTHS,
+          stage: "invest",
+        },
+        milestones.length,
+      ),
     );
   }
   const legacyBoard =
@@ -337,13 +369,23 @@ export function migrateFortunePlan(raw) {
       !!theme &&
       (milestones.length > 0 || raw.screen === "board"));
   const targetMonths = Number(raw.stabilizeTargetMonths) === 3 ? 3 : 6;
-  const fixMonths = Number(raw.fixMonths) === 6 ? 6 : 3;
   const fixMonthsPicked = !!raw.fixMonthsPicked;
+  const fixMonthsUserPicked = !!raw.fixMonthsUserPicked;
+  const storedFix = Number(raw.fixMonths) === 3 ? 3 : 6;
+  let fixMonths = fixMonthsPicked || fixMonthsUserPicked ? storedFix : 6;
   milestones.forEach((m, i) => {
     if (milestoneRole(m) !== "fix") return;
-    const months = Number(m.months) === 6 || fixMonths === 6 ? 6 : 3;
-    const picked = fixMonthsPicked || !!m.monthsKnown;
+    const picked = fixMonthsUserPicked || fixMonthsPicked || !!m.monthsKnown;
+    let months;
+    if (fixMonthsUserPicked) {
+      months = storedFix;
+    } else if (picked) {
+      months = Number(m.months) === 3 || storedFix === 3 ? 3 : 6;
+    } else {
+      months = 6;
+    }
     milestones[i] = { ...m, months, name: fixGoalLabel({ months, picked }) };
+    if (picked) fixMonths = months;
   });
   return {
     ...base,
@@ -360,6 +402,7 @@ export function migrateFortunePlan(raw) {
     stabilizeMonthsPicked: !!raw.stabilizeMonthsPicked,
     fixMonths,
     fixMonthsPicked,
+    fixMonthsUserPicked,
     net: {
       emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
       floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),
@@ -425,7 +468,17 @@ export function toEnginePlan(plan) {
   money.savings = emergencyCurrentHkd(migrated);
   const fix = (migrated.milestones || []).find((m) => milestoneRole(m) === "fix");
   let fixMonths = 0;
-  if (fix) fixMonths = Number(migrated.fixMonths) === 6 || Number(fix.months) === 6 ? 6 : 3;
+  if (fix) {
+    const picked = !!migrated.fixMonthsUserPicked || !!migrated.fixMonthsPicked || !!fix.monthsKnown;
+    const stored = migrated.fixMonthsUserPicked
+      ? Number(migrated.fixMonths) === 3
+        ? 3
+        : 6
+      : Number(migrated.fixMonths) === 3 || Number(fix.months) === 3
+        ? 3
+        : 6;
+    fixMonths = picked ? stored : 6;
+  }
   return {
     theme: migrated.theme,
     money,
@@ -459,4 +512,15 @@ export function migrateUiState(raw) {
   };
 }
 
-export { THEMES, THEME_IDS, canonicalThemeId, getTheme, TEMPLATE_IDS, canonicalTemplateId, getTemplate };
+export {
+  THEMES,
+  THEME_IDS,
+  canonicalThemeId,
+  getTheme,
+  FIRST_GROWTH_POT_AMOUNT,
+  FIRST_GROWTH_POT_MONTHS,
+  LEGACY_FIRST_GROWTH_POT_AMOUNT,
+  TEMPLATE_IDS,
+  canonicalTemplateId,
+  getTemplate,
+};

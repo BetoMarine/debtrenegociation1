@@ -6,7 +6,7 @@ export const INVEST_PLACEHOLDER_ID = "invest-placeholder";
 
 export const FIX_GOAL_NAME = "Debt renegotiation";
 export const EF_GOAL_NAME = "Emergency fund";
-export const INVEST_PLACEHOLDER_NAME = "Suggested mix (after floor) — not a product";
+export const INVEST_PLACEHOLDER_NAME = "Suggested mix (after the emergency fund) — not a product";
 
 /**
  * Fortune board / stored Fix title. Always says “3 months” or “6 months”

@@ -3,17 +3,22 @@ import { applyTheme, migrateFortunePlan, newFortunePlan } from "./model.js";
 import { isStabilizeReady } from "./stabilize.js";
 import {
   bookForTemplate,
+  boostVsCash,
+  effectiveInvestMu,
   isGatedTemplate,
   planningMu,
   resolveTemplatePick,
+  SILENT_INVEST_MU,
 } from "./strategyBooks.js";
 import {
+  CASH_BENCHMARK,
   TEMPLATE_IDS,
   TEMPLATES,
   canonicalTemplateId,
   getTemplate,
   mixFiPercent,
 } from "./templates.js";
+import { timeToGoal } from "./timeToGoal.js";
 
 function thinRebuild(overrides = {}) {
   return {
@@ -119,6 +124,36 @@ describe("Fortune growth-pot shelf lock", () => {
     TEMPLATE_IDS.forEach((id) => {
       expect(TEMPLATES[id].note).toMatch(/not a fund we sell/i);
     });
+  });
+
+  it("BOOST vs cash uses Linda timeToGoal and locked shelf μ", () => {
+    expect(CASH_BENCHMARK.mu).toBe(0.012);
+    expect(TEMPLATES.firm).toMatchObject({ mu: 0.12, sigma: 0.16 });
+    expect(TEMPLATES.balanced).toMatchObject({ mu: 0.15, sigma: 0.2 });
+    expect(TEMPLATES.growth).toMatchObject({ mu: 0.2, sigma: 0.28 });
+    expect(TEMPLATES.frontier).toMatchObject({ mu: 0.35, sigma: 0.45 });
+    const opts = { goal: 180000, principal: 0, monthlySave: 8000 };
+    const hit = timeToGoal(CASH_BENCHMARK.mu, planningMu("balanced"), opts);
+    expect(hit.monthsInvest).toBeLessThan(hit.monthsCash);
+    expect(hit.monthsSooner).toBe(hit.monthsCash - hit.monthsInvest);
+    expect(hit.yearsSooner).toBe(hit.monthsSooner / 12);
+    const boost = boostVsCash({
+      goal: 180000,
+      monthlySave: 8000,
+      investMu: planningMu("balanced"),
+    });
+    expect(boost.cashMonths).toBe(hit.monthsCash);
+    expect(boost.investMonths).toBe(hit.monthsInvest);
+    expect(boost.soonerMonths).toBe(hit.monthsSooner);
+    expect(boost.yearsSooner).toBe(hit.yearsSooner);
+    expect(boost.investPot).toBeGreaterThan(boost.cashPot);
+    expect(timeToGoal(0.012, 0.12, { goal: 10000, monthlySave: 10000 }).monthsInvest).toBe(1);
+    expect(timeToGoal(0.012, 0.12, { goal: 50000, principal: 50000 }).monthsCash).toBe(0);
+    expect(timeToGoal(0.012, 0.12, { goal: 50000, monthlySave: 0 }).monthsCash).toBeNull();
+    const thin = thinRebuild();
+    expect(isStabilizeReady(thin)).toBe(false);
+    expect(effectiveInvestMu(thin)).toBe(SILENT_INVEST_MU);
+    expect(effectiveInvestMu(fundedFloor())).toBe(planningMu("balanced"));
   });
 
   it("blocks Growth/Frontier until the EF floor is ready", () => {

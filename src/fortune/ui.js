@@ -3,6 +3,7 @@ import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
 import { boardCoachActions, isEmptyPot, shouldShowCoach } from "./coach.js";
 import { currentStage, holdStatus, stageStack } from "./journey.js";
+import { planTimeline } from "./timeline.js";
 import {
   DEBT_BANDS,
   INCOME_BANDS,
@@ -440,12 +441,17 @@ function renderBoard(host) {
   const youAreIn = t("youAreIn", { stage: stageCopy(here) });
   const hereSection = stack.find((section) => section.current) || stack[0];
   const count = t("youAreInCount", { n: String(hereSection.index), total: String(hereSection.total) });
+  body.insertAdjacentHTML(
+    "beforeend",
+    renderPlanJourneyHtml(planTimeline(plan, forecast), escapeHtml, !!forecast?.hardFail),
+  );
   body.append(
     el(`<div class="ft-you-in" data-you-in>
       <p data-stage-status data-stage-line>${escapeHtml(youAreIn)}</p>
       <span data-stage-count>${escapeHtml(count)}</span>
     </div>`),
   );
+  body.append(el(`<p class="ft-stack-kicker">${escapeHtml(t("stackDetail"))}</p>`));
   body.insertAdjacentHTML("beforeend", renderStageStackHtml(stack, escapeHtml, !!forecast?.hardFail));
 
   body.append(el(`<p class="tiny ft-stack-foot">${escapeHtml(t("stackFoot"))}</p>`));
@@ -465,6 +471,112 @@ function rowShown(item) {
   return { shown: `${item.pct}%`, pending: false, tone: dialTone(item.pct, false) };
 }
 
+function journeyTimeButtons(beat, escapeHtml) {
+  if (!beat.draggable) return "";
+  return `<span class="ft-row-time">
+    <button class="ft-time-btn" type="button" data-time-delta="-1" data-time-id="${escapeHtml(beat.id)}" aria-label="${escapeHtml(t("sooner"))}">${escapeHtml(t("sooner"))}</button>
+    <button class="ft-time-btn" type="button" data-time-delta="1" data-time-id="${escapeHtml(beat.id)}" aria-label="${escapeHtml(t("later"))}">${escapeHtml(t("later"))}</button>
+  </span>`;
+}
+
+function journeyFixPick(beat, escapeHtml) {
+  if (!beat.pickMonths) return "";
+  const assumed = beat.assumed
+    ? `<em class="ft-row-hint">${escapeHtml(t("journeyFixAssumed"))}</em>`
+    : "";
+  return `<span class="ft-fix-horizon">
+    <button class="${beat.fixMonths === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
+    <button class="${beat.fixMonths === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
+    ${assumed}
+  </span>`;
+}
+
+function journeyFacts(beat, escapeHtml) {
+  const facts = beat.facts || [];
+  if (!facts.length) return "";
+  const rows = facts
+    .map(
+      (fact) => `<div class="ft-journey-fact" data-fact="${escapeHtml(fact.key)}">
+        <span>${escapeHtml(fact.label)}</span>
+        <strong>${escapeHtml(fact.value)}</strong>
+      </div>`,
+    )
+    .join("");
+  return `<dl class="ft-journey-facts">${rows}</dl>`;
+}
+
+function renderJourneyBeat(beat, escapeHtml, hardFail) {
+  const time = journeyTimeButtons(beat, escapeHtml);
+  const pick = journeyFixPick(beat, escapeHtml);
+  const assumed = beat.assumed
+    ? `<em class="ft-journey-note">${escapeHtml(t("journeyFixAssumed"))}</em>`
+    : "";
+  const efHint =
+    beat.kind === "floor" && beat.targetMonths
+      ? `<em class="ft-journey-note">${escapeHtml(t("journeyEfMonths", { n: String(beat.targetMonths) }))}</em>`
+      : "";
+  const stuck = beat.kind === "floor" && beat.stuck ? `<em class="ft-journey-note">${escapeHtml(t("journeyEfStuck"))}</em>` : "";
+  const contribute =
+    beat.contributeLabel
+      ? `<p class="ft-journey-contribute" data-journey-contribute>${escapeHtml(beat.contributeLabel)}</p>`
+      : "";
+  const reason =
+    beat.reason
+      ? `<p class="ft-journey-reason" data-journey-reason>${escapeHtml(beat.reason)}</p>`
+      : "";
+  const growth =
+    beat.kind === "invest" && (beat.boostLine || beat.growthLine)
+      ? `<p class="ft-journey-growth" data-journey-growth>${escapeHtml(beat.boostLine || beat.growthLine)}</p>
+         <p class="tiny">${escapeHtml(t("journeyGrowthNote"))}</p>`
+      : "";
+  const idAttr = beat.draggable
+    ? `data-chip="${escapeHtml(beat.id)}"`
+    : `data-static="${escapeHtml(beat.id)}"`;
+  const showWhen = beat.kind === "goal" || !beat.facts?.length;
+  return `
+    <li class="ft-journey-beat kind-${escapeHtml(beat.kind)}" data-journey-beat data-kind="${escapeHtml(beat.kind)}" data-stage="${escapeHtml(beat.stage || "")}" data-months="${escapeHtml(beat.months ?? "")}" ${idAttr}>
+      <span class="ft-journey-dot" aria-hidden="true"></span>
+      <div class="ft-journey-body">
+        <p class="ft-journey-kicker">${escapeHtml(beat.title)}</p>
+        <strong class="ft-journey-name">${escapeHtml(beat.name)}</strong>
+        ${showWhen ? `<p class="ft-journey-when" data-journey-when>${escapeHtml(beat.whenLabel)}</p>` : `<p class="ft-journey-when" hidden data-journey-when>${escapeHtml(beat.whenLabel)}</p>`}
+        ${reason}
+        ${journeyFacts(beat, escapeHtml)}
+        ${assumed}
+        ${contribute}
+        ${efHint}
+        ${stuck}
+        ${growth}
+        ${time}
+        ${pick}
+      </div>
+    </li>
+  `;
+}
+
+export function renderPlanJourneyHtml(timeline, escapeHtml, hardFail = false) {
+  const beats = (timeline?.beats || []).map((beat) => renderJourneyBeat(beat, escapeHtml, hardFail)).join("");
+  const fix = timeline?.fix;
+  const ef = timeline?.ef;
+  const invest = timeline?.invest;
+  return `
+    <section class="ft-journey" data-journey>
+      <header class="ft-journey-head">
+        <h2>${escapeHtml(t("timelineTitle"))}</h2>
+        <p class="tiny">${escapeHtml(t("timelineHint"))}</p>
+      </header>
+      <ol class="ft-journey-list">
+        ${beats}
+      </ol>
+      <span hidden data-journey-fix-end>${escapeHtml(fix?.endLabel || "")}</span>
+      <span hidden data-journey-ef-start>${escapeHtml(ef?.startLabel || "")}</span>
+      <span hidden data-journey-ef-end>${escapeHtml(ef?.endLabel || "")}</span>
+      <span hidden data-journey-invest-start-value>${escapeHtml(invest?.startSaveLabel || "")}</span>
+      <span hidden data-journey-invest-enough-value>${escapeHtml(invest?.enoughLabel || "")}</span>
+    </section>
+  `;
+}
+
 function renderStageRow(item, escapeHtml, hardFail) {
   const { shown, pending, tone } = rowShown(item);
   const ringTone = hardFail && !pending && item.pct != null ? "wreck" : tone;
@@ -480,8 +592,8 @@ function renderStageRow(item, escapeHtml, hardFail) {
   const pick =
     item.pickMonths
       ? `<span class="ft-fix-horizon">
-          <button class="${item.months === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
-          <button class="${item.months === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
+          <button class="${(item.fixMonths ?? item.months) === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
+          <button class="${(item.fixMonths ?? item.months) === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
           <em class="ft-row-hint">${escapeHtml(t("fixPickHint"))}</em>
         </span>`
       : "";
@@ -495,6 +607,14 @@ function renderStageRow(item, escapeHtml, hardFail) {
   const when =
     item.whenLabel
       ? `<em class="ft-row-when">${escapeHtml(item.whenLabel)}</em>`
+      : "";
+  const reason =
+    item.reason
+      ? `<em class="ft-row-reason">${escapeHtml(item.reason)}</em>`
+      : "";
+  const growth =
+    item.growthLine
+      ? `<em class="ft-row-growth">${escapeHtml(item.growthLine)}</em>`
       : "";
   const time =
     item.draggable
@@ -514,6 +634,8 @@ function renderStageRow(item, escapeHtml, hardFail) {
         <span class="ft-row-text">
           <strong>${escapeHtml(item.name)}</strong>
           ${when}
+          ${reason}
+          ${growth}
           ${hint}
         </span>
       </button>
@@ -533,9 +655,10 @@ export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
       const showNow = section.current;
       const rollupReady = section.rollup != null;
       const meta = showNow ? t("stageNow") : rollupReady ? `${section.rollup}%` : "…";
-      const rollupLabel = showNow ? "" : `<em>${escapeHtml(t("stageRollup"))}</em>`;
+      const rollupText = t("stageRollup");
+      const rollupLabel = showNow || !rollupText ? "" : rollupReady ? `<em>${escapeHtml(rollupText)}</em>` : "";
       const until =
-        section.horizonLabel
+        !showNow && section.horizonLabel
           ? `<em class="ft-stage-until" data-horizon="${escapeHtml(section.horizon ?? "")}">${escapeHtml(
               t("stageUntil", { when: section.horizonLabel }),
             )}</em>`
@@ -592,6 +715,7 @@ function bindBoard(host) {
     btn.addEventListener("click", () => host.applyCoach(btn.dataset.coach));
   });
   host.bindStageStack(root.querySelector("[data-stack]"));
+  host.bindStageStack(root.querySelector("[data-journey]"));
 }
 
 function monthOptions(selectedMonths, escapeHtml) {

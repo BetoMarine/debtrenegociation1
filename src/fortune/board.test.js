@@ -26,7 +26,8 @@ describe("Fortune board chrome", () => {
     expect(html).toContain('data-stage="stabilize"');
     expect(html).toContain('data-stage="plan"');
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/stage rollup/i);
+    expect(html).toMatch(/You're here/);
+    expect(html).not.toMatch(/on these goals|stage rollup/i);
     expect(html).toContain("ft-row-ring");
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");
@@ -45,10 +46,10 @@ describe("Fortune board chrome", () => {
       escape,
     );
     expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Dec 2026</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
     expect(html).not.toMatch(/Emergency fund · now HK\$0 \(3 mo\)/);
-    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Dec 2026<\/strong>/);
   });
 
   it("puts Sooner / Later on living goals and a date on every row", () => {
@@ -85,10 +86,10 @@ describe("Fortune board chrome", () => {
       expect(row).toMatch(/class="ft-row-when">[^<]+</);
     });
     expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Dec 2026</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
-    expect(html).toMatch(/First growth pot[\s\S]*?class="ft-row-when">by /);
-    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).toMatch(/First growth pot[\s\S]*?class="ft-row-when">Start saving /);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Dec 2026<\/strong>/);
     expect(html).not.toMatch(/<strong>by /);
   });
 
@@ -103,22 +104,22 @@ describe("Fortune board chrome", () => {
       escape,
     );
     expect(html).toMatch(/<strong>Debt renegotiation · 6 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Mar 2027</);
-    expect(html).not.toMatch(/<strong>Mar 2027<\/strong>/);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Mar 2027</);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Mar 2027<\/strong>/);
   });
 
   it("keeps a thin Invest section on grow and labels the hold line", () => {
     const plan = applyTheme(newFortunePlan(), "grow");
     const html = renderStageStackHtml(stageStack(plan, { netPct: 10, milestonePct: [], livingPct: 10 }), escape);
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/Suggested mix \(after floor\)/i);
+    expect(html).toMatch(/Suggested mix \(after the emergency fund\)/i);
     expect(html).not.toMatch(/Thin for now/i);
     expect(html).not.toMatch(/fixedIncome|2800\.HK|\bREIT\b/i);
     const wrecked = applyTheme(newFortunePlan(), "rebuild");
     wrecked.money = { ...wrecked.money, savingsBand: "0", savings: 0 };
     const line = holdLineText(wrecked, { verdict: "wrecked", hardFail: true, livingPct: 2, netPct: 3 }, false);
     expect(line).toMatch(/does not hold/i);
-    expect(line).toMatch(/floor first/i);
+    expect(line).toMatch(/emergency fund first/i);
     expect(line).not.toMatch(/you'?re set/i);
   });
 });

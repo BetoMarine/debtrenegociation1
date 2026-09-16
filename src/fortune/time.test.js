@@ -99,12 +99,12 @@ describe("FT-DRAG-01 drag goals in time", () => {
     expect(html).toMatch(/>Later</);
     expect(html).toMatch(/Drag to move in time/);
     expect(html).toMatch(/<strong>Debt renegotiation · 6 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Mar 2027</);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Mar 2027</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
     const fixBlock = html.match(/data-stage="fix"[\s\S]*?<\/section>/)[0];
     expect(fixBlock).not.toMatch(/data-time-delta/);
     expect(html).toMatch(/data-horizon="18"/);
-    expect(html).toMatch(/to Mar 2028/);
+    expect(html).toMatch(/through Mar 2028/);
   });
 
   it("delaying a tight living goal raises the modelled success %", () => {
@@ -163,7 +163,7 @@ describe("FT-OVERLAP-01 soft phase overlap", () => {
     expect(planStage.rows.find((r) => r.id === phone.id).stage).toBe("plan");
     const html = renderStageStackHtml(stack, escape);
     expect(html).toMatch(/data-overlap="stabilize"/);
-    expect(html).toMatch(/overlaps Stabilize/);
+    expect(html).toMatch(/also during Stabilize/);
     expect(html).toMatch(/data-time-id="/);
   });
 

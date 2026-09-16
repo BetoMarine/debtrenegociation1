@@ -2,8 +2,8 @@ import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
 import { applyCoachAction, boardCoachActions, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { APP_VERSION, ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
-import { fixGoalLabel } from "../handoff.js";
 import {
+  applyFixMonths,
   canOpenPlan,
   ensureEmergencyFund,
   ensureFireSequence,
@@ -13,6 +13,7 @@ import {
   stabilizeTargetMonths,
 } from "./stabilize.js";
 import { currentStage, defaultOpenStages, holdStatus, monthsFromDrag, rowWhenLabel, stageStack } from "./journey.js";
+import { goalImpactLabel } from "./timeline.js";
 import { FORTUNE_SCREENS, dialTone, holdLineText, renderFortune } from "./ui.js";
 import {
   applyTheme,
@@ -185,6 +186,10 @@ function fortuneFooter() {
           ·
           <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
   const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;
+  const preview = /\/preview\/pr-\d+\//.test(typeof location !== "undefined" ? location.pathname : "");
+  const previewHint = preview
+    ? `<p class="tiny" data-preview-build>${escapeHtml(ft("previewSwHint"))}</p>`
+    : "";
   if (screen === "start") {
     return `
         ${pylWordmarkHtml({ footer: true })}
@@ -193,11 +198,12 @@ function fortuneFooter() {
           ${tools}
         </p>
         <p class="tiny">${escapeHtml(ft("compliance"))}</p>
-        ${version}`;
+        ${version}${previewHint}`;
   }
   return `
         <p class="tiny">${escapeHtml(ft("footerCompact"))}</p>
-        <p class="tiny">${tools} · ${version}</p>`;
+        <p class="tiny">${tools} · ${version}</p>
+        ${previewHint}`;
 }
 
 function shell(body) {
@@ -357,14 +363,7 @@ async function finishStep2() {
 }
 
 async function setFixMonths(n) {
-  const months = n === 6 ? 6 : 3;
-  plan.fixMonths = months;
-  plan.fixMonthsPicked = true;
-  plan.milestones = (plan.milestones || []).map((m) =>
-    m.role === "fix" || m.id === "fix-renegotiate"
-      ? { ...m, months, monthsKnown: true, name: fixGoalLabel({ months, picked: true }) }
-      : m,
-  );
+  plan = applyFixMonths(plan, n);
   await persistPlan("board");
   render({ keepScroll: true });
   if (isBoardUnlocked(plan)) queueForecast({ persistEvent: false });
@@ -565,10 +564,21 @@ function toggleStage(id) {
 
 function liveWhenLabel(row, months) {
   const when = row.querySelector(".ft-row-when");
-  if (!when) return;
   const kind = row.classList.contains("is-goal") ? "goal" : "action";
-  when.textContent = rowWhenLabel({ kind, months: Number(months) || 1 });
+  const pctEl = row.querySelector(".ft-pin-pct, [data-journey-pct]");
+  const pctRaw = pctEl?.textContent?.replace(/%/g, "").trim();
+  const pct = Number(pctRaw);
+  const label =
+    kind === "goal"
+      ? goalImpactLabel(months, Number.isFinite(pct) ? pct : null)
+      : rowWhenLabel({ kind, months: Number(months) || 1 });
+  if (when) when.textContent = label;
   row.dataset.months = String(months);
+  const id = row.dataset.chip;
+  if (!id) return;
+  document.querySelectorAll(`[data-journey-beat][data-chip="${id}"] [data-journey-when]`).forEach((el) => {
+    el.textContent = label;
+  });
 }
 
 function bindStageStack(stack) {
@@ -671,6 +681,27 @@ function patchDials() {
     if (id === "journey-fix" || id === "fix-renegotiate") return;
     const i = plan.milestones.findIndex((m) => m.id === id);
     if (i >= 0) apply(forecast.milestonePct?.[i]);
+  });
+  root.querySelectorAll("[data-journey-beat]").forEach((beat) => {
+    const id = beat.dataset.chip || beat.dataset.static;
+    const whenEl = beat.querySelector("[data-journey-when]");
+    const i = plan.milestones.findIndex((m) => m.id === id);
+    if (beat.dataset.kind === "goal" && whenEl) {
+      const pct = i >= 0 ? forecast.milestonePct?.[i] : null;
+      whenEl.textContent = goalImpactLabel(beat.dataset.months, pct);
+    }
+    const pctEl = beat.querySelector("[data-journey-pct]");
+    if (!pctEl) return;
+    const applyPct = (pct) => {
+      const ready = pct != null && Number.isFinite(Number(pct));
+      pctEl.textContent = ready ? `${Math.round(pct)}%` : "…";
+      pctEl.classList.toggle("is-pending", !ready);
+    };
+    if (id === "ef-floor") {
+      applyPct(forecast.netPct);
+      return;
+    }
+    if (i >= 0) applyPct(forecast.milestonePct?.[i]);
   });
   stageStack(plan, forecast, { open: openStages }).forEach((section) => {
     const meta = root.querySelector(`[data-stage="${section.id}"] [data-rollup] strong`);
