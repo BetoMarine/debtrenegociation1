@@ -148,7 +148,7 @@ describe("Invest start and goal boost vs cash", () => {
     expect(invest.startSaveLabel).toBe("Sep 2027");
     expect(invest.enoughLabel).toBe("Sep 2029");
     expect(invest.whenLabel).toBe("Start saving Sep 2027 · enough Sep 2029");
-    expect(invest.thresholdLabel).toBe("HK$25,000");
+    expect(invest.thresholdLabel).toBe("HK$180,000");
     expect(invest.investStartLabel).toBe("Sep 2029");
     expect(invest.mix).toBe("Balanced");
     expect(invest.mu).toBe(SILENT_INVEST_MU);
@@ -159,6 +159,23 @@ describe("Invest start and goal boost vs cash", () => {
     expect(invest.growthLine).not.toMatch(/we invest|we hold|buy list|rebalance for you|custody/i);
     expect(invest.growthLine).not.toMatch(/shelf|floor|rollup/i);
     expect(isReadableCalendarWhen(invest.whenLabel)).toBe(true);
+  });
+
+  it("shows sooner-by vs cash on the rebuild leftover 5–10k path, not same month", () => {
+    const qa = persistLike(
+      applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
+      makeFireHandoff({ source: "right-door", months: 6 }),
+    );
+    const { invest } = planSchedule(qa, null, FROM);
+    expect(invest.amount).toBe(180000);
+    expect(invest.mu).toBe(SILENT_INVEST_MU);
+    expect(invest.boost.soonerMonths).toBeGreaterThan(0);
+    expect(invest.boost.investMonths).toBeLessThan(invest.boost.cashMonths);
+    expect(invest.growthLine).toMatch(/lands sooner by /);
+    expect(invest.growthLine).not.toMatch(/same month as cash-only/i);
+    const html = renderPlanJourneyHtml(planTimeline(qa, { netPct: 22, milestonePct: [] }, FROM), escape);
+    expect(html).toMatch(/sooner by /);
+    expect(html).not.toMatch(/Same month as cash-only/);
   });
 
   it("shows a visible months-sooner boost for a large goal under mix μ vs cash 1.2%", () => {
@@ -197,8 +214,15 @@ describe("Invest start and goal boost vs cash", () => {
     expect(invest.silent).toBe(false);
     expect(invest.mu).toBe(planningMu("firm"));
     expect(invest.mu).toBe(0.12);
+    expect(invest.boost.soonerMonths).toBeGreaterThan(0);
+    expect(invest.boost.investMonths).toBeLessThan(invest.boost.cashMonths);
     expect(invest.growthLine).toMatch(/If you invest this way under Firm \(12% a year\)/);
+    expect(invest.growthLine).toMatch(/lands sooner by /);
+    expect(invest.growthLine).not.toMatch(/same month as cash-only/i);
     expect(invest.growthLine).not.toMatch(/quieter mix/);
+    const html = renderPlanJourneyHtml(planTimeline(funded, null, FROM), escape);
+    expect(html).toMatch(/sooner by /);
+    expect(html).not.toMatch(/Same month as cash-only/);
   });
 
   it("hard-locks BOOST copy as directions-only — never execute/buy/rebalance-for-you", () => {
@@ -286,7 +310,7 @@ describe("plan timeline glance", () => {
     expect(html).toMatch(/Start saving/);
     expect(html).toMatch(/Enough to invest/);
     expect(html).toMatch(/Invest start/);
-    expect(html).toMatch(/HK\$25,000 · Sep 2029/);
+    expect(html).toMatch(/HK\$180,000 · Sep 2029/);
     expect(html).toMatch(/>Balanced</);
     expect(html).toMatch(/cash-only/);
     expect(html).toMatch(/if you invest this/i);

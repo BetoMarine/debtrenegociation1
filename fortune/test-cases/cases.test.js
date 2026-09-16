@@ -224,9 +224,9 @@ describe("FT-INVEST-01", () => {
     const seeded = applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild");
     seeded.money = {
       ...seeded.money,
-      incomeMonthly: 40000,
+      incomeMonthly: 27500,
       spendMonthly: 20000,
-      leftoverMonthly: 20000,
+      leftoverMonthly: 7500,
       savings: 0,
       debts: 0,
     };
@@ -234,19 +234,22 @@ describe("FT-INVEST-01", () => {
     seeded.moneyCapturedAtStabilize = true;
     const plan = persistLike(seeded, makeFireHandoff({ source: "right-door", months: 6 }));
     const { invest } = planSchedule(plan, null, from);
-    expect(invest.startSaveLabel).toBe("Sep 2027");
+    expect(invest.startSaveLabel).toBe("Jul 2028");
     expect(invest.enoughLabel).toBe("Sep 2029");
     expect(projectShelfGrowth(25000, 36, 0.15)).toBe(38022);
-    expect(invest.growthLine).toMatch(/sooner by .+ than cash-only|same month as cash-only/i);
+    expect(invest.boost.soonerMonths).toBeGreaterThan(0);
+    expect(invest.growthLine).toMatch(/sooner by .+ than cash-only/i);
+    expect(invest.growthLine).not.toMatch(/same month as cash-only/i);
     expect(invest.growthLine).toMatch(/if you invest this/i);
     expect(invest.growthLine).toMatch(/Illustrative under assumed return/);
     expect(invest.growthLine).not.toMatch(/custody|we hold|buy list|we invest for you/i);
     const html = renderPlanJourneyHtml(planTimeline(plan, { netPct: 22, milestonePct: [] }, from), escape);
-    expect(html).toMatch(/Start saving Sep 2027 · enough Sep 2029/);
+    expect(html).toMatch(/Start saving Jul 2028 · enough Sep 2029/);
     expect(html).toMatch(/Enough to invest/);
     expect(html).toMatch(/Invest start/);
-    expect(html).toMatch(/HK\$25,000 · Sep 2029/);
-    expect(html).toMatch(/Vs cash-only|sooner by |same month as cash-only/);
+    expect(html).toMatch(/HK\$180,000 · Sep 2029/);
+    expect(html).toMatch(/sooner by /);
+    expect(html).not.toMatch(/Same month as cash-only/);
     expect(html).toMatch(/data-journey-growth/);
     expect(html).toMatch(/Illustrative under assumed return/);
     expect(html).toMatch(/you act elsewhere/);
@@ -373,7 +376,7 @@ describe("FT-OVERLAP-01", () => {
 
 describe("FT-VER-01", () => {
   it("unit slice: Fortune version and HTML shell stay Fortune after an RD/Sunday path", () => {
-    expect(APP_VERSION).toMatch(/0\.9\.11/);
+    expect(APP_VERSION).toMatch(/0\.9\.12/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(STRINGS.en.version).toMatch(/0\.8\.0/);

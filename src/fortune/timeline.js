@@ -341,7 +341,7 @@ export function investSchedule(plan, forecast, from = new Date()) {
   const startSaveLabel = monthYearLabel(startSaveMonths, from);
   const enoughLabel = monthYearLabel(enoughMonths, from);
   const boostGoal =
-    [...goals].sort((a, b) => b.amount - a.amount || a.months - b.months)[0] || pot;
+    pot || [...goals].sort((a, b) => b.amount - a.amount || a.months - b.months)[0];
   const boost = boostVsCash({
     target: boostGoal?.amount || amount,
     monthly: ef.surplus,

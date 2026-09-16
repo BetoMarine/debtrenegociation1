@@ -1,6 +1,6 @@
 /** Register the root service worker from any product URL. */
 
-export const SW_CACHE_BUST = "0.9.11";
+export const SW_CACHE_BUST = "0.9.12";
 
 export function isPagesPreviewPath(pathname) {
   return /\/preview\/pr-\d+\//.test(String(pathname || ""));

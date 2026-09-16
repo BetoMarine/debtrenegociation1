@@ -104,12 +104,12 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Expect:**
 
-1. Open `/fortune/`. Footer is **PoC v0.9.11** (Fortune), not **PoC v0.8.0**.
+1. Open `/fortune/`. Footer is **PoC v0.9.12** (Fortune), not **PoC v0.8.0**.
 2. Fortune → Right Door (header **Back to Fortune Teller**). Right Door footer is **PoC v0.8.0**.
-3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.11** — no hard refresh.
+3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.12** — no hard refresh.
 4. Same return from Sunday Pack.
 
-**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.11 and RD/Sunday stay 0.8.0.
+**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.12 and RD/Sunday stay 0.8.0.
 
 **Preview SW / cache:** Live Fortune’s site-root SW must not serve preview. Cold-load `…/preview/pr-N/fortune/index.html` (the `.html` path bypasses the old navigation handler). If Safari A2HS still shows an older PoC, one line:
 

@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.11";
+export const APP_VERSION = "PoC v0.9.12";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -24,7 +24,7 @@ const en = {
     "This plan stays on this phone. No account required. Uninstall wipes it. We do not upload your numbers.",
   footerCompact: "On this phone · not advice · not a sale. Not affiliated with HSBC.",
   previewSwHint:
-    "Preview PoC v0.9.11. If the footer is older, in the Safari console: navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>location.reload())",
+    "Preview PoC v0.9.12. If the footer is older, in the Safari console: navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>location.reload())",
   otherToolsRight: "Right Door",
   otherToolsSunday: "Sunday Pack",
   otherToolsLabel: "Other tools from Plan Your Life",
