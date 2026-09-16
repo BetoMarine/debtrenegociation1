@@ -13,11 +13,13 @@ import {
   planTimeline,
   projectShelfGrowth,
   shelfGrowthLine,
+  soonerLagPhrase,
 } from "./timeline.js";
 import { renderPlanJourneyHtml, renderStageStackHtml } from "./ui.js";
 import { stageStack } from "./journey.js";
-import { boostVsCash, planningMu, SILENT_INVEST_MU, timeToGoal } from "./strategyBooks.js";
+import { boostVsCash, planningMu, SILENT_INVEST_MU } from "./strategyBooks.js";
 import { CASH_BENCHMARK } from "./templates.js";
+import { timeToGoal } from "./timeToGoal.js";
 
 const FROM = new Date(2026, 8, 14);
 
@@ -146,24 +148,29 @@ describe("Invest start and goal boost vs cash", () => {
     expect(invest.investStartLabel).toBe("Sep 2029");
     expect(invest.mix).toBe("Balanced");
     expect(invest.mu).toBe(SILENT_INVEST_MU);
+    expect(invest.growthLine).toMatch(/if you invest this quieter mix/i);
     expect(invest.growthLine).toMatch(/cash-only/);
-    expect(invest.growthLine).toMatch(/Projection only/);
-    expect(invest.growthLine).not.toMatch(/shelf|custody|buy list/i);
+    expect(invest.growthLine).toMatch(/Illustrative under assumed return/);
+    expect(invest.growthLine).toMatch(/you act elsewhere/);
+    expect(invest.growthLine).not.toMatch(/we invest|we hold|buy list|rebalance for you|custody/i);
+    expect(invest.growthLine).not.toMatch(/shelf|floor|rollup/i);
     expect(isReadableCalendarWhen(invest.whenLabel)).toBe(true);
   });
 
   it("shows a visible months-sooner boost for a large goal under mix μ vs cash 1.2%", () => {
     expect(CASH_BENCHMARK.mu).toBe(0.012);
-    expect(timeToGoal({ target: 180000, monthly: 8000, mu: 0.012 })).toBeGreaterThan(
-      timeToGoal({ target: 180000, monthly: 8000, mu: 0.15 }),
-    );
+    const hit = timeToGoal(0.012, 0.15, { goal: 180000, monthlySave: 8000 });
+    expect(hit.monthsCash).toBeGreaterThan(hit.monthsInvest);
+    expect(hit.monthsSooner).toBeGreaterThan(0);
     const boost = boostVsCash({
-      target: 180000,
-      monthly: 8000,
+      goal: 180000,
+      monthlySave: 8000,
       investMu: planningMu("balanced"),
       cashMu: CASH_BENCHMARK.mu,
     });
-    expect(boost.soonerMonths).toBeGreaterThan(0);
+    expect(boost.soonerMonths).toBe(hit.monthsSooner);
+    expect(boost.yearsSooner).toBe(hit.yearsSooner);
+    expect(boost.investPot).toBeGreaterThan(boost.cashPot);
     const line = investBoostLine({
       name: "New car",
       templateLabel: "Balanced",
@@ -171,9 +178,23 @@ describe("Invest start and goal boost vs cash", () => {
       boost,
       silent: false,
     });
-    expect(line).toMatch(/New car lands about \d+ months sooner than cash-only/);
-    expect(line).toMatch(/With Balanced \(15% a year\)/);
-    expect(line).not.toMatch(/shelf|floor|rollup/i);
+    expect(line).toMatch(/If you invest this way under Balanced \(15% a year\)/);
+    expect(line).toMatch(new RegExp(`New car lands about ${soonerLagPhrase(boost.soonerMonths)} sooner than cash-only`));
+    expect(line).toMatch(/At the cash-only date the mix pot is about/);
+    expect(line).toMatch(/Illustrative under assumed return — you act elsewhere/);
+    expect(line).not.toMatch(/we invest|buy list|rebalance for you|custody|shelf|floor/i);
+  });
+
+  it("uses the picked card μ after the emergency fund is complete, not the silent 5%", () => {
+    const funded = stressedRebuild({ fixMonths: 6, leftover: 8000, savings: 200000 });
+    funded.templateId = "firm";
+    const { invest, ef } = planSchedule(funded, null, FROM);
+    expect(ef.ready).toBe(true);
+    expect(invest.silent).toBe(false);
+    expect(invest.mu).toBe(planningMu("firm"));
+    expect(invest.mu).toBe(0.12);
+    expect(invest.growthLine).toMatch(/If you invest this way under Firm \(12% a year\)/);
+    expect(invest.growthLine).not.toMatch(/quieter mix/);
   });
 });
 
@@ -220,6 +241,11 @@ describe("plan timeline glance", () => {
     expect(html).toMatch(/HK\$25,000 · Sep 2029/);
     expect(html).toMatch(/>Balanced</);
     expect(html).toMatch(/cash-only/);
+    expect(html).toMatch(/if you invest this/i);
+    expect(html).toMatch(/Illustrative under assumed return/);
+    expect(html).toMatch(/you act elsewhere/);
+    expect(html).toMatch(/At cash-only date/);
+    expect(html).not.toMatch(/we invest for you|rebalance for you|buy list/i);
     expect(html).not.toMatch(/stage rollup/i);
     expect(html).not.toMatch(/>Shelf</);
     expect(html).toMatch(/>Sooner</);

@@ -252,22 +252,47 @@ export function shelfGrowthLine({ amount, months, templateId } = {}) {
   return `Over ${horizonPhrase(tenor)}, ${hkd(fromHkd)} grows to about ${hkd(grown)} under ${template.label} (${muPercentLabel(mu)}). Projection only.`;
 }
 
+const BOOST_HONEST = "Illustrative under assumed return — you act elsewhere.";
+
+export function soonerLagPhrase(months) {
+  const n = Math.max(0, Math.round(Number(months) || 0));
+  if (n <= 0) return "0 months";
+  const years = Math.floor(n / 12);
+  const rem = n % 12;
+  if (years > 0 && rem === 0) return horizonPhrase(n);
+  if (years > 0) {
+    const y = years === 1 ? "1 year" : `${years} years`;
+    const m = rem === 1 ? "1 month" : `${rem} months`;
+    return `${y} ${m}`;
+  }
+  return horizonPhrase(n);
+}
+
 export function investBoostLine({ name, templateLabel, mu, boost, silent } = {}) {
   const mix = templateLabel || "this mix";
+  const rate = muPercentLabel(mu);
+  const who = name ? String(name) : "this goal";
+  const how = silent
+    ? `Until the emergency fund is complete, if you invest this quieter mix (${rate})`
+    : `If you invest this way under ${mix} (${rate})`;
+  const potBit =
+    boost?.cashPot != null && boost?.investPot != null && boost.investPot !== boost.cashPot
+      ? ` At the cash-only date the mix pot is about ${hkd(boost.investPot)} vs ${hkd(boost.cashPot)} in cash.`
+      : "";
+  if (boost?.cashMonths == null && boost?.investMonths == null) {
+    return `Needs leftover to see how much sooner ${mix} beats cash-only if you invest this way. ${BOOST_HONEST}`;
+  }
+  if (boost?.cashMonths == null && boost?.investMonths != null) {
+    return `${how}, ${who} can land while cash-only cannot in this window.${potBit} ${BOOST_HONEST}`;
+  }
   if (boost?.cashMonths == null || boost?.investMonths == null) {
-    return `Needs leftover to see how much sooner ${mix} beats cash-only. Projection only.`;
+    return `Needs leftover to see how much sooner ${mix} beats cash-only if you invest this way. ${BOOST_HONEST}`;
   }
   const sooner = Number(boost.soonerMonths) || 0;
-  const rate = muPercentLabel(mu);
-  const quiet = silent
-    ? `Until the emergency fund is complete, a quieter mix (${rate})`
-    : `With ${mix} (${rate})`;
-  const who = name ? String(name) : "this goal";
   if (sooner <= 0) {
-    return `${quiet}, ${who} lands in the same month as cash-only at this leftover. Projection only.`;
+    return `${how}, ${who} lands in the same month as cash-only at this leftover.${potBit} ${BOOST_HONEST}`;
   }
-  const lag = sooner === 1 ? "1 month" : `${sooner} months`;
-  return `${quiet}, ${who} lands about ${lag} sooner than cash-only. Projection only.`;
+  return `${how}, ${who} lands about ${soonerLagPhrase(sooner)} sooner than cash-only.${potBit} ${BOOST_HONEST}`;
 }
 
 function livingGoals(plan, forecast, from = new Date()) {
@@ -471,8 +496,12 @@ export function planTimeline(plan, forecast, from = new Date()) {
     invest.boost?.soonerMonths == null
       ? invest.boostLine
       : invest.boost.soonerMonths > 0
-        ? `${invest.boost.soonerMonths === 1 ? "1 month" : `${invest.boost.soonerMonths} months`} sooner than cash-only`
+        ? `${soonerLagPhrase(invest.boost.soonerMonths)} sooner than cash-only`
         : "Same month as cash-only";
+  const potValue =
+    invest.boost?.cashPot != null && invest.boost?.investPot != null
+      ? `Mix ${hkd(invest.boost.investPot)} · cash ${hkd(invest.boost.cashPot)}`
+      : "";
   const investFacts = [
     { key: "start-save", label: "Start saving", value: invest.startSaveLabel },
     {
@@ -486,6 +515,9 @@ export function planTimeline(plan, forecast, from = new Date()) {
     { key: "mix", label: "Mix", value: invest.mix },
     { key: "boost", label: "Vs cash-only", value: soonerValue },
   ];
+  if (potValue) {
+    investFacts.push({ key: "pot", label: "At cash-only date", value: potValue });
+  }
   beats.push({
     id: invest.id,
     kind: "invest",

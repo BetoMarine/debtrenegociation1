@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.9";
+export const APP_VERSION = "PoC v0.9.10";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -159,7 +159,9 @@ const en = {
   journeyShelf: "Mix",
   journeyMix: "Mix",
   journeyBoost: "Vs cash-only",
-  journeyGrowthNote: "Projection only. Not a product. Fortune does not hold money.",
+  journeyPot: "At cash-only date",
+  journeyGrowthNote:
+    "Illustrative under assumed return. Projection only. Not a product. Not custody. You act elsewhere — Fortune does not invest for you.",
   stackDetail: "Same path, in more detail",
   youAreIn: "You're in {stage}",
   youAreInCount: "{n} of {total}",

@@ -59,11 +59,11 @@
     },
     {
       "id": "FT-INVEST-01",
-      "title": "Invest start saving, enough-to-start, and shelf growth line",
+      "title": "Invest start saving, enough-to-start, and cash-vs-mix BOOST",
       "status": "automated",
       "automation": "unit",
       "liveRequires": null,
-      "expect": "Journey answers when Invest saving starts, when the growth pot is enough to start, and how much sooner the goal lands under Firm/Balanced/Growth/Frontier μ vs cash-only (1.2%). Projection only — no custody language.",
+      "expect": "Journey answers when Invest saving starts, when the growth pot is enough to start, and how much sooner the goal lands if you invest this way under Firm/Balanced/Growth/Frontier μ vs cash-only (1.2%), plus mix vs cash pot at the cash-only date. Illustrative under assumed return — you act elsewhere. Not a product. Not custody.",
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/fortune/timeline.test.js"

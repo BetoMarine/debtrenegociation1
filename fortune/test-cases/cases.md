@@ -36,11 +36,11 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Status:** automated (`npm test`)
 
-**Expect:** Timeline answers: when I can **start saving** toward Invest; when I have **enough to start**; how much **sooner** the goal lands under the chosen mix (Firm / Balanced / Growth / Frontier μ) vs cash-only (1.2%). Quiet ~5% mix until the emergency fund is complete. Projection only. No custody language.
+**Expect:** Timeline answers: when I can **start saving** toward Invest; when I have **enough to start**; how much **sooner** the goal lands if you invest this way under the chosen mix (Firm 12% / Balanced 15% / Growth 20% / Frontier 35%) vs cash-only (1.2%), plus mix vs cash pot at the cash-only date. Quiet ~5% mix until the emergency fund is complete. Illustrative under assumed return — you act elsewhere. Not a product. Not custody.
 
-**Bob:** catalog + `src/fortune/timeline.test.js`
+**Bob:** catalog + `src/fortune/timeline.test.js` (`timeToGoal` from `src/fortune/timeToGoal.js`)
 
-**Maddy (optional live):** On the board, read Invest: start-saving date, enough date, and a cash-only vs mix “how much sooner” line.
+**Maddy (optional live):** On the board, read Invest: start-saving date, enough date, and a cash-only vs mix “how much sooner” / pot line. Copy must stay directions-only.
 
 ## FT-LOOP-01 — must-fix loop
 
@@ -104,11 +104,11 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Expect:**
 
-1. Open `/fortune/`. Footer is **PoC v0.9.9** (Fortune), not **PoC v0.8.0**.
+1. Open `/fortune/`. Footer is **PoC v0.9.10** (Fortune), not **PoC v0.8.0**.
 2. Fortune → Right Door (header **Back to Fortune Teller**). Right Door footer is **PoC v0.8.0**.
-3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.9** — no hard refresh.
+3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.10** — no hard refresh.
 4. Same return from Sunday Pack.
 
-**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.9 and RD/Sunday stay 0.8.0.
+**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.10 and RD/Sunday stay 0.8.0.
 
 **Maddy:** iPhone Safari on live `/fortune/`. Chrome-in-app does not count.

@@ -42,7 +42,7 @@ describe("MPA HTML shell routing", () => {
 
 describe("PoC version isolation", () => {
   it("keeps Fortune's stamp off Right Door / Sunday Pack copy", () => {
-    expect(APP_VERSION).toMatch(/PoC v0\.9\.9/);
+    expect(APP_VERSION).toMatch(/PoC v0\.9\.10/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(STRINGS.en.version).toMatch(/PoC v0\.8\.0/);
     expect(STRINGS.zh.version).toMatch(/PoC v0\.8\.0/);

@@ -4,6 +4,7 @@
  */
 import { isStabilizeReady } from "./stabilize.js";
 import { CASH_BENCHMARK, TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
+import { timeToGoal } from "./timeToGoal.js";
 
 export const GATED_TEMPLATE_IDS = ["growth", "frontier"];
 
@@ -81,41 +82,47 @@ export function effectiveInvestMu(plan, from) {
   return planningMu(plan?.templateId);
 }
 
-/**
- * Months to reach a HKD target with a monthly contribution under annual μ.
- * Monthly compounding. Null if leftover cannot get there.
- */
-export function timeToGoal({ target, monthly, mu, principal = 0 } = {}) {
-  const need = Math.max(0, Number(target) || 0);
-  const pmt = Number(monthly) || 0;
-  const start = Math.max(0, Number(principal) || 0);
-  const annual = Number(mu) || 0;
-  if (need <= start + 1e-9) return 0;
-  if (!(pmt > 0) && start + 1e-9 < need) return null;
-  const r = annual / 12;
-  if (!(r > 0)) {
-    if (!(pmt > 0)) return null;
-    return Math.max(1, Math.ceil((need - start) / pmt));
-  }
-  const num = need * r + pmt;
-  const den = start * r + pmt;
-  if (!(den > 0) || num / den <= 0) return null;
-  const n = Math.log(num / den) / Math.log(1 + r);
-  if (!Number.isFinite(n) || n < 0) return null;
-  if (n <= 1e-9) return 0;
-  return Math.max(1, Math.ceil(n - 1e-9));
+/** Ordinary annuity + grown principal. Same monthly compounding as timeToGoal. */
+export function projectedPot({ principal = 0, monthlySave = 0, mu, months } = {}) {
+  const p = Math.max(0, Number(principal) || 0);
+  const s = Math.max(0, Number(monthlySave) || 0);
+  const n = Math.max(0, Math.round(Number(months) || 0));
+  const r = (Number(mu) || 0) > 0 ? Number(mu) / 12 : 0;
+  if (n <= 0) return Math.round(p);
+  if (!(r > 0)) return Math.round(p + s * n);
+  const growth = (1 + r) ** n;
+  return Math.round(p * growth + (s * (growth - 1)) / r);
 }
 
-export function boostVsCash({ target, monthly, principal = 0, investMu, cashMu = CASH_BENCHMARK.mu } = {}) {
-  const cashMonths = timeToGoal({ target, monthly, mu: cashMu, principal });
-  const investMonths = timeToGoal({ target, monthly, mu: investMu, principal });
-  if (cashMonths == null || investMonths == null) {
-    return { cashMonths, investMonths, soonerMonths: null };
-  }
+/**
+ * Cash-only vs mix BOOST. Uses Linda's timeToGoal(cashMu, investMu, { goal, … }).
+ * Also returns pots at the cash-only landing month (invest vs cash).
+ */
+export function boostVsCash({
+  goal,
+  target,
+  monthly,
+  monthlySave,
+  principal = 0,
+  investMu,
+  cashMu = CASH_BENCHMARK.mu,
+} = {}) {
+  const g = Number(goal ?? target) || 0;
+  const s = Number(monthlySave ?? monthly) || 0;
+  const hit = timeToGoal(cashMu, investMu, { goal: g, principal, monthlySave: s });
+  const potMonths = hit.monthsCash ?? hit.monthsInvest;
+  const cashPot =
+    potMonths == null ? null : projectedPot({ principal, monthlySave: s, mu: cashMu, months: potMonths });
+  const investPot =
+    potMonths == null ? null : projectedPot({ principal, monthlySave: s, mu: investMu, months: potMonths });
   return {
-    cashMonths,
-    investMonths,
-    soonerMonths: Math.max(0, cashMonths - investMonths),
+    cashMonths: hit.monthsCash,
+    investMonths: hit.monthsInvest,
+    soonerMonths: hit.monthsSooner,
+    yearsSooner: hit.yearsSooner,
+    potMonths,
+    cashPot,
+    investPot,
   };
 }
 
