@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" class="fortune-root" data-pyl-app="fortune">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      /* pyl-shell-guard */
+      (function () {
+        var expected = document.documentElement.getAttribute("data-pyl-app");
+        var path = location.pathname || "";
+        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        if (expected === app) return;
+        document.documentElement.style.visibility = "hidden";
+        function go() {
+          location.reload();
+        }
+        if (!("serviceWorker" in navigator)) {
+          go();
+          return;
+        }
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+        }).then(function () {
+          if (!self.caches || !caches.keys) return;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          });
+        }).then(go, go);
+      })();
+    </script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#fafafa" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Fortune Teller" />
+    <meta
+      name="description"
+      content="Living vs a security net. On this phone. Not advice. Not a product sale."
+    />
+    <title>Fortune Teller</title>
+    <link rel="manifest" href="../fortune/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="../fortune/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="../fortune/apple-touch-icon.png" />
+    <script type="module" crossorigin src="../assets/fortune-DP2CraaS.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-DCn_JTds.js">
+    <link rel="stylesheet" crossorigin href="../assets/register-sw-B5zi9vUu.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
