@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.7";
+export const APP_VERSION = "PoC v0.9.8";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -141,14 +141,30 @@ const en = {
 
   boardKicker: "Step 3 · Your new life",
   boardTitle: "Your new life",
-  timelineTitle: "Stages",
-  timelineHint: "Each row is a chance it works.",
+  timelineTitle: "Your plan",
+  timelineHint: "Start, finish, and what happens if you move a goal.",
+  journeyFix: "Fix",
+  journeyEf: "Emergency fund",
+  journeyPlan: "Goals",
+  journeyInvest: "Invest",
+  journeyStart: "Start",
+  journeyEnd: "End",
+  journeyComplete: "Complete",
+  journeyFixAssumed: "6 months assumed — pick once.",
+  journeyEfMonths: "{n} months of spending",
+  journeyEfStuck: "Needs leftover to finish.",
+  journeyStartSave: "Start saving",
+  journeyThreshold: "Enough to invest",
+  journeyInvestStart: "Invest start",
+  journeyShelf: "Shelf",
+  journeyGrowthNote: "Projection only. Not a product. Fortune does not hold money.",
+  stackDetail: "Stage detail",
   youAreIn: "You're in {stage}",
   youAreInCount: "{n} of {total}",
   stageRollup: "stage rollup",
   stageNow: "Now",
   holdFloorFirst: "floor first",
-  stackFoot: "Goals = rows + % rings. Drag in time; stages may overlap. No path pins.",
+  stackFoot: "The timeline above is the plan. Stages below are the same path. Drag in time; stages may overlap. No path pins.",
   dragHint: "Drag to move in time",
   sooner: "Sooner",
   later: "Later",

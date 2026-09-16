@@ -45,10 +45,10 @@ describe("Fortune board chrome", () => {
       escape,
     );
     expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Dec 2026</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
     expect(html).not.toMatch(/Emergency fund · now HK\$0 \(3 mo\)/);
-    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Dec 2026<\/strong>/);
   });
 
   it("puts Sooner / Later on living goals and a date on every row", () => {
@@ -85,10 +85,10 @@ describe("Fortune board chrome", () => {
       expect(row).toMatch(/class="ft-row-when">[^<]+</);
     });
     expect(html).toMatch(/<strong>Debt renegotiation · 3 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Dec 2026</);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Dec 2026</);
     expect(html).toMatch(/Emergency fund · now HK\$/);
-    expect(html).toMatch(/First growth pot[\s\S]*?class="ft-row-when">by /);
-    expect(html).not.toMatch(/<strong>Dec 2026<\/strong>/);
+    expect(html).toMatch(/First growth pot[\s\S]*?class="ft-row-when">Start saving /);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Dec 2026<\/strong>/);
     expect(html).not.toMatch(/<strong>by /);
   });
 
@@ -103,8 +103,8 @@ describe("Fortune board chrome", () => {
       escape,
     );
     expect(html).toMatch(/<strong>Debt renegotiation · 6 months<\/strong>/);
-    expect(html).toMatch(/class="ft-row-when">Mar 2027</);
-    expect(html).not.toMatch(/<strong>Mar 2027<\/strong>/);
+    expect(html).toMatch(/class="ft-row-when">Sep 2026 → Mar 2027</);
+    expect(html).not.toMatch(/<strong>Sep 2026 → Mar 2027<\/strong>/);
   });
 
   it("keeps a thin Invest section on grow and labels the hold line", () => {

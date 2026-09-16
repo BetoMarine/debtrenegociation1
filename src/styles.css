@@ -659,6 +659,181 @@ html.fortune-root body {
   white-space: nowrap;
 }
 
+.ft-stack-kicker {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ft-journey {
+  background: #fff;
+  border: 1px solid var(--pyl-purple);
+  border-radius: var(--radius);
+  padding: 14px 14px 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pyl-purple) 22%, transparent);
+}
+
+.ft-journey-head h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.ft-journey-head .tiny {
+  margin: 4px 0 10px;
+}
+
+.ft-journey-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px 8px;
+  border-left: 2px solid color-mix(in srgb, var(--pyl-purple) 35%, #e5e5e5);
+}
+
+.ft-journey-beat {
+  position: relative;
+  padding: 0 0 14px 16px;
+}
+
+.ft-journey-beat:last-child {
+  padding-bottom: 2px;
+}
+
+.ft-journey-dot {
+  position: absolute;
+  left: -13px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pyl-teal);
+  box-shadow: 0 0 0 3px #fff;
+}
+
+.ft-journey-beat.kind-now .ft-journey-dot {
+  background: var(--pyl-purple);
+}
+
+.ft-journey-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pyl-purple);
+}
+
+.ft-journey-name {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.ft-journey-when {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.ft-journey-facts {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.ft-journey-fact {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 38%) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.ft-journey-fact span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ft-journey-fact strong {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ft-journey-contribute {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ft-journey-range {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.ft-journey-note {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ft-journey-pct {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #f4f4f5;
+}
+
+.ft-journey-pct.tone-ok {
+  color: var(--pyl-teal);
+  background: color-mix(in srgb, var(--pyl-teal) 12%, #fff);
+}
+
+.ft-journey-pct.tone-mid {
+  color: #92650a;
+  background: #f8efd4;
+}
+
+.ft-journey-pct.tone-wreck,
+.ft-journey-pct.tone-low {
+  color: var(--ft-wreck);
+  background: color-mix(in srgb, var(--ft-wreck) 12%, #fff);
+}
+
+.ft-journey-growth {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ft-journey-beat .ft-row-time {
+  margin-top: 8px;
+}
+
+.ft-journey-beat .ft-fix-horizon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .ft-stack {
   display: flex;
   flex-direction: column;
@@ -876,8 +1051,19 @@ html.fortune-root body {
   display: block;
   margin-top: 2px;
   font-style: normal;
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ft-row-growth {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
+  line-height: 1.35;
 }
 
 .ft-row-time {

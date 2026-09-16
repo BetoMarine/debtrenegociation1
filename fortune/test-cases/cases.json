@@ -9,6 +9,8 @@
   "requiredIds": [
     "FT-DATE-01",
     "FT-EF-01",
+    "FT-EF-02",
+    "FT-INVEST-01",
     "FT-LOOP-01",
     "FT-ENTRY-01",
     "FT-FAIL-01",
@@ -19,15 +21,16 @@
   "cases": [
     {
       "id": "FT-DATE-01",
-      "title": "Every board row has a date or range",
+      "title": "Readable calendar dates on the plan timeline, not tenor strings",
       "status": "automated",
       "automation": "unit",
       "liveRequires": null,
-      "expect": "whenLabel / date present for Fix, Stabilize, Plan, and Invest rows. Fix title stays Debt renegotiation · 3 or 6 months (calendar date is secondary, never the strong title).",
+      "expect": "Home board shows one ft-journey timeline. Fix finish is a calendar range or Finishes {month year} — never 3–6 months as the only when. Stage rows also carry calendar whenLabels. Fix title still Debt renegotiation · 3 or 6 months.",
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/fortune/board.test.js",
-        "src/fortune/journey.test.js"
+        "src/fortune/journey.test.js",
+        "src/fortune/timeline.test.js"
       ]
     },
     {
@@ -40,6 +43,30 @@
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/fortune/goals.test.js"
+      ]
+    },
+    {
+      "id": "FT-EF-02",
+      "title": "Emergency fund start and complete calendar dates",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": null,
+      "expect": "If saving 6 months of EF, the journey shows when it starts and when it is complete (Start {month year} · complete {month year}), not a Stabilize label alone.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/timeline.test.js"
+      ]
+    },
+    {
+      "id": "FT-INVEST-01",
+      "title": "Invest start saving, enough-to-start, and shelf growth line",
+      "status": "automated",
+      "automation": "unit",
+      "liveRequires": null,
+      "expect": "Journey answers when Invest saving starts, when the growth pot is enough to start, and over timeframe X how much grows under the chosen Firm/Balanced/Growth/Frontier μ. Projection only — no custody language.",
+      "tests": [
+        "fortune/test-cases/cases.test.js",
+        "src/fortune/timeline.test.js"
       ]
     },
     {

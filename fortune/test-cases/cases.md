@@ -2,15 +2,15 @@
 
 Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`npm test`) before **Maddy** (Safari). Live LOOP / ENTRY still need Safari.
 
-## FT-DATE-01 — date or range on every row
+## FT-DATE-01 — readable calendar dates, not tenor strings
 
 **Status:** automated (`npm test`)
 
-**Expect:** Every Fix / Stabilize / Plan / Invest row has `whenLabel` (calendar month or a range such as `3–6 months` / `by Sep 2029`). Fix **title** stays `Debt renegotiation · 3 months` / `6 months` / `3 or 6 months`. The date is secondary (`ft-row-when`), never the `<strong>` title.
+**Expect:** Step 3 opens with **Your plan** (`ft-journey`) as the primary readable plan. Fix is a dated **start → end** (6 months assumed until picked) such as Start Sep 2026 / End Mar 2027 — never `3–6 months` or a vague Now+tenor. Stage-stack rows also carry calendar `whenLabel`s. Fix **title** stays `Debt renegotiation · 3 months` / `6 months` / `3 or 6 months`.
 
-**Bob:** catalog + `src/fortune/board.test.js` + `src/fortune/journey.test.js`
+**Bob:** catalog + `src/fortune/timeline.test.js` + board / journey
 
-**Maddy (optional live):** Rebuild board after a 3- or 6-month pack. Confirm dates under names; Fix wording unchanged.
+**Maddy (optional live):** Rebuild board after a 3- or 6-month pack. Confirm the timeline answers “when does Fix end?” without hunting stage cards.
 
 ## FT-EF-01 — growth pot pin vs emergency fund
 
@@ -21,6 +21,26 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 **Bob:** catalog + `src/fortune/goals.test.js`
 
 **Maddy (optional live):** Rebuild → board. Note EF amount (0 is allowed). Pin growth pot to 88000. EF unchanged; one Invest pot.
+
+## FT-EF-02 — emergency fund start and complete
+
+**Status:** automated (`npm test`)
+
+**Expect:** Saving a 6-month emergency fund shows **when I start** and **when it is complete** on the plan timeline (`Start Mar 2027 · complete Sep 2027`). Not a vague Stabilize label alone.
+
+**Bob:** catalog + `src/fortune/timeline.test.js`
+
+**Maddy (optional live):** Rebuild board. Confirm EF start sits after Fix finish, and complete is a calendar month.
+
+## FT-INVEST-01 — Invest start + growth line
+
+**Status:** automated (`npm test`)
+
+**Expect:** Timeline answers: when I can **start saving** toward Invest; when I have **enough to start**; over timeframe X how much the growth pot grows under the chosen shelf (Firm / Balanced / Growth / Frontier μ). Projection only. No custody language.
+
+**Bob:** catalog + `src/fortune/timeline.test.js`
+
+**Maddy (optional live):** On the board, read Invest: start-saving date, enough date, and a growth line that names the mix and “Projection only.”
 
 ## FT-LOOP-01 — must-fix loop
 
@@ -84,11 +104,11 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Expect:**
 
-1. Open `/fortune/`. Footer is **PoC v0.9.7** (Fortune), not **PoC v0.8.0**.
+1. Open `/fortune/`. Footer is **PoC v0.9.8** (Fortune), not **PoC v0.8.0**.
 2. Fortune → Right Door (header **Back to Fortune Teller**). Right Door footer is **PoC v0.8.0**.
-3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.7** — no hard refresh.
+3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.8** — no hard refresh.
 4. Same return from Sunday Pack.
 
-**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.7 and RD/Sunday stay 0.8.0.
+**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.8 and RD/Sunday stay 0.8.0.
 
 **Maddy:** iPhone Safari on live `/fortune/`. Chrome-in-app does not count.

@@ -67,7 +67,8 @@ describe("Step 3 journey path", () => {
     const plan = applyTheme(newFortunePlan(), "steady");
     const items = journeyItems(plan, { netPct: 71, milestonePct: [80, 70, 50] });
     expect(items.some((i) => i.stage === "fix" && i.kind === "action")).toBe(false);
-    expect(items.find((i) => i.kind !== "today").stage).toBe("stabilize");
+    expect(items.find((i) => i.kind === "floor").stage).toBe("stabilize");
+    expect(items.find((i) => i.kind === "floor").whenLabel).toMatch(/Start |Complete now/);
     expect(items.some((i) => i.kind === "goal" && i.pct === 80)).toBe(true);
     expect(currentStage(plan)).toBe("stabilize");
     expect(emphasizeStage(plan)).toBe("stabilize");
@@ -160,23 +161,26 @@ describe("Step 3 vertical stage stack", () => {
       { ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy", stabilizeTargetMonths: 3 },
       "rebuild",
     );
+    const from = new Date(2026, 8, 14);
     const waiting = ensureFireSequence(base, makeFireHandoff({ source: "right-door", months: null }));
-    const waitingRows = stackRows(waiting, null);
+    const waitingRows = stackRows(waiting, null, from);
     const waitingFix = waitingRows.find((r) => r.stage === "fix");
     const waitingEf = waitingRows.find((r) => r.kind === "floor");
     expect(waitingFix.name).toBe("Debt renegotiation · 3 or 6 months");
-    expect(waitingFix.whenLabel).toBe("3–6 months");
+    expect(waitingFix.whenLabel).toBe("Sep 2026 → Mar 2027");
     expect(waitingFix.pickMonths).toBe(true);
     expect(waitingEf.name).toMatch(/Emergency fund · now HK\$0/);
     expect(waitingEf.name).not.toMatch(/\(3 mo\)/);
     expect(waitingEf.name).not.toMatch(/renegotiat/i);
-    expect(waitingEf.whenLabel).toMatch(/^by [A-Z][a-z]{2} 20\d\d$/);
+    expect(waitingEf.whenLabel).toMatch(/Start |Complete now/);
+    expect(waitingEf.whenLabel).toMatch(/[A-Z][a-z]{2} 20\d\d/);
+    expect(waitingEf.whenLabel).not.toMatch(/^by /);
 
     const picked = ensureFireSequence(base, makeFireHandoff({ source: "right-door", months: 6 }));
     const pickedRows = stackRows(picked, null, new Date(2026, 8, 14));
     expect(pickedRows.find((r) => r.stage === "fix").name).toBe("Debt renegotiation · 6 months");
-    expect(pickedRows.find((r) => r.stage === "fix").whenLabel).toBe("Mar 2027");
-    expect(pickedRows.find((r) => r.kind === "floor").whenLabel).toMatch(/^by [A-Z][a-z]{2} 20\d\d$/);
+    expect(pickedRows.find((r) => r.stage === "fix").whenLabel).toBe("Sep 2026 → Mar 2027");
+    expect(pickedRows.find((r) => r.kind === "floor").whenLabel).toMatch(/Start |Complete now/);
     expect(pickedRows.find((r) => r.kind === "floor").name).toMatch(/Emergency fund · now HK\$0/);
   });
 
