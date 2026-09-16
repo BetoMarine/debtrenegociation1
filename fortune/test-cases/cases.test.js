@@ -252,7 +252,7 @@ describe("FT-INVEST-01", () => {
     expect(html).toMatch(/you act elsewhere/);
     expect(html).toMatch(/Projection only/);
     expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/Illustrative under assumed return/);
-    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/you act elsewhere/);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/you act elsewhere/i);
     expect(FORTUNE_STRINGS.en.journeyGrowthNote).not.toMatch(/we invest for you/);
   });
 });
