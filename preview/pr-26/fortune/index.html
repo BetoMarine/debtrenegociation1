@@ -1,14 +1,21 @@
 <!doctype html>
-<html lang="en" class="fortune-root" data-pyl-app="fortune">
+<html lang="en" class="fortune-root" data-pyl-app="fortune" data-fortune-build="0.9.11">
   <head>
     <meta charset="UTF-8" />
+    <!-- pyl-fortune-build 0.9.11 -->
+    <meta http-equiv="Cache-Control" content="no-store" />
     <script>
       /* pyl-shell-guard */
       (function () {
         var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
         var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
-        if (expected === app) return;
+        var preview = /\/preview\/pr-\d+\//.test(path);
+        var controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+        var swUrl = (controller && controller.scriptURL) || "";
+        var foreignPreview = preview && swUrl && swUrl.indexOf("/preview/") === -1;
+        var wrongApp = expected !== app;
+        if (!wrongApp && !foreignPreview) return;
         document.documentElement.style.visibility = "hidden";
         function go() {
           location.reload();
@@ -18,11 +25,19 @@
           return;
         }
         navigator.serviceWorker.getRegistrations().then(function (rs) {
-          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          return Promise.all(rs.map(function (r) {
+            var url = (r.active && r.active.scriptURL) || (r.waiting && r.waiting.scriptURL) || (r.installing && r.installing.scriptURL) || "";
+            if (wrongApp || (preview && url && url.indexOf("/preview/") === -1)) return r.unregister();
+            return Promise.resolve();
+          }));
         }).then(function () {
           if (!self.caches || !caches.keys) return;
           return caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            return Promise.all(keys.map(function (k) {
+              if (wrongApp) return caches.delete(k);
+              if (preview && !/pyl-pr-|preview/i.test(k)) return caches.delete(k);
+              return Promise.resolve();
+            }));
           });
         }).then(go, go);
       })();
@@ -45,8 +60,8 @@
     <link rel="manifest" href="../fortune/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="../fortune/icons/icon.svg" />
     <link rel="apple-touch-icon" href="../fortune/apple-touch-icon.png" />
-    <script type="module" crossorigin src="../assets/fortune-B9QZomBx.js"></script>
-    <link rel="modulepreload" crossorigin href="../assets/register-sw-DCn_JTds.js">
+    <script type="module" crossorigin src="../assets/fortune-Bzdm_MeG.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-WZzkRUEd.js">
     <link rel="stylesheet" crossorigin href="../assets/register-sw-B5zi9vUu.css">
   </head>
   <body>
