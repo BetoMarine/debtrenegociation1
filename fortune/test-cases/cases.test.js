@@ -237,7 +237,7 @@ describe("FT-INVEST-01", () => {
     expect(invest.startSaveLabel).toBe("Sep 2027");
     expect(invest.enoughLabel).toBe("Sep 2029");
     expect(projectShelfGrowth(25000, 36, 0.15)).toBe(38022);
-    expect(invest.growthLine).toMatch(/grows to about HK\$38,022 under Balanced \(15% a year\)/);
+    expect(invest.growthLine).toMatch(/sooner than cash-only|same month as cash-only/i);
     expect(invest.growthLine).toMatch(/Projection only/);
     expect(invest.growthLine).not.toMatch(/custody|we hold|buy list/i);
     const html = renderPlanJourneyHtml(planTimeline(plan, { netPct: 22, milestonePct: [] }, from), escape);
@@ -245,7 +245,7 @@ describe("FT-INVEST-01", () => {
     expect(html).toMatch(/Enough to invest/);
     expect(html).toMatch(/Invest start/);
     expect(html).toMatch(/HK\$25,000 · Sep 2029/);
-    expect(html).toMatch(/>Balanced</);
+    expect(html).toMatch(/Vs cash-only|sooner than cash-only|same month as cash-only/);
     expect(html).toMatch(/data-journey-growth/);
     expect(html).toMatch(/Projection only/);
   });
@@ -355,7 +355,7 @@ describe("FT-OVERLAP-01", () => {
     expect(stack.find((s) => s.id === "stabilize").overlapsPrevious).toBe(true);
     expect(stack.find((s) => s.id === "plan").overlapsPrevious).toBe(true);
     const html = renderStageStackHtml(stack, escape);
-    expect(html).toMatch(/overlaps Stabilize/);
+    expect(html).toMatch(/also during Stabilize/);
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");
   });
@@ -367,7 +367,7 @@ describe("FT-OVERLAP-01", () => {
 
 describe("FT-VER-01", () => {
   it("unit slice: Fortune version and HTML shell stay Fortune after an RD/Sunday path", () => {
-    expect(APP_VERSION).toMatch(/0\.9\.8/);
+    expect(APP_VERSION).toMatch(/0\.9\.9/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(STRINGS.en.version).toMatch(/0\.8\.0/);

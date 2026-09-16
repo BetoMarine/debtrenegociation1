@@ -194,7 +194,7 @@ describe("Fortune 0.9.2 silent house-mix marks", () => {
   it("board stays silent on sleeves while the Invest placeholder copy is unchanged", () => {
     const plan = applyTheme(newFortunePlan(), "grow");
     const html = renderStageStackHtml(stageStack(plan, { netPct: 10, milestonePct: [], livingPct: 10 }), escape);
-    expect(html).toMatch(/Suggested mix \(after floor\) — not a product/);
+    expect(html).toMatch(/Suggested mix \(after the emergency fund\) — not a product/);
     expect(html).not.toMatch(/fixedIncome/);
     expect(html).not.toMatch(/\bREIT\b/i);
     expect(html).not.toMatch(/2800\.HK/);

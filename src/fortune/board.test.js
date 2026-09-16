@@ -26,7 +26,7 @@ describe("Fortune board chrome", () => {
     expect(html).toContain('data-stage="stabilize"');
     expect(html).toContain('data-stage="plan"');
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/stage rollup/i);
+    expect(html).toMatch(/on these goals/i);
     expect(html).toContain("ft-row-ring");
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");
@@ -111,14 +111,14 @@ describe("Fortune board chrome", () => {
     const plan = applyTheme(newFortunePlan(), "grow");
     const html = renderStageStackHtml(stageStack(plan, { netPct: 10, milestonePct: [], livingPct: 10 }), escape);
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/Suggested mix \(after floor\)/i);
+    expect(html).toMatch(/Suggested mix \(after the emergency fund\)/i);
     expect(html).not.toMatch(/Thin for now/i);
     expect(html).not.toMatch(/fixedIncome|2800\.HK|\bREIT\b/i);
     const wrecked = applyTheme(newFortunePlan(), "rebuild");
     wrecked.money = { ...wrecked.money, savingsBand: "0", savings: 0 };
     const line = holdLineText(wrecked, { verdict: "wrecked", hardFail: true, livingPct: 2, netPct: 3 }, false);
     expect(line).toMatch(/does not hold/i);
-    expect(line).toMatch(/floor first/i);
+    expect(line).toMatch(/emergency fund first/i);
     expect(line).not.toMatch(/you'?re set/i);
   });
 });

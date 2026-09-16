@@ -4,7 +4,7 @@
  */
 import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
 import { clampGoalMonths, emergencyCurrentHkd, isLivingGoal, milestoneRole, monthYearLabel } from "./model.js";
-import { fireFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
+import { planFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 import { planSchedule, whenLabelForRow } from "./timeline.js";
 
 export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
@@ -117,8 +117,8 @@ export function journeyItems(plan, forecast, from = new Date()) {
 
   const received = receivedFixMilestone(plan);
   if (received) {
-    const stored = fireFixMonths(plan);
-    const picked = !!plan.fixMonthsPicked || !!received.monthsKnown;
+    const stored = planFixMonths(plan);
+    const picked = !!plan.fixMonthsPicked || !!received.monthsKnown || !!plan.fixMonthsUserPicked;
     items.push({
       id: received.id,
       kind: "action",
@@ -129,8 +129,9 @@ export function journeyItems(plan, forecast, from = new Date()) {
       amount: 0,
       pct: null,
       draggable: false,
-      pickMonths: !picked,
+      pickMonths: true,
       assumed: schedule.fix.assumed,
+      fixMonths: schedule.fix.months,
     });
   } else if (theme === "rebuild") {
     items.push({
@@ -163,11 +164,16 @@ export function journeyItems(plan, forecast, from = new Date()) {
     ready: schedule.ef.ready,
   });
 
+  const livingById = new Map(
+    [...(schedule.planGoals || []), schedule.invest].filter((g) => g?.id).map((g) => [g.id, g]),
+  );
+
   (plan?.milestones || []).forEach((m, i) => {
     if (milestoneRole(m) === "fix" || milestoneRole(m) === "floor") return;
     const stage = inferStage(m);
     const months = Math.max(1, Math.round(Number(m.months) || 12));
     const invest = stage === "invest" ? schedule.invest : null;
+    const live = livingById.get(m.id);
     items.push({
       id: m.id,
       kind: "goal",
@@ -176,11 +182,12 @@ export function journeyItems(plan, forecast, from = new Date()) {
       months,
       startMonths: months,
       amount: Number(m.amount) || 0,
-      pct: itemPct(forecast?.milestonePct?.[i]),
+      pct: live?.pct ?? itemPct(forecast?.milestonePct?.[i]),
+      reason: live?.reason || "",
       draggable: true,
       milestoneIndex: i,
       boardOrder: Number.isFinite(Number(m.boardOrder)) ? Number(m.boardOrder) : i,
-      growthLine: invest?.growthLine,
+      growthLine: invest?.boostLine || invest?.growthLine,
     });
   });
 
@@ -276,7 +283,7 @@ export function stageStack(plan, forecast, { open } = {}, from = new Date()) {
           amount: 0,
           pct: null,
           draggable: false,
-          growthLine: invest.growthLine,
+          growthLine: invest.boostLine || invest.growthLine,
           whenLabel: invest.whenLabel,
         },
       ];

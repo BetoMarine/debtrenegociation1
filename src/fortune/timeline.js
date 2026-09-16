@@ -4,15 +4,16 @@
  */
 import { EF_MILESTONE_ID, INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME } from "../handoff.js";
 import { emergencyCurrentHkd, hkd, isLivingGoal, JOURNEY_STAGES, milestoneRole, monthYearLabel } from "./model.js";
-import { fireFixMonths, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
-import { planningMu } from "./strategyBooks.js";
-import { getTemplate } from "./templates.js";
+import { planFixMonths, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
+import { boostVsCash, effectiveInvestMu, planningMu, SILENT_INVEST_MU } from "./strategyBooks.js";
+import { CASH_BENCHMARK, getTemplate } from "./templates.js";
 
 /** Visible assumption when the pack has not picked 3 vs 6. */
 export const FIX_ASSUMED_MONTHS = 6;
 
 const CALENDAR_WHEN = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) 20\d\d\b/;
 const TENOR_ONLY = /^\s*\d+\s*[–-]\s*\d+\s*months\s*$/i;
+const CHANCE_SLOPE = 0.35;
 
 export function isReadableCalendarWhen(label) {
   const text = String(label || "");
@@ -38,11 +39,7 @@ function itemPct(raw) {
 }
 
 export function visibleFixMonths(plan) {
-  const received = receivedFixMilestone(plan);
-  const picked = !!plan?.fixMonthsPicked || !!received?.monthsKnown;
-  if (picked) return fireFixMonths(plan);
-  if (received || plan?.theme === "rebuild") return FIX_ASSUMED_MONTHS;
-  return 0;
+  return planFixMonths(plan);
 }
 
 export function monthsToFundFloor(plan, from = new Date()) {
@@ -58,7 +55,8 @@ export function monthsToFundFloor(plan, from = new Date()) {
 export function fixSchedule(plan, from = new Date()) {
   const received = receivedFixMilestone(plan);
   if (received) {
-    const pickMonths = !(plan?.fixMonthsPicked || received.monthsKnown);
+    const pickMonths = true;
+    const assumed = !(plan?.fixMonthsPicked || received.monthsKnown || plan?.fixMonthsUserPicked);
     const months = visibleFixMonths(plan);
     const startMonths = 0;
     const endMonths = months;
@@ -68,7 +66,7 @@ export function fixSchedule(plan, from = new Date()) {
       present: true,
       kind: "fix",
       pickMonths,
-      assumed: pickMonths,
+      assumed,
       months,
       startMonths,
       endMonths,
@@ -173,6 +171,75 @@ export function muPercentLabel(mu) {
   return `${shown}% a year`;
 }
 
+/**
+ * Save-path chance that moves with ±1 month. Not a fake 0 from a missing forecast.
+ * Leftover-only so a sooner date is honestly harder.
+ */
+export function goalReachChance({
+  amount,
+  months,
+  leftover,
+  savings = 0,
+  inflationOn = true,
+  inflation = 0.045,
+} = {}) {
+  const need0 = Math.max(0, Number(amount) || 0);
+  const tenor = Math.max(1, Math.round(Number(months) || 1));
+  const flow = Number(leftover) || 0;
+  const cash = Math.max(0, Number(savings) || 0);
+  const inf = inflationOn === false ? 0 : Number(inflation) || 0;
+  const need = need0 * (1 + inf / 12) ** tenor;
+  if (need <= 0) {
+    return { pct: 99, reason: "This goal has no cost pinned yet.", stuck: false };
+  }
+  if (!(flow > 0) && cash + 1e-9 < need) {
+    return {
+      pct: 0,
+      reason: "This stays at 0% until leftover each month can cover it.",
+      stuck: true,
+    };
+  }
+  const needMonths = flow > 0 ? Math.max(0, (need - cash) / flow) : 0;
+  if (flow > 0 && tenor + 1e-9 < needMonths * 0.5) {
+    return {
+      pct: 0,
+      reason: "Even by then leftover is not enough for this goal. Later raises the chance.",
+      stuck: true,
+      needMonths,
+    };
+  }
+  const delta = tenor - needMonths;
+  const raw = 100 / (1 + Math.exp(-CHANCE_SLOPE * delta));
+  const pct = Math.max(1, Math.min(99, Math.round(raw)));
+  let reason;
+  if (delta < -0.5) {
+    reason = "By then leftover is not enough — a later date raises the chance.";
+  } else if (delta < 2) {
+    reason = "This date is tight. Later gives leftover more months to catch up.";
+  } else {
+    reason = "Leftover can cover this by then. Sooner means less time to save.";
+  }
+  return { pct, reason, stuck: false, needMonths };
+}
+
+export function goalImpactReason(deltaMonths, pctBefore, pctAfter) {
+  const before = Number(pctBefore);
+  const after = Number(pctAfter);
+  if (after === 0 && before === 0) {
+    return "Still 0% — leftover cannot cover this date yet.";
+  }
+  if (deltaMonths < 0 && after < before) {
+    return "A month sooner means less time to save, so this is less likely.";
+  }
+  if (deltaMonths > 0 && after > before) {
+    return "Waiting a month gives leftover more time, so this is more likely.";
+  }
+  if (deltaMonths < 0) {
+    return "A month sooner means less time to save.";
+  }
+  return "Waiting a month gives leftover more time to catch up.";
+}
+
 export function shelfGrowthLine({ amount, months, templateId } = {}) {
   const template = getTemplate(templateId);
   const mu = planningMu(templateId);
@@ -185,24 +252,58 @@ export function shelfGrowthLine({ amount, months, templateId } = {}) {
   return `Over ${horizonPhrase(tenor)}, ${hkd(fromHkd)} grows to about ${hkd(grown)} under ${template.label} (${muPercentLabel(mu)}). Projection only.`;
 }
 
-function livingGoals(plan, forecast) {
+export function investBoostLine({ name, templateLabel, mu, boost, silent } = {}) {
+  const mix = templateLabel || "this mix";
+  if (boost?.cashMonths == null || boost?.investMonths == null) {
+    return `Needs leftover to see how much sooner ${mix} beats cash-only. Projection only.`;
+  }
+  const sooner = Number(boost.soonerMonths) || 0;
+  const rate = muPercentLabel(mu);
+  const quiet = silent
+    ? `Until the emergency fund is complete, a quieter mix (${rate})`
+    : `With ${mix} (${rate})`;
+  const who = name ? String(name) : "this goal";
+  if (sooner <= 0) {
+    return `${quiet}, ${who} lands in the same month as cash-only at this leftover. Projection only.`;
+  }
+  const lag = sooner === 1 ? "1 month" : `${sooner} months`;
+  return `${quiet}, ${who} lands about ${lag} sooner than cash-only. Projection only.`;
+}
+
+function livingGoals(plan, forecast, from = new Date()) {
+  const snap = stabilizeSnapshot(plan, from);
+  const leftover = Math.max(0, Number(snap.surplus) || 0);
+  const inflationOn = plan?.inflationOn !== false;
   return (plan?.milestones || [])
     .map((m, i) => ({ m, i }))
     .filter(({ m }) => milestoneRole(m) === "living" || isLivingGoal(m))
-    .map(({ m, i }) => ({
-      id: m.id,
-      name: m.name,
-      stage: inferStage(m),
-      months: Math.max(1, Math.round(Number(m.months) || 12)),
-      amount: Number(m.amount) || 0,
-      pct: itemPct(forecast?.milestonePct?.[i]),
-      draggable: true,
-    }));
+    .map(({ m, i }) => {
+      const months = Math.max(1, Math.round(Number(m.months) || 12));
+      const amount = Number(m.amount) || 0;
+      const chance = goalReachChance({
+        amount,
+        months,
+        leftover,
+        savings: 0,
+        inflationOn,
+      });
+      return {
+        id: m.id,
+        name: m.name,
+        stage: inferStage(m),
+        months,
+        amount,
+        pct: chance.pct,
+        reason: chance.reason,
+        forecastPct: itemPct(forecast?.milestonePct?.[i]),
+        draggable: true,
+      };
+    });
 }
 
 export function investSchedule(plan, forecast, from = new Date()) {
   const ef = efSchedule(plan, from);
-  const goals = livingGoals(plan, forecast);
+  const goals = livingGoals(plan, forecast, from);
   const pots = goals.filter((g) => g.stage === "invest");
   const pot = pots[0] || null;
   const startSaveMonths = ef.endMonths;
@@ -211,19 +312,41 @@ export function investSchedule(plan, forecast, from = new Date()) {
   const horizonMonths = pot ? pot.months : 36;
   const templateId = plan?.templateId;
   const template = getTemplate(templateId);
-  const mu = planningMu(templateId);
+  const silent = ef.ready === false;
+  const mu = effectiveInvestMu(plan, from);
   const startSaveLabel = monthYearLabel(startSaveMonths, from);
   const enoughLabel = monthYearLabel(enoughMonths, from);
-  const growthLine = shelfGrowthLine({ amount, months: horizonMonths, templateId });
+  const boostGoal =
+    [...goals].sort((a, b) => b.amount - a.amount || a.months - b.months)[0] || pot;
+  const boost = boostVsCash({
+    target: boostGoal?.amount || amount,
+    monthly: ef.surplus,
+    principal: 0,
+    investMu: mu,
+    cashMu: CASH_BENCHMARK.mu,
+  });
+  const boostLine = investBoostLine({
+    name: boostGoal?.name || pot?.name,
+    templateLabel: template.label,
+    mu,
+    boost,
+    silent,
+  });
+  const growthLine = boostLine;
   const thresholdLabel = amount > 0 ? hkd(amount) : "";
   const investStartLabel = enoughLabel;
   const whenLabel = `Start saving ${startSaveLabel} · enough ${enoughLabel}`;
+  const cashLand =
+    boost.cashMonths == null ? "" : monthYearLabel(startSaveMonths + boost.cashMonths, from);
+  const mixLand =
+    boost.investMonths == null ? "" : monthYearLabel(startSaveMonths + boost.investMonths, from);
   return {
     id: pot?.id || INVEST_PLACEHOLDER_ID,
     name: pot?.name || INVEST_PLACEHOLDER_NAME,
     placeholder: !pot,
     amount,
     pct: pot?.pct ?? null,
+    reason: pot?.reason || "",
     draggable: !!pot,
     startSaveMonths,
     enoughMonths,
@@ -234,9 +357,16 @@ export function investSchedule(plan, forecast, from = new Date()) {
     thresholdLabel,
     whenLabel,
     growthLine,
+    boostLine,
+    boost,
+    cashLand,
+    mixLand,
     grownTo: amount > 0 ? projectShelfGrowth(amount, horizonMonths, mu) : 0,
+    mix: template.label,
     shelf: template.label,
     mu,
+    silent,
+    silentMu: SILENT_INVEST_MU,
     startMonths: startSaveMonths,
     months: enoughMonths,
   };
@@ -245,7 +375,7 @@ export function investSchedule(plan, forecast, from = new Date()) {
 export function planSchedule(plan, forecast, from = new Date()) {
   const fix = fixSchedule(plan, from);
   const ef = efSchedule(plan, from);
-  const goals = livingGoals(plan, forecast);
+  const goals = livingGoals(plan, forecast, from);
   const planGoals = goals.filter((g) => g.stage === "plan");
   const invest = investSchedule(plan, forecast, from);
   return { from, fix, ef, planGoals, invest };
@@ -281,6 +411,7 @@ export function planTimeline(plan, forecast, from = new Date()) {
       assumed: fix.assumed,
       pickMonths: fix.pickMonths,
       fixMonths: fix.months,
+      fixKind: fix.kind,
       draggable: false,
       pct: null,
       facts: [
@@ -331,10 +462,17 @@ export function planTimeline(plan, forecast, from = new Date()) {
         rangeLabel: monthYearLabel(goal.months, from),
         draggable: true,
         pct: goal.pct,
+        reason: goal.reason,
         amount: goal.amount,
       });
     });
   const invest = schedule.invest;
+  const soonerValue =
+    invest.boost?.soonerMonths == null
+      ? invest.boostLine
+      : invest.boost.soonerMonths > 0
+        ? `${invest.boost.soonerMonths === 1 ? "1 month" : `${invest.boost.soonerMonths} months`} sooner than cash-only`
+        : "Same month as cash-only";
   const investFacts = [
     { key: "start-save", label: "Start saving", value: invest.startSaveLabel },
     {
@@ -345,7 +483,8 @@ export function planTimeline(plan, forecast, from = new Date()) {
         : invest.enoughLabel,
     },
     { key: "invest-start", label: "Invest start", value: invest.investStartLabel },
-    { key: "shelf", label: "Shelf", value: invest.shelf },
+    { key: "mix", label: "Mix", value: invest.mix },
+    { key: "boost", label: "Vs cash-only", value: soonerValue },
   ];
   beats.push({
     id: invest.id,
@@ -359,13 +498,16 @@ export function planTimeline(plan, forecast, from = new Date()) {
     whenLabel: invest.whenLabel,
     rangeLabel: monthRangeLabel(invest.startSaveMonths, invest.enoughMonths, from),
     growthLine: invest.growthLine,
+    boostLine: invest.boostLine,
     startSaveLabel: invest.startSaveLabel,
     enoughLabel: invest.enoughLabel,
     investStartLabel: invest.investStartLabel,
     thresholdLabel: invest.thresholdLabel,
-    shelf: invest.shelf,
+    mix: invest.mix,
+    shelf: invest.mix,
     draggable: invest.draggable,
     pct: invest.pct,
+    reason: invest.reason,
     amount: invest.amount,
     placeholder: invest.placeholder,
     facts: investFacts,

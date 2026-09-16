@@ -3,7 +3,7 @@
  * Not a fund we sell. Not custody. Not a buy list.
  */
 import { isStabilizeReady } from "./stabilize.js";
-import { TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
+import { CASH_BENCHMARK, TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
 
 export const GATED_TEMPLATE_IDS = ["growth", "frontier"];
 
@@ -70,6 +70,53 @@ export function bookForTemplate(id) {
 
 export function planningMu(id) {
   return getTemplate(id).mu;
+}
+
+/** House-mix floor index before the emergency fund is ready. ~5%. */
+export const SILENT_INVEST_MU = 0.05;
+
+/** Card μ after the emergency fund; silent ~0.05 until then. */
+export function effectiveInvestMu(plan, from) {
+  if (!isStabilizeReady(plan, from)) return SILENT_INVEST_MU;
+  return planningMu(plan?.templateId);
+}
+
+/**
+ * Months to reach a HKD target with a monthly contribution under annual μ.
+ * Monthly compounding. Null if leftover cannot get there.
+ */
+export function timeToGoal({ target, monthly, mu, principal = 0 } = {}) {
+  const need = Math.max(0, Number(target) || 0);
+  const pmt = Number(monthly) || 0;
+  const start = Math.max(0, Number(principal) || 0);
+  const annual = Number(mu) || 0;
+  if (need <= start + 1e-9) return 0;
+  if (!(pmt > 0) && start + 1e-9 < need) return null;
+  const r = annual / 12;
+  if (!(r > 0)) {
+    if (!(pmt > 0)) return null;
+    return Math.max(1, Math.ceil((need - start) / pmt));
+  }
+  const num = need * r + pmt;
+  const den = start * r + pmt;
+  if (!(den > 0) || num / den <= 0) return null;
+  const n = Math.log(num / den) / Math.log(1 + r);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n <= 1e-9) return 0;
+  return Math.max(1, Math.ceil(n - 1e-9));
+}
+
+export function boostVsCash({ target, monthly, principal = 0, investMu, cashMu = CASH_BENCHMARK.mu } = {}) {
+  const cashMonths = timeToGoal({ target, monthly, mu: cashMu, principal });
+  const investMonths = timeToGoal({ target, monthly, mu: investMu, principal });
+  if (cashMonths == null || investMonths == null) {
+    return { cashMonths, investMonths, soonerMonths: null };
+  }
+  return {
+    cashMonths,
+    investMonths,
+    soonerMonths: Math.max(0, cashMonths - investMonths),
+  };
 }
 
 export function isGatedTemplate(id) {

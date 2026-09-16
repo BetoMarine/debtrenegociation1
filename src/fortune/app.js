@@ -2,8 +2,8 @@ import { CRUMB_KEYS, markCrumb, shouldShowCrumb } from "./crumbs.js";
 import { applyCoachAction, boardCoachActions, coachActions, coachCrumb, isEmptyPot } from "./coach.js";
 import { APP_VERSION, ft } from "./copy.js";
 import { compareSaveBorrow } from "./engine.js";
-import { fixGoalLabel } from "../handoff.js";
 import {
+  applyFixMonths,
   canOpenPlan,
   ensureEmergencyFund,
   ensureFireSequence,
@@ -358,14 +358,7 @@ async function finishStep2() {
 }
 
 async function setFixMonths(n) {
-  const months = n === 6 ? 6 : 3;
-  plan.fixMonths = months;
-  plan.fixMonthsPicked = true;
-  plan.milestones = (plan.milestones || []).map((m) =>
-    m.role === "fix" || m.id === "fix-renegotiate"
-      ? { ...m, months, monthsKnown: true, name: fixGoalLabel({ months, picked: true }) }
-      : m,
-  );
+  plan = applyFixMonths(plan, n);
   await persistPlan("board");
   render({ keepScroll: true });
   if (isBoardUnlocked(plan)) queueForecast({ persistEvent: false });

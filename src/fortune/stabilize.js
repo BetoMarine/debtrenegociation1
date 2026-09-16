@@ -30,13 +30,42 @@ export function fireLinkOrder(heat) {
   return prefersSunday(heat) ? ["sunday", "right-door"] : ["right-door", "sunday"];
 }
 
-/** Debt renegotiation horizon. Default 3 months; 6 stays available. */
+/** Visible / stored default until the pack or the user picks 3. */
+export const DEFAULT_FIX_MONTHS = 6;
+
+/** Debt renegotiation horizon. Default 6 months; 3 stays available. */
 export function fireFixMonths(plan) {
   const n = Number(plan?.fixMonths);
   if (n === 6 || n === 3) return n;
   const fix = receivedFixMilestone(plan);
+  if (Number(fix?.months) === 3) return 3;
   if (Number(fix?.months) === 6) return 6;
-  return 3;
+  return DEFAULT_FIX_MONTHS;
+}
+
+/** Months the plan timeline actually uses (6 until a real 3/6 pick). */
+export function planFixMonths(plan) {
+  const received = receivedFixMilestone(plan);
+  const picked = !!plan?.fixMonthsUserPicked || !!plan?.fixMonthsPicked || !!received?.monthsKnown;
+  if (picked) return fireFixMonths(plan);
+  if (received || plan?.theme === "rebuild") return DEFAULT_FIX_MONTHS;
+  return 0;
+}
+
+/** User (or test) pick of 3 vs 6 — wins over a stored pack tenor on persist. */
+export function applyFixMonths(plan, n) {
+  const months = n === 3 ? 3 : 6;
+  return {
+    ...plan,
+    fixMonths: months,
+    fixMonthsPicked: true,
+    fixMonthsUserPicked: true,
+    milestones: (plan?.milestones || []).map((m) =>
+      milestoneRole(m) === "fix"
+        ? { ...m, months, monthsKnown: true, name: fixGoalLabel({ months, picked: true }) }
+        : m,
+    ),
+  };
 }
 
 export function receivedFixMilestone(plan) {
@@ -48,9 +77,20 @@ export function receiveFireHandoff(plan, handoff) {
   if (!plan || !isFireHandoff(handoff)) return plan;
   const existing = receivedFixMilestone(plan);
   const fromPack = handoff.months === 3 || handoff.months === 6 ? handoff.months : null;
+  const userPicked = !!plan.fixMonthsUserPicked;
   const alreadyPicked = !!plan.fixMonthsPicked || !!existing?.monthsKnown;
-  const months = fromPack || (alreadyPicked ? fireFixMonths(plan) : 3);
-  const picked = !!fromPack || alreadyPicked;
+  let months;
+  let picked;
+  if (userPicked) {
+    months = fireFixMonths(plan);
+    picked = true;
+  } else if (fromPack) {
+    months = fromPack;
+    picked = true;
+  } else {
+    months = alreadyPicked ? fireFixMonths(plan) : DEFAULT_FIX_MONTHS;
+    picked = alreadyPicked;
+  }
   const fix = {
     id: FIX_MILESTONE_ID,
     name: fixGoalLabel({ months, picked }),
@@ -68,6 +108,7 @@ export function receiveFireHandoff(plan, handoff) {
     milestones: [fix, ...rest],
     fixMonths: months,
     fixMonthsPicked: picked,
+    fixMonthsUserPicked: userPicked,
     boardReached: true,
     phase2Unlocked: true,
   };

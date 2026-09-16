@@ -63,7 +63,7 @@
       "status": "automated",
       "automation": "unit",
       "liveRequires": null,
-      "expect": "Journey answers when Invest saving starts, when the growth pot is enough to start, and over timeframe X how much grows under the chosen Firm/Balanced/Growth/Frontier μ. Projection only — no custody language.",
+      "expect": "Journey answers when Invest saving starts, when the growth pot is enough to start, and how much sooner the goal lands under Firm/Balanced/Growth/Frontier μ vs cash-only (1.2%). Projection only — no custody language.",
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/fortune/timeline.test.js"
@@ -115,7 +115,7 @@
       "status": "automated",
       "automation": "unit",
       "liveRequires": "safari",
-      "expect": "Sooner / Later (and vertical handle) update milestone.months on living goals. Stage stays put; phase end is max(months) and can extend. Fix/EF are not user-invented. Dates stay on the row. Live gesture: Safari.",
+      "expect": "Sooner / Later (and vertical handle) update milestone.months on living goals. Date and success % both move, with a plain-English reason. Stage stays put; phase end is max(months) and can extend. Fix/EF are not user-invented. Dates stay on the row. Live gesture: Safari.",
       "tests": [
         "fortune/test-cases/cases.test.js",
         "src/fortune/time.test.js",

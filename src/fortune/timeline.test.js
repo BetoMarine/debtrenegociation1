@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { makeFireHandoff } from "../handoff.js";
 import { applyTheme, migrateFortunePlan, newFortunePlan, shiftLivingGoalMonths } from "./model.js";
-import { ensureFireSequence } from "./stabilize.js";
+import { applyFixMonths, ensureFireSequence } from "./stabilize.js";
 import {
   FIX_ASSUMED_MONTHS,
+  goalImpactReason,
+  goalReachChance,
+  investBoostLine,
   isReadableCalendarWhen,
   monthRangeLabel,
   planSchedule,
@@ -13,7 +16,8 @@ import {
 } from "./timeline.js";
 import { renderPlanJourneyHtml, renderStageStackHtml } from "./ui.js";
 import { stageStack } from "./journey.js";
-import { planningMu } from "./strategyBooks.js";
+import { boostVsCash, planningMu, SILENT_INVEST_MU, timeToGoal } from "./strategyBooks.js";
+import { CASH_BENCHMARK } from "./templates.js";
 
 const FROM = new Date(2026, 8, 14);
 
@@ -84,6 +88,21 @@ describe("Fix finish date", () => {
     expect(six.startLabel).toBe("Sep 2026");
     expect(six.endLabel).toBe("Mar 2027");
   });
+
+  it("lets a 6-month pick rewrite a 3-month pack tenor on the plan dates", () => {
+    const three = stressedRebuild({ fixMonths: 3 });
+    expect(planSchedule(three, null, FROM).fix.rangeLabel).toBe("Sep 2026 → Dec 2026");
+    const six = persistLike(applyFixMonths(three, 6), makeFireHandoff({ source: "right-door", months: 3 }));
+    const { fix } = planSchedule(six, null, FROM);
+    expect(six.fixMonthsUserPicked).toBe(true);
+    expect(fix.months).toBe(6);
+    expect(fix.rangeLabel).toBe("Sep 2026 → Mar 2027");
+    expect(fix.endLabel).toBe("Mar 2027");
+    const html = renderPlanJourneyHtml(planTimeline(six, null, FROM), escape);
+    expect(html).toMatch(/Mar 2027/);
+    expect(html).toMatch(/data-fix-months="6"/);
+    expect(html).not.toMatch(/Sep 2026 → Dec 2026/);
+  });
 });
 
 describe("Emergency fund start and complete", () => {
@@ -105,8 +124,8 @@ describe("Emergency fund start and complete", () => {
   });
 });
 
-describe("Invest start and shelf growth", () => {
-  it("compounds Linda shelf μ annually over the growth-pot horizon", () => {
+describe("Invest start and goal boost vs cash", () => {
+  it("compounds Linda mix μ annually over the growth-pot horizon", () => {
     expect(projectShelfGrowth(25000, 36, 0.15)).toBe(38022);
     expect(projectShelfGrowth(25000, 36, planningMu("balanced"))).toBe(38022);
     expect(projectShelfGrowth(25000, 36, planningMu("firm"))).toBe(35123);
@@ -117,7 +136,7 @@ describe("Invest start and shelf growth", () => {
     expect(shelfGrowthLine({ amount: 25000, months: 36, templateId: "balanced" })).not.toMatch(/custody|hold money|buy list/i);
   });
 
-  it("answers when Invest saving starts and when the pot is enough", () => {
+  it("answers when Invest saving starts and how much sooner the goal lands vs cash-only", () => {
     const { invest, ef } = planSchedule(stressedRebuild({ fixMonths: 6 }), null, FROM);
     expect(invest.startSaveMonths).toBe(ef.endMonths);
     expect(invest.startSaveLabel).toBe("Sep 2027");
@@ -125,9 +144,54 @@ describe("Invest start and shelf growth", () => {
     expect(invest.whenLabel).toBe("Start saving Sep 2027 · enough Sep 2029");
     expect(invest.thresholdLabel).toBe("HK$25,000");
     expect(invest.investStartLabel).toBe("Sep 2029");
-    expect(invest.shelf).toBe("Balanced");
-    expect(invest.growthLine).toMatch(/HK\$25,000 grows to about HK\$38,022 under Balanced/);
+    expect(invest.mix).toBe("Balanced");
+    expect(invest.mu).toBe(SILENT_INVEST_MU);
+    expect(invest.growthLine).toMatch(/cash-only/);
+    expect(invest.growthLine).toMatch(/Projection only/);
+    expect(invest.growthLine).not.toMatch(/shelf|custody|buy list/i);
     expect(isReadableCalendarWhen(invest.whenLabel)).toBe(true);
+  });
+
+  it("shows a visible months-sooner boost for a large goal under mix μ vs cash 1.2%", () => {
+    expect(CASH_BENCHMARK.mu).toBe(0.012);
+    expect(timeToGoal({ target: 180000, monthly: 8000, mu: 0.012 })).toBeGreaterThan(
+      timeToGoal({ target: 180000, monthly: 8000, mu: 0.15 }),
+    );
+    const boost = boostVsCash({
+      target: 180000,
+      monthly: 8000,
+      investMu: planningMu("balanced"),
+      cashMu: CASH_BENCHMARK.mu,
+    });
+    expect(boost.soonerMonths).toBeGreaterThan(0);
+    const line = investBoostLine({
+      name: "New car",
+      templateLabel: "Balanced",
+      mu: 0.15,
+      boost,
+      silent: false,
+    });
+    expect(line).toMatch(/New car lands about \d+ months sooner than cash-only/);
+    expect(line).toMatch(/With Balanced \(15% a year\)/);
+    expect(line).not.toMatch(/shelf|floor|rollup/i);
+  });
+});
+
+describe("goal success % that moves", () => {
+  it("changes the % when a tight goal moves one month, with a plain-English reason", () => {
+    const early = goalReachChance({ amount: 100000, months: 5, leftover: 20000, inflationOn: false });
+    const later = goalReachChance({ amount: 100000, months: 6, leftover: 20000, inflationOn: false });
+    expect(early.pct).toBeGreaterThan(0);
+    expect(later.pct).toBeGreaterThan(early.pct);
+    expect(goalImpactReason(-1, later.pct, early.pct)).toMatch(/less time to save/i);
+    expect(goalImpactReason(1, early.pct, later.pct)).toMatch(/more time/i);
+  });
+
+  it("explains a stuck 0% instead of leaving it unexplained", () => {
+    const stuck = goalReachChance({ amount: 80000, months: 8, leftover: 0, inflationOn: false });
+    expect(stuck.pct).toBe(0);
+    expect(stuck.reason).toMatch(/leftover/i);
+    expect(stuck.stuck).toBe(true);
   });
 });
 
@@ -137,7 +201,8 @@ describe("plan timeline glance", () => {
     const forecast = { netPct: 22, milestonePct: [0, 22, 40, 55, 60, 35], livingPct: 38, hardFail: false };
     const timeline = planTimeline(plan, forecast, FROM);
     const html = renderPlanJourneyHtml(timeline, escape);
-    expect(html).toContain('data-journey');
+    const phone = timeline.beats.find((b) => b.kind === "goal" && /phone/i.test(b.name));
+    expect(html).toContain("data-journey");
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");
     expect(html).toMatch(/Your plan/);
@@ -148,36 +213,42 @@ describe("plan timeline glance", () => {
     expect(html).toMatch(/Start Mar 2027 · complete Sep 2027|>Mar 2027</);
     expect(html).toMatch(/data-fact="complete"/);
     expect(html).toMatch(/HK\$20,000 a month until complete/);
-    expect(html).toMatch(/May 2027 · 40%/);
-    expect(html).toMatch(/Nov 2027 · 55%/);
-    expect(html).toMatch(/Mar 2028 · 60%/);
+    expect(html).toMatch(new RegExp(`May 2027 · ${phone.pct}%`));
     expect(html).toMatch(/Start saving/);
     expect(html).toMatch(/Enough to invest/);
     expect(html).toMatch(/Invest start/);
     expect(html).toMatch(/HK\$25,000 · Sep 2029/);
     expect(html).toMatch(/>Balanced</);
-    expect(html).toMatch(/grows to about HK\$38,022 under Balanced/);
+    expect(html).toMatch(/cash-only/);
+    expect(html).not.toMatch(/stage rollup/i);
+    expect(html).not.toMatch(/>Shelf</);
     expect(html).toMatch(/>Sooner</);
     expect(html).toMatch(/>Later</);
+    expect(html).toMatch(/data-journey-reason/);
     expect(timeline.beats.find((b) => b.kind === "now")).toBeUndefined();
     expect(timeline.beats.find((b) => b.kind === "fix").whenLabel).toBe("Sep 2026 → Mar 2027");
-    expect(timeline.beats.find((b) => b.kind === "goal" && /phone/i.test(b.name)).whenLabel).toBe("May 2027 · 40%");
-    expect(timeline.beats.find((b) => b.kind === "goal" && /phone/i.test(b.name)).pct).toBe(40);
+    expect(phone.whenLabel).toBe(`May 2027 · ${phone.pct}%`);
+    expect(phone.pct).toBeGreaterThan(0);
+    expect(phone.reason).toMatch(/leftover|time to save|later/i);
   });
 
-  it("moving a Plan goal updates the timeline date", () => {
-    const plan = stressedRebuild({ fixMonths: 6 });
+  it("moving a Plan goal updates the timeline date and the success %", () => {
+    const plan = stressedRebuild({ fixMonths: 6, leftover: 8000 });
     const phone = plan.milestones.find((m) => /phone/i.test(m.name));
     const later = persistLike(shiftLivingGoalMonths(plan, phone.id, 6));
-    const before = planTimeline(plan, { milestonePct: [0, 22, 40, 55, 60, 35] }, FROM);
-    const after = planTimeline(later, { milestonePct: [0, 22, 70, 55, 60, 35] }, FROM);
+    const before = planTimeline(plan, null, FROM);
+    const after = planTimeline(later, null, FROM);
     const beforePhone = before.beats.find((b) => b.id === phone.id);
     const afterPhone = after.beats.find((b) => b.id === phone.id);
-    expect(beforePhone.whenLabel).toBe("May 2027 · 40%");
-    expect(afterPhone.whenLabel).toBe("Nov 2027 · 70%");
+    expect(beforePhone.whenLabel).toMatch(/^May 2027 · \d+%$/);
+    expect(afterPhone.whenLabel).toMatch(/^Nov 2027 · \d+%$/);
     expect(afterPhone.stage).toBe("plan");
-    expect(afterPhone.pct).toBe(70);
     expect(afterPhone.pct).not.toBe(beforePhone.pct);
+    expect(afterPhone.pct).toBeGreaterThan(beforePhone.pct);
+    expect(afterPhone.reason).toBeTruthy();
+    const html = renderPlanJourneyHtml(after, escape);
+    expect(html).toMatch(/data-journey-reason/);
+    expect(html).not.toMatch(/May 2027 · 0%/);
   });
 
   it("keeps stage-stack whenLabels as calendar dates, not tenor strings", () => {
@@ -192,5 +263,7 @@ describe("plan timeline glance", () => {
     expect(html).toMatch(/Sep 2026 → Mar 2027/);
     expect(html).toMatch(/Start Mar 2027 · complete Sep 2027/);
     expect(html).toMatch(/Start saving Sep 2027 · enough Sep 2029/);
+    expect(html).not.toMatch(/stage rollup/i);
+    expect(html).toMatch(/You're here|on these goals/);
   });
 });

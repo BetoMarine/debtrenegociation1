@@ -505,7 +505,7 @@ function journeyFacts(beat, escapeHtml) {
 function renderJourneyBeat(beat, escapeHtml, hardFail) {
   const time = journeyTimeButtons(beat, escapeHtml);
   const pick = journeyFixPick(beat, escapeHtml);
-  const assumed = beat.assumed && !beat.pickMonths
+  const assumed = beat.assumed
     ? `<em class="ft-journey-note">${escapeHtml(t("journeyFixAssumed"))}</em>`
     : "";
   const efHint =
@@ -517,9 +517,13 @@ function renderJourneyBeat(beat, escapeHtml, hardFail) {
     beat.contributeLabel
       ? `<p class="ft-journey-contribute" data-journey-contribute>${escapeHtml(beat.contributeLabel)}</p>`
       : "";
+  const reason =
+    beat.reason
+      ? `<p class="ft-journey-reason" data-journey-reason>${escapeHtml(beat.reason)}</p>`
+      : "";
   const growth =
-    beat.kind === "invest" && beat.growthLine
-      ? `<p class="ft-journey-growth" data-journey-growth>${escapeHtml(beat.growthLine)}</p>
+    beat.kind === "invest" && (beat.boostLine || beat.growthLine)
+      ? `<p class="ft-journey-growth" data-journey-growth>${escapeHtml(beat.boostLine || beat.growthLine)}</p>
          <p class="tiny">${escapeHtml(t("journeyGrowthNote"))}</p>`
       : "";
   const idAttr = beat.draggable
@@ -533,6 +537,7 @@ function renderJourneyBeat(beat, escapeHtml, hardFail) {
         <p class="ft-journey-kicker">${escapeHtml(beat.title)}</p>
         <strong class="ft-journey-name">${escapeHtml(beat.name)}</strong>
         ${showWhen ? `<p class="ft-journey-when" data-journey-when>${escapeHtml(beat.whenLabel)}</p>` : `<p class="ft-journey-when" hidden data-journey-when>${escapeHtml(beat.whenLabel)}</p>`}
+        ${reason}
         ${journeyFacts(beat, escapeHtml)}
         ${assumed}
         ${contribute}
@@ -584,8 +589,8 @@ function renderStageRow(item, escapeHtml, hardFail) {
   const pick =
     item.pickMonths
       ? `<span class="ft-fix-horizon">
-          <button class="${item.months === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
-          <button class="${item.months === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
+          <button class="${(item.fixMonths ?? item.months) === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
+          <button class="${(item.fixMonths ?? item.months) === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
           <em class="ft-row-hint">${escapeHtml(t("fixPickHint"))}</em>
         </span>`
       : "";
@@ -599,6 +604,10 @@ function renderStageRow(item, escapeHtml, hardFail) {
   const when =
     item.whenLabel
       ? `<em class="ft-row-when">${escapeHtml(item.whenLabel)}</em>`
+      : "";
+  const reason =
+    item.reason
+      ? `<em class="ft-row-reason">${escapeHtml(item.reason)}</em>`
       : "";
   const growth =
     item.growthLine
@@ -622,6 +631,7 @@ function renderStageRow(item, escapeHtml, hardFail) {
         <span class="ft-row-text">
           <strong>${escapeHtml(item.name)}</strong>
           ${when}
+          ${reason}
           ${growth}
           ${hint}
         </span>
@@ -642,9 +652,9 @@ export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
       const showNow = section.current;
       const rollupReady = section.rollup != null;
       const meta = showNow ? t("stageNow") : rollupReady ? `${section.rollup}%` : "…";
-      const rollupLabel = showNow ? "" : `<em>${escapeHtml(t("stageRollup"))}</em>`;
+      const rollupLabel = showNow ? "" : rollupReady ? `<em>${escapeHtml(t("stageRollup"))}</em>` : "";
       const until =
-        section.horizonLabel
+        !showNow && section.horizonLabel
           ? `<em class="ft-stage-until" data-horizon="${escapeHtml(section.horizon ?? "")}">${escapeHtml(
               t("stageUntil", { when: section.horizonLabel }),
             )}</em>`

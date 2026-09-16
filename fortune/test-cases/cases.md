@@ -32,15 +32,15 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Maddy (optional live):** Rebuild board. Confirm EF start sits after Fix finish, and complete is a calendar month.
 
-## FT-INVEST-01 — Invest start + growth line
+## FT-INVEST-01 — Invest start + goal boost vs cash
 
 **Status:** automated (`npm test`)
 
-**Expect:** Timeline answers: when I can **start saving** toward Invest; when I have **enough to start**; over timeframe X how much the growth pot grows under the chosen shelf (Firm / Balanced / Growth / Frontier μ). Projection only. No custody language.
+**Expect:** Timeline answers: when I can **start saving** toward Invest; when I have **enough to start**; how much **sooner** the goal lands under the chosen mix (Firm / Balanced / Growth / Frontier μ) vs cash-only (1.2%). Quiet ~5% mix until the emergency fund is complete. Projection only. No custody language.
 
 **Bob:** catalog + `src/fortune/timeline.test.js`
 
-**Maddy (optional live):** On the board, read Invest: start-saving date, enough date, and a growth line that names the mix and “Projection only.”
+**Maddy (optional live):** On the board, read Invest: start-saving date, enough date, and a cash-only vs mix “how much sooner” line.
 
 ## FT-LOOP-01 — must-fix loop
 
@@ -82,7 +82,7 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Status:** automated (`npm test`); live gesture still **Safari** (Maddy after Bob)
 
-**Expect:** Living rows have **Sooner / Later** (44px) plus a vertical ⋮⋮ handle. Tapping or dragging updates `milestone.months`. The goal stays in its stage. Phase end = `max(months)` of that stage and can extend. Fix stays RD/Sunday 3/6 (user does not invent Fix). EF stays distinct. Dates/tenors remain on the row (FT-DATE-01).
+**Expect:** Living rows have **Sooner / Later** (44px) plus a vertical ⋮⋮ handle. Tapping or dragging updates `milestone.months`. The goal stays in its stage. Date **and** success % move, with a plain-English reason (no sticky unexplained 0%). Phase end = `max(months)` of that stage and can extend. Fix stays RD/Sunday 3/6 (user does not invent Fix). EF stays distinct. Dates/tenors remain on the row (FT-DATE-01).
 
 **Bob:** catalog + `src/fortune/time.test.js` + board HTML for Sooner/Later. Engine already models later dates as higher success %.
 
@@ -96,7 +96,7 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Bob:** catalog + `src/fortune/time.test.js` (overlap flags, stage unchanged).
 
-**Maddy:** Safari. Pull a Plan goal Sooner into the Stabilize window. Confirm **overlaps Stabilize** on the Plan header; goal does not jump stage.
+**Maddy:** Safari. Pull a Plan goal Sooner into the Stabilize window. Confirm **also during Stabilize** on the Plan header; goal does not jump stage.
 
 ## FT-VER-01 — Fortune version stamp after RD / Sunday
 
@@ -104,11 +104,11 @@ Source of truth for ids: `cases.json` (keep this file in lockstep). **Bob** (`np
 
 **Expect:**
 
-1. Open `/fortune/`. Footer is **PoC v0.9.8** (Fortune), not **PoC v0.8.0**.
+1. Open `/fortune/`. Footer is **PoC v0.9.9** (Fortune), not **PoC v0.8.0**.
 2. Fortune → Right Door (header **Back to Fortune Teller**). Right Door footer is **PoC v0.8.0**.
-3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.8** — no hard refresh.
+3. Tap **Back to Fortune Teller**. Fortune footer is still **PoC v0.9.9** — no hard refresh.
 4. Same return from Sunday Pack.
 
-**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.8 and RD/Sunday stay 0.8.0.
+**Bob:** MPA shell map (`htmlShellForPath`), SW is injectManifest (no SPA `navigateFallback: "index.html"`), Fortune copy is 0.9.9 and RD/Sunday stay 0.8.0.
 
 **Maddy:** iPhone Safari on live `/fortune/`. Chrome-in-app does not count.

@@ -3,11 +3,15 @@ import { applyTheme, migrateFortunePlan, newFortunePlan } from "./model.js";
 import { isStabilizeReady } from "./stabilize.js";
 import {
   bookForTemplate,
+  effectiveInvestMu,
   isGatedTemplate,
   planningMu,
   resolveTemplatePick,
+  SILENT_INVEST_MU,
+  timeToGoal,
 } from "./strategyBooks.js";
 import {
+  CASH_BENCHMARK,
   TEMPLATE_IDS,
   TEMPLATES,
   canonicalTemplateId,
@@ -119,6 +123,19 @@ describe("Fortune growth-pot shelf lock", () => {
     TEMPLATE_IDS.forEach((id) => {
       expect(TEMPLATES[id].note).toMatch(/not a fund we sell/i);
     });
+  });
+
+  it("timeToGoal lands sooner under mix μ than cash 1.2%", () => {
+    expect(timeToGoal({ target: 180000, monthly: 8000, mu: CASH_BENCHMARK.mu })).toBeGreaterThan(
+      timeToGoal({ target: 180000, monthly: 8000, mu: planningMu("balanced") }),
+    );
+    expect(timeToGoal({ target: 10000, monthly: 10000, mu: 0.12 })).toBe(1);
+    expect(timeToGoal({ target: 50000, monthly: 0, mu: 0.12, principal: 50000 })).toBe(0);
+    expect(timeToGoal({ target: 50000, monthly: 0, mu: 0.12, principal: 0 })).toBeNull();
+    const thin = thinRebuild();
+    expect(isStabilizeReady(thin)).toBe(false);
+    expect(effectiveInvestMu(thin)).toBe(SILENT_INVEST_MU);
+    expect(effectiveInvestMu(fundedFloor())).toBe(planningMu("balanced"));
   });
 
   it("blocks Growth/Frontier until the EF floor is ready", () => {

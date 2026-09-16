@@ -261,8 +261,9 @@ export function newFortunePlan() {
     thinFloorWarned: false,
     stabilizeTargetMonths: 6,
     stabilizeMonthsPicked: false,
-    fixMonths: 3,
+    fixMonths: 6,
     fixMonthsPicked: false,
+    fixMonthsUserPicked: false,
     money: {
       incomeBand: "30_50",
       spendBand: "20_35",
@@ -337,12 +338,14 @@ export function migrateFortunePlan(raw) {
       !!theme &&
       (milestones.length > 0 || raw.screen === "board"));
   const targetMonths = Number(raw.stabilizeTargetMonths) === 3 ? 3 : 6;
-  const fixMonths = Number(raw.fixMonths) === 6 ? 6 : 3;
   const fixMonthsPicked = !!raw.fixMonthsPicked;
+  const fixMonthsUserPicked = !!raw.fixMonthsUserPicked;
+  const storedFix = Number(raw.fixMonths) === 3 ? 3 : 6;
+  const fixMonths = fixMonthsPicked || fixMonthsUserPicked ? storedFix : 6;
   milestones.forEach((m, i) => {
     if (milestoneRole(m) !== "fix") return;
-    const months = Number(m.months) === 6 || fixMonths === 6 ? 6 : 3;
-    const picked = fixMonthsPicked || !!m.monthsKnown;
+    const picked = fixMonthsUserPicked || fixMonthsPicked || !!m.monthsKnown;
+    const months = picked ? (Number(m.months) === 3 || fixMonths === 3 ? 3 : 6) : 6;
     milestones[i] = { ...m, months, name: fixGoalLabel({ months, picked }) };
   });
   return {
@@ -360,6 +363,7 @@ export function migrateFortunePlan(raw) {
     stabilizeMonthsPicked: !!raw.stabilizeMonthsPicked,
     fixMonths,
     fixMonthsPicked,
+    fixMonthsUserPicked,
     net: {
       emergencyMonths: Math.max(0, Math.min(36, Math.round(Number(net.emergencyMonths) || 0))),
       floorHkd: Math.max(0, Math.round(Number(net.floorHkd) || 0)),
@@ -425,7 +429,11 @@ export function toEnginePlan(plan) {
   money.savings = emergencyCurrentHkd(migrated);
   const fix = (migrated.milestones || []).find((m) => milestoneRole(m) === "fix");
   let fixMonths = 0;
-  if (fix) fixMonths = Number(migrated.fixMonths) === 6 || Number(fix.months) === 6 ? 6 : 3;
+  if (fix) {
+    const picked = !!migrated.fixMonthsUserPicked || !!migrated.fixMonthsPicked || !!fix.monthsKnown;
+    const stored = Number(migrated.fixMonths) === 3 || Number(fix.months) === 3 ? 3 : 6;
+    fixMonths = picked ? stored : 6;
+  }
   return {
     theme: migrated.theme,
     money,

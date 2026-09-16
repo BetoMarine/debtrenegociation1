@@ -816,6 +816,14 @@ html.fortune-root body {
   background: color-mix(in srgb, var(--ft-wreck) 12%, #fff);
 }
 
+.ft-journey-reason {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
 .ft-journey-growth {
   margin: 8px 0 0;
   font-size: 14px;
@@ -1054,6 +1062,16 @@ html.fortune-root body {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
+}
+
+.ft-row-reason {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .ft-row-growth {

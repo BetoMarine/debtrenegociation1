@@ -52,7 +52,7 @@ describe("Fire Fix handoff", () => {
     const fix = receivedFixMilestone(received);
     expect(fix.source).toBe("sunday");
     expect(received.fixMonthsPicked).toBe(false);
-    expect(fix.months).toBe(3);
+    expect(fix.months).toBe(6);
     expect(fix.name).toBe("Debt renegotiation · 3 or 6 months");
   });
 
