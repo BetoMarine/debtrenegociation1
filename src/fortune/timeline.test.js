@@ -106,6 +106,7 @@ describe("Fix finish date", () => {
     expect(html).toMatch(/data-fix-months="6"/);
     expect(html).toMatch(/Debt renegotiation · 6 months/);
     expect(html).not.toMatch(/Debt renegotiation · 3 months/);
+    expect(html).not.toMatch(/6 months assumed/);
     expect(html).not.toMatch(/Sep 2026 → Dec 2026/);
   });
 });

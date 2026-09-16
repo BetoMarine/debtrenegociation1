@@ -481,10 +481,13 @@ function journeyTimeButtons(beat, escapeHtml) {
 
 function journeyFixPick(beat, escapeHtml) {
   if (!beat.pickMonths) return "";
+  const assumed = beat.assumed
+    ? `<em class="ft-row-hint">${escapeHtml(t("journeyFixAssumed"))}</em>`
+    : "";
   return `<span class="ft-fix-horizon">
     <button class="${beat.fixMonths === 3 ? "choice selected" : "choice"}" type="button" data-fix-months="3">${escapeHtml(t("stabilizeMonths3"))}</button>
     <button class="${beat.fixMonths === 6 ? "choice selected" : "choice"}" type="button" data-fix-months="6">${escapeHtml(t("stabilizeMonths6"))}</button>
-    <em class="ft-row-hint">${escapeHtml(t("journeyFixAssumed"))}</em>
+    ${assumed}
   </span>`;
 }
 
