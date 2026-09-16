@@ -36,8 +36,13 @@ export const DEFAULT_FIX_MONTHS = 6;
 /** Debt renegotiation horizon. Default 6 months; 3 stays available. */
 export function fireFixMonths(plan) {
   const n = Number(plan?.fixMonths);
-  if (n === 6 || n === 3) return n;
+  if (plan?.fixMonthsUserPicked) return n === 3 ? 3 : DEFAULT_FIX_MONTHS;
   const fix = receivedFixMilestone(plan);
+  if (fix?.monthsKnown) {
+    if (Number(fix.months) === 3) return 3;
+    if (Number(fix.months) === 6) return 6;
+  }
+  if (n === 6 || n === 3) return n;
   if (Number(fix?.months) === 3) return 3;
   if (Number(fix?.months) === 6) return 6;
   return DEFAULT_FIX_MONTHS;

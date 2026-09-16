@@ -112,6 +112,31 @@ describe("Fortune Teller plan model", () => {
     expect(fix.name).not.toMatch(/[A-Z][a-z]{2} 20\d\d/);
   });
 
+  it("keeps a user 6-month pick when the pack milestone still says 3", () => {
+    const plan = migrateFortunePlan({
+      ...newFortunePlan(),
+      theme: "rebuild",
+      fixMonths: 6,
+      fixMonthsPicked: true,
+      fixMonthsUserPicked: true,
+      milestones: [
+        {
+          id: "fix-renegotiate",
+          name: "Debt renegotiation · 3 months",
+          amount: 0,
+          months: 3,
+          stage: "fix",
+          role: "fix",
+          monthsKnown: true,
+        },
+      ],
+    });
+    const fix = plan.milestones.find((m) => m.role === "fix");
+    expect(plan.fixMonths).toBe(6);
+    expect(fix.months).toBe(6);
+    expect(fix.name).toBe("Debt renegotiation · 6 months");
+  });
+
   it("migrates a stored Steady mix to Firm so old plans keep a shelf card", () => {
     const plan = migrateFortunePlan({
       ...newFortunePlan(),

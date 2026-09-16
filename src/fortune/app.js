@@ -186,6 +186,10 @@ function fortuneFooter() {
           ·
           <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
   const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;
+  const preview = /\/preview\/pr-\d+\//.test(typeof location !== "undefined" ? location.pathname : "");
+  const previewHint = preview
+    ? `<p class="tiny" data-preview-build>${escapeHtml(ft("previewSwHint"))}</p>`
+    : "";
   if (screen === "start") {
     return `
         ${pylWordmarkHtml({ footer: true })}
@@ -194,11 +198,12 @@ function fortuneFooter() {
           ${tools}
         </p>
         <p class="tiny">${escapeHtml(ft("compliance"))}</p>
-        ${version}`;
+        ${version}${previewHint}`;
   }
   return `
         <p class="tiny">${escapeHtml(ft("footerCompact"))}</p>
-        <p class="tiny">${tools} · ${version}</p>`;
+        <p class="tiny">${tools} · ${version}</p>
+        ${previewHint}`;
 }
 
 function shell(body) {

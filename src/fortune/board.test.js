@@ -26,7 +26,8 @@ describe("Fortune board chrome", () => {
     expect(html).toContain('data-stage="stabilize"');
     expect(html).toContain('data-stage="plan"');
     expect(html).toContain('data-stage="invest"');
-    expect(html).toMatch(/on these goals/i);
+    expect(html).toMatch(/You're here/);
+    expect(html).not.toMatch(/on these goals|stage rollup/i);
     expect(html).toContain("ft-row-ring");
     expect(html).not.toContain("ft-timeline");
     expect(html).not.toContain("ft-beat");

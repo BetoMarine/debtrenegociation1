@@ -104,6 +104,8 @@ describe("Fix finish date", () => {
     const html = renderPlanJourneyHtml(planTimeline(six, null, FROM), escape);
     expect(html).toMatch(/Mar 2027/);
     expect(html).toMatch(/data-fix-months="6"/);
+    expect(html).toMatch(/Debt renegotiation · 6 months/);
+    expect(html).not.toMatch(/Debt renegotiation · 3 months/);
     expect(html).not.toMatch(/Sep 2026 → Dec 2026/);
   });
 });
@@ -180,7 +182,7 @@ describe("Invest start and goal boost vs cash", () => {
       silent: false,
     });
     expect(line).toMatch(/If you invest this way under Balanced \(15% a year\)/);
-    expect(line).toMatch(new RegExp(`New car lands about ${soonerLagPhrase(boost.soonerMonths)} sooner than cash-only`));
+    expect(line).toMatch(new RegExp(`New car lands sooner by ${soonerLagPhrase(boost.soonerMonths)} than cash-only`));
     expect(line).toMatch(/At the cash-only date the mix pot is about/);
     expect(line).toMatch(/Illustrative under assumed return — you act elsewhere/);
     expect(line).not.toMatch(/we invest|buy list|rebalance for you|custody|shelf|floor/i);
@@ -243,6 +245,12 @@ describe("goal success % that moves", () => {
     const later = goalReachChance({ amount: 100000, months: 6, leftover: 20000, inflationOn: false });
     expect(early.pct).toBeGreaterThan(0);
     expect(later.pct).toBeGreaterThan(early.pct);
+    const easySoon = goalReachChance({ amount: 4000, months: 7, leftover: 20000, inflationOn: false });
+    const easyLater = goalReachChance({ amount: 4000, months: 8, leftover: 20000, inflationOn: false });
+    expect(easyLater.pct).not.toBe(easySoon.pct);
+    expect(easyLater.pct).toBeGreaterThan(easySoon.pct);
+    expect(easySoon.pct).toBeGreaterThan(0);
+    expect(easyLater.pct).toBeLessThan(100);
     expect(goalImpactReason(-1, later.pct, early.pct)).toMatch(/less time to save/i);
     expect(goalImpactReason(1, early.pct, later.pct)).toMatch(/more time/i);
   });
@@ -329,6 +337,6 @@ describe("plan timeline glance", () => {
     expect(html).toMatch(/Start Mar 2027 · complete Sep 2027/);
     expect(html).toMatch(/Start saving Sep 2027 · enough Sep 2029/);
     expect(html).not.toMatch(/stage rollup/i);
-    expect(html).toMatch(/You're here|on these goals/);
+    expect(html).toMatch(/You're here/);
   });
 });

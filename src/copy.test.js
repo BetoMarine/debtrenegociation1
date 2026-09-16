@@ -92,14 +92,15 @@ describe("product copy", () => {
     expect(FORTUNE_STRINGS.en.startTitle).toMatch(/phone/i);
     expect(FORTUNE_STRINGS.en.whereTitle).toMatch(/where are you today/i);
     expect(FORTUNE_STRINGS.en.boardKicker).toMatch(/your new life/i);
-    expect(FORTUNE_STRINGS.en.stageRollup).toMatch(/on these goals/i);
+    expect(FORTUNE_STRINGS.en.stageRollup).not.toMatch(/on these goals/i);
+    expect(FORTUNE_STRINGS.en.stageRollup).not.toMatch(/rollup/i);
     expect(FORTUNE_STRINGS.en.stackFoot).toMatch(/timeline/i);
     expect(FORTUNE_STRINGS.en.timelineTitle).toMatch(/your plan/i);
     expect(FORTUNE_STRINGS.en.timelineHint).toMatch(/start, finish/i);
     expect(FORTUNE_STRINGS.en.stackDetail).toMatch(/more detail/i);
     expect(FORTUNE_STRINGS.en.stageEmpty.invest).toMatch(/still on the board/i);
     expect(FORTUNE_STRINGS.en.youAreIn).toMatch(/you're in \{stage\}/i);
-    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.10/);
+    expect(FORTUNE_STRINGS.en.version).toMatch(/0\.9\.11/);
     expect(FORTUNE_STRINGS.en.version).not.toMatch(/0\.8\.0/);
     expect(FORTUNE_STRINGS.en.sooner).toMatch(/sooner/i);
     expect(FORTUNE_STRINGS.en.later).toMatch(/later/i);

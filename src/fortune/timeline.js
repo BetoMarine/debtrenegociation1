@@ -2,7 +2,7 @@
  * Readable plan timeline — calendar dates a stressed user can glance.
  * Not overlapping path pins. Projection-only for Invest growth.
  */
-import { EF_MILESTONE_ID, INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME } from "../handoff.js";
+import { EF_MILESTONE_ID, INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, fixGoalLabel } from "../handoff.js";
 import { emergencyCurrentHkd, hkd, isLivingGoal, JOURNEY_STAGES, milestoneRole, monthYearLabel } from "./model.js";
 import { planFixMonths, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 import { boostVsCash, effectiveInvestMu, planningMu, SILENT_INVEST_MU } from "./strategyBooks.js";
@@ -13,7 +13,6 @@ export const FIX_ASSUMED_MONTHS = 6;
 
 const CALENDAR_WHEN = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) 20\d\d\b/;
 const TENOR_ONLY = /^\s*\d+\s*[–-]\s*\d+\s*months\s*$/i;
-const CHANCE_SLOPE = 0.35;
 
 export function isReadableCalendarWhen(label) {
   const text = String(label || "");
@@ -208,9 +207,8 @@ export function goalReachChance({
       needMonths,
     };
   }
+  const pct = Math.max(1, Math.min(99, Math.round((100 * tenor) / Math.max(needMonths + tenor, 1))));
   const delta = tenor - needMonths;
-  const raw = 100 / (1 + Math.exp(-CHANCE_SLOPE * delta));
-  const pct = Math.max(1, Math.min(99, Math.round(raw)));
   let reason;
   if (delta < -0.5) {
     reason = "By then leftover is not enough — a later date raises the chance.";
@@ -293,7 +291,7 @@ export function investBoostLine({ name, templateLabel, mu, boost, silent } = {})
   if (sooner <= 0) {
     return `${how}, ${who} lands in the same month as cash-only at this leftover.${potBit} ${BOOST_HONEST}`;
   }
-  return `${how}, ${who} lands about ${soonerLagPhrase(sooner)} sooner than cash-only.${potBit} ${BOOST_HONEST}`;
+  return `${how}, ${who} lands sooner by ${soonerLagPhrase(sooner)} than cash-only.${potBit} ${BOOST_HONEST}`;
 }
 
 function livingGoals(plan, forecast, from = new Date()) {
@@ -427,7 +425,7 @@ export function planTimeline(plan, forecast, from = new Date()) {
       kind: "fix",
       stage: "fix",
       title: "Fix",
-      name: fix.kind === "rebuild" ? "Rebuild first" : "Debt renegotiation",
+      name: fix.kind === "rebuild" ? "Rebuild first" : fixGoalLabel({ months: fix.months, picked: !fix.assumed }),
       months: fix.endMonths,
       startMonths: fix.startMonths,
       endMonths: fix.endMonths,
@@ -497,7 +495,7 @@ export function planTimeline(plan, forecast, from = new Date()) {
     invest.boost?.soonerMonths == null
       ? invest.boostLine
       : invest.boost.soonerMonths > 0
-        ? `${soonerLagPhrase(invest.boost.soonerMonths)} sooner than cash-only`
+        ? `sooner by ${soonerLagPhrase(invest.boost.soonerMonths)}`
         : "Same month as cash-only";
   const potValue =
     invest.boost?.cashPot != null && invest.boost?.investPot != null

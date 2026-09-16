@@ -652,7 +652,8 @@ export function renderStageStackHtml(stack, escapeHtml, hardFail = false) {
       const showNow = section.current;
       const rollupReady = section.rollup != null;
       const meta = showNow ? t("stageNow") : rollupReady ? `${section.rollup}%` : "…";
-      const rollupLabel = showNow ? "" : rollupReady ? `<em>${escapeHtml(t("stageRollup"))}</em>` : "";
+      const rollupText = t("stageRollup");
+      const rollupLabel = showNow || !rollupText ? "" : rollupReady ? `<em>${escapeHtml(rollupText)}</em>` : "";
       const until =
         !showNow && section.horizonLabel
           ? `<em class="ft-stage-until" data-horizon="${escapeHtml(section.horizon ?? "")}">${escapeHtml(

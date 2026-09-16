@@ -1,8 +1,17 @@
 /// <reference lib="webworker" />
-import { clientsClaim } from "workbox-core";
+import { clientsClaim, setCacheNameDetails } from "workbox-core";
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
 import { htmlShellForPath } from "./pwa-shell.js";
+
+const swPath = self.location.pathname || "";
+const previewHit = swPath.match(/\/preview\/pr-(\d+)\//);
+const isPreviewSw = !!previewHit;
+
+setCacheNameDetails({
+  prefix: isPreviewSw ? `pyl-pr-${previewHit[1]}` : "pyl-live",
+  suffix: "wb",
+});
 
 self.skipWaiting();
 clientsClaim();
@@ -20,6 +29,9 @@ for (const url of SHELLS) {
   }
 }
 
+const denylist = [/\.[^/]+$/];
+if (!isPreviewSw) denylist.push(/\/preview\/pr-\d+\//);
+
 registerRoute(
   new NavigationRoute(
     (ctx) => {
@@ -28,8 +40,6 @@ registerRoute(
       if (!handler) return fetch(ctx.request);
       return handler(ctx);
     },
-    {
-      denylist: [/\.[^/]+$/],
-    },
+    { denylist },
   ),
 );

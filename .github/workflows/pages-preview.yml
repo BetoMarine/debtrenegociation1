@@ -32,4 +32,6 @@ jobs:
           keep_files: true
           enable_jekyll: false
       - name: Preview URL
-        run: echo "https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/fortune/"
+        run: |
+          echo "https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/fortune/"
+          echo "Cold-load (bypasses live SW nav): https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/fortune/index.html"

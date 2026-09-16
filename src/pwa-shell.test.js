@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { htmlShellForPath, productIdForPath } from "./pwa-shell.js";
-import { siteRootFromPath } from "./register-sw.js";
+import { isPagesPreviewPath, siteRootFromPath, SW_CACHE_BUST } from "./register-sw.js";
 import { APP_VERSION, FORTUNE_STRINGS } from "./fortune/copy.js";
 import { STRINGS } from "./i18n.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
@@ -42,7 +42,7 @@ describe("MPA HTML shell routing", () => {
 
 describe("PoC version isolation", () => {
   it("keeps Fortune's stamp off Right Door / Sunday Pack copy", () => {
-    expect(APP_VERSION).toMatch(/PoC v0\.9\.10/);
+    expect(APP_VERSION).toMatch(/PoC v0\.9\.11/);
     expect(FORTUNE_STRINGS.en.version).toBe(APP_VERSION);
     expect(STRINGS.en.version).toMatch(/PoC v0\.8\.0/);
     expect(STRINGS.zh.version).toMatch(/PoC v0\.8\.0/);
@@ -63,6 +63,8 @@ describe("product HTML shell guard", () => {
       expect(html).toContain("pyl-shell-guard");
       expect(html).toMatch(/serviceWorker/);
     }
+    expect(htmlFiles.fortune).toContain('data-fortune-build="0.9.11"');
+    expect(htmlFiles.fortune).toContain("foreignPreview");
   });
 });
 
@@ -73,5 +75,14 @@ describe("service worker registration", () => {
     expect(siteRootFromPath("/debtrenegociation1/sunday")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/index.html")).toBe("/debtrenegociation1/");
+    expect(siteRootFromPath("/debtrenegociation1/preview/pr-26/fortune/")).toBe(
+      "/debtrenegociation1/preview/pr-26/",
+    );
+    expect(isPagesPreviewPath("/debtrenegociation1/preview/pr-26/fortune/")).toBe(true);
+    expect(isPagesPreviewPath("/debtrenegociation1/fortune/")).toBe(false);
+    expect(SW_CACHE_BUST).toMatch(/0\.9\.11/);
+    expect(swSrc).toMatch(/pyl-pr-/);
+    expect(swSrc).toMatch(/pyl-live/);
+    expect(swSrc).toMatch(/preview/);
   });
 });

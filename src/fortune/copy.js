@@ -1,4 +1,4 @@
-export const APP_VERSION = "PoC v0.9.10";
+export const APP_VERSION = "PoC v0.9.11";
 
 export const PDF_FOOTER_ORG =
   "Plan Your Life / Fortune Teller · illustrative model · not regulated advice · not a product sale";
@@ -23,6 +23,8 @@ const en = {
   localOnly:
     "This plan stays on this phone. No account required. Uninstall wipes it. We do not upload your numbers.",
   footerCompact: "On this phone · not advice · not a sale. Not affiliated with HSBC.",
+  previewSwHint:
+    "Preview PoC v0.9.11. If the footer is older, in the Safari console: navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>location.reload())",
   otherToolsRight: "Right Door",
   otherToolsSunday: "Sunday Pack",
   otherToolsLabel: "Other tools from Plan Your Life",
@@ -64,11 +66,11 @@ const en = {
   themes: {
     rebuild: {
       label: "I need to rebuild",
-      blurb: "Fix first. Then a floor.",
+      blurb: "Fix first. Then an emergency fund.",
     },
     steady: {
       label: "I'm steady",
-      blurb: "Hold the floor. Then plan.",
+      blurb: "Hold the emergency fund. Then plan.",
     },
     grow: {
       label: "I want to grow",
@@ -78,8 +80,8 @@ const en = {
 
   nextKicker: "Step 2 · Correct actions",
   nextRebuildTitle: "Fix first.",
-  nextRebuildLead: "If debt is on fire, open the right tool. Then set a floor.",
-  nextSteadyTitle: "Hold the floor.",
+  nextRebuildLead: "If debt is on fire, open the right tool. Then set an emergency fund.",
+  nextSteadyTitle: "Hold the emergency fund.",
   nextSteadyLead: "A light snapshot. Skip if you want the board now.",
   nextGrowTitle: "Add a goal.",
   nextGrowLead: "Pin one living goal on the path from today.",
@@ -130,7 +132,7 @@ const en = {
     net_heavy: "The net is safer. Living is at risk.",
     shared: "This plan holds.",
   },
-  wreckedDetail: "The floor and these goals cannot share the pot yet.",
+  wreckedDetail: "The emergency fund and these goals cannot share the pot yet.",
   notSet: "A sketch of trade-offs — never “you're set.”",
 
   coachTitle: "Does not hold — yet.",
@@ -165,7 +167,7 @@ const en = {
   stackDetail: "Same path, in more detail",
   youAreIn: "You're in {stage}",
   youAreInCount: "{n} of {total}",
-  stageRollup: "on these goals",
+  stageRollup: "",
   stageNow: "You're here",
   holdFloorFirst: "emergency fund first",
   stackFoot: "Your plan is the timeline. Stages below are the same path with more detail. Drag a goal to move its date.",
@@ -204,12 +206,12 @@ const en = {
 
   netEditTitle: "Security net",
   netMonths: "Emergency months",
-  netFloor: "Floor (HKD)",
-  netHintEdit: "Months of spending to stand on, or a HKD floor.",
+  netFloor: "Target amount (HKD)",
+  netHintEdit: "Months of spending to stand on, or a HKD amount.",
   saveNet: "Save the net",
 
   adjustTitle: "Adjust",
-  adjustLead: "Mix, floor, and extras. Not on the main path.",
+  adjustLead: "Mix, emergency fund, and extras. Not on the main path.",
   templateTitle: "Portfolio mix",
   templatesHint: "Benchmarks only. Not a fund we sell. Growth and Frontier wait until the emergency fund holds.",
   templateGatedHint: "After the emergency fund holds.",

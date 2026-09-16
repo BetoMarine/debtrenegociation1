@@ -341,12 +341,20 @@ export function migrateFortunePlan(raw) {
   const fixMonthsPicked = !!raw.fixMonthsPicked;
   const fixMonthsUserPicked = !!raw.fixMonthsUserPicked;
   const storedFix = Number(raw.fixMonths) === 3 ? 3 : 6;
-  const fixMonths = fixMonthsPicked || fixMonthsUserPicked ? storedFix : 6;
+  let fixMonths = fixMonthsPicked || fixMonthsUserPicked ? storedFix : 6;
   milestones.forEach((m, i) => {
     if (milestoneRole(m) !== "fix") return;
     const picked = fixMonthsUserPicked || fixMonthsPicked || !!m.monthsKnown;
-    const months = picked ? (Number(m.months) === 3 || fixMonths === 3 ? 3 : 6) : 6;
+    let months;
+    if (fixMonthsUserPicked) {
+      months = storedFix;
+    } else if (picked) {
+      months = Number(m.months) === 3 || storedFix === 3 ? 3 : 6;
+    } else {
+      months = 6;
+    }
     milestones[i] = { ...m, months, name: fixGoalLabel({ months, picked }) };
+    if (picked) fixMonths = months;
   });
   return {
     ...base,
@@ -431,7 +439,13 @@ export function toEnginePlan(plan) {
   let fixMonths = 0;
   if (fix) {
     const picked = !!migrated.fixMonthsUserPicked || !!migrated.fixMonthsPicked || !!fix.monthsKnown;
-    const stored = Number(migrated.fixMonths) === 3 || Number(fix.months) === 3 ? 3 : 6;
+    const stored = migrated.fixMonthsUserPicked
+      ? Number(migrated.fixMonths) === 3
+        ? 3
+        : 6
+      : Number(migrated.fixMonths) === 3 || Number(fix.months) === 3
+        ? 3
+        : 6;
     fixMonths = picked ? stored : 6;
   }
   return {
