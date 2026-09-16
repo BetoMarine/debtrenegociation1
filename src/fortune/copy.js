@@ -120,7 +120,7 @@ const en = {
   livingDial: "Living",
   netDial: "Security-net",
   livingHint: "Goals funded on time",
-  netHint: "Floor still standing",
+  netHint: "Emergency fund still standing",
   dialsKicker: "Living and the net",
 
   verdicts: {
