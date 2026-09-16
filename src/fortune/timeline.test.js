@@ -20,6 +20,7 @@ import { stageStack } from "./journey.js";
 import { boostVsCash, planningMu, SILENT_INVEST_MU } from "./strategyBooks.js";
 import { CASH_BENCHMARK } from "./templates.js";
 import { timeToGoal } from "./timeToGoal.js";
+import { FORTUNE_STRINGS } from "./copy.js";
 
 const FROM = new Date(2026, 8, 14);
 
@@ -195,6 +196,44 @@ describe("Invest start and goal boost vs cash", () => {
     expect(invest.mu).toBe(0.12);
     expect(invest.growthLine).toMatch(/If you invest this way under Firm \(12% a year\)/);
     expect(invest.growthLine).not.toMatch(/quieter mix/);
+  });
+
+  it("hard-locks BOOST copy as directions-only — never execute/buy/rebalance-for-you", () => {
+    const execution = /we invest for you|rebalance for you|buy for you|\bwe (buy|trade|execute)\b/i;
+    const samples = [
+      investBoostLine({
+        name: "New car",
+        templateLabel: "Balanced",
+        mu: 0.15,
+        boost: { cashMonths: 24, investMonths: 18, soonerMonths: 6, cashPot: 100000, investPot: 120000 },
+        silent: false,
+      }),
+      investBoostLine({
+        name: "First growth pot",
+        templateLabel: "Balanced",
+        mu: 0.05,
+        boost: { cashMonths: 24, investMonths: 18, soonerMonths: 6, cashPot: 100000, investPot: 105000 },
+        silent: true,
+      }),
+      investBoostLine({
+        name: "New car",
+        templateLabel: "Firm",
+        mu: 0.12,
+        boost: { cashMonths: 12, investMonths: 12, soonerMonths: 0 },
+        silent: false,
+      }),
+      investBoostLine({ name: "New car", templateLabel: "Growth", mu: 0.2, boost: {}, silent: false }),
+    ];
+    samples.forEach((line) => {
+      expect(line).toMatch(/if you invest this/i);
+      expect(line).toMatch(/Illustrative under assumed return/);
+      expect(line).toMatch(/you act elsewhere/i);
+      expect(line).not.toMatch(execution);
+    });
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/Illustrative under assumed return/);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/you act elsewhere/i);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).toMatch(/Fortune does not invest for you/);
+    expect(FORTUNE_STRINGS.en.journeyGrowthNote).not.toMatch(execution);
   });
 });
 

@@ -252,6 +252,7 @@ export function shelfGrowthLine({ amount, months, templateId } = {}) {
   return `Over ${horizonPhrase(tenor)}, ${hkd(fromHkd)} grows to about ${hkd(grown)} under ${template.label} (${muPercentLabel(mu)}). Projection only.`;
 }
 
+/** Beto: directions only. Linda owns μ. Never imply Fortune executes the mix. */
 const BOOST_HONEST = "Illustrative under assumed return — you act elsewhere.";
 
 export function soonerLagPhrase(months) {
