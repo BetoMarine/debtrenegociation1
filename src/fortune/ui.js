@@ -505,7 +505,9 @@ function journeyFacts(beat, escapeHtml) {
 function renderJourneyBeat(beat, escapeHtml, hardFail) {
   const time = journeyTimeButtons(beat, escapeHtml);
   const pick = journeyFixPick(beat, escapeHtml);
-  const assumed = beat.assumed ? `<em class="ft-journey-note">${escapeHtml(t("journeyFixAssumed"))}</em>` : "";
+  const assumed = beat.assumed && !beat.pickMonths
+    ? `<em class="ft-journey-note">${escapeHtml(t("journeyFixAssumed"))}</em>`
+    : "";
   const efHint =
     beat.kind === "floor" && beat.targetMonths
       ? `<em class="ft-journey-note">${escapeHtml(t("journeyEfMonths", { n: String(beat.targetMonths) }))}</em>`
