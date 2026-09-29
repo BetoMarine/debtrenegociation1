@@ -1,6 +1,10 @@
 import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
+import { RD_PRODUCT } from "../shared/product-id.js";
+import { JOURNEY_STAGES } from "../shared/stage-words.js";
 import { THEMES, THEME_IDS, canonicalThemeId, getTheme } from "./themes.js";
 import { TEMPLATE_IDS, canonicalTemplateId, getTemplate } from "./templates.js";
+
+export { JOURNEY_STAGES };
 
 export const INCOME_BANDS = [
   { id: "0", label: "None — HK$0", value: 0 },
@@ -48,8 +52,6 @@ export const DEBT_BANDS = [
   { id: "400_1m", label: "HK$400,000 – 1 million", value: 700000 },
   { id: "gt1m", label: "Over HK$1 million", value: 1500000 },
 ];
-
-export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
 
 const BANDS = {
   incomeBand: INCOME_BANDS,
@@ -277,6 +279,10 @@ export function newFortunePlan() {
     seed: 20260909,
     compareMilestoneId: null,
     screen: "start",
+    schemaVersion: 2,
+    cushionStartedAt: null,
+    cushionBuiltAt: null,
+    stage1: emptyStage1(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -299,7 +305,9 @@ export function normalizeMilestone(raw, index = 0) {
     role,
     boardOrder: Number.isFinite(Number(raw?.boardOrder)) ? Math.round(Number(raw.boardOrder)) : index,
   };
-  if (raw?.source === "right-door" || raw?.source === "sunday") out.source = raw.source;
+  if (raw?.source === RD_PRODUCT || raw?.source === "sunday" || raw?.source === "legacy") out.source = raw.source;
+  if (raw?.pinned === true) out.pinned = true;
+  if (typeof raw?.pinnedAt === "string" && raw.pinnedAt) out.pinnedAt = raw.pinnedAt;
   if (raw?.monthsKnown === true) out.monthsKnown = true;
   return out;
 }
@@ -373,6 +381,121 @@ export function migrateFortunePlan(raw) {
     seed: Number(raw.seed) || base.seed,
     theme,
     compareMilestoneId: raw.compareMilestoneId || milestones[0]?.id || null,
+    schemaVersion: 2,
+    cushionStartedAt: raw.cushionStartedAt ?? null,
+    cushionBuiltAt: raw.cushionBuiltAt ?? null,
+    stage1: stage1FromRaw(raw, milestones),
+  };
+}
+
+const STAGE1_STATUSES = new Set(["none", "asked", "agreed", "declined"]);
+const STAGE1_ROUTES = new Set(["bank", "no-bank-debt", "managing"]);
+const STAGE1_SOURCES = new Set(["ft-rd-steps", "rd-export", "code", "legacy"]);
+const DECLINE_ROUTES = new Set(["idrp", "hardship"]);
+
+export function emptyStage1() {
+  return {
+    route: null,
+    source: null,
+    monthsAskedFor: null,
+    tenorMonths: null,
+    startMonth: null,
+    done: false,
+    doneAt: null,
+    status: "none",
+    agreedAt: null,
+    declinedAt: null,
+    declinedRoutes: [],
+    importedAt: null,
+    edited: false,
+  };
+}
+
+export function normalizeStage1(raw) {
+  const base = emptyStage1();
+  if (!raw || typeof raw !== "object") return base;
+  const status = STAGE1_STATUSES.has(raw.status) ? raw.status : "none";
+  const route = STAGE1_ROUTES.has(raw.route) ? raw.route : null;
+  const source = STAGE1_SOURCES.has(raw.source) ? raw.source : null;
+  const declinedRoutes = Array.isArray(raw.declinedRoutes)
+    ? [...new Set(raw.declinedRoutes.filter((item) => DECLINE_ROUTES.has(item)))]
+    : [];
+  return {
+    ...base,
+    route,
+    source,
+    monthsAskedFor: raw.monthsAskedFor == null ? null : Number(raw.monthsAskedFor),
+    tenorMonths: raw.tenorMonths == null ? null : Number(raw.tenorMonths),
+    startMonth: raw.startMonth || null,
+    done: !!raw.done,
+    doneAt: raw.doneAt || null,
+    status,
+    agreedAt: raw.agreedAt || null,
+    declinedAt: raw.declinedAt || null,
+    declinedRoutes,
+    importedAt: raw.importedAt || null,
+    edited: !!raw.edited,
+  };
+}
+
+function stage1FromRaw(raw, milestones) {
+  if (raw?.stage1 && typeof raw.stage1 === "object") return normalizeStage1(raw.stage1);
+  const fix = (milestones || []).find((m) => m.role === "fix" || m.id === FIX_MILESTONE_ID);
+  if (!fix) return emptyStage1();
+  const fromLegacy =
+    fix.id === FIX_MILESTONE_ID || fix.source === RD_PRODUCT || fix.source === "sunday" || fix.source === "legacy";
+  if (!fromLegacy) return emptyStage1();
+  const months = Number(fix.months) === 6 ? 6 : Number(fix.months) === 3 ? 3 : null;
+  return normalizeStage1({
+    route: "bank",
+    source: "legacy",
+    monthsAskedFor: months,
+    tenorMonths: months,
+    startMonth: null,
+    done: false,
+    status: "asked",
+  });
+}
+
+/** Map tick. A decline does not tick stage 1. Cushion fields are not involved. */
+export function stage1Ticked(plan) {
+  const status = plan?.stage1?.status;
+  return status === "asked" || status === "agreed";
+}
+
+/** Reserve N1. Does not reset cushionStartedAt or cushionBuiltAt. No UI in this step. */
+export function declineStage1(plan, route, month) {
+  const stage1 = normalizeStage1(plan?.stage1);
+  const declinedRoutes = DECLINE_ROUTES.has(route) ? [...new Set([...stage1.declinedRoutes, route])] : stage1.declinedRoutes;
+  return {
+    ...plan,
+    stage1: {
+      ...stage1,
+      status: "declined",
+      declinedAt: month || null,
+      declinedRoutes,
+    },
+  };
+}
+
+/** Asking again replaces the stage-1 dates and sets status back to asked. */
+export function askStage1Again(plan, dates = {}) {
+  const prev = normalizeStage1(plan?.stage1);
+  return {
+    ...plan,
+    stage1: normalizeStage1({
+      ...prev,
+      monthsAskedFor: dates.monthsAskedFor ?? prev.monthsAskedFor,
+      tenorMonths: dates.tenorMonths ?? prev.tenorMonths,
+      startMonth: Object.prototype.hasOwnProperty.call(dates, "startMonth") ? dates.startMonth : prev.startMonth,
+      done: Object.prototype.hasOwnProperty.call(dates, "done") ? !!dates.done : false,
+      doneAt: Object.prototype.hasOwnProperty.call(dates, "doneAt") ? dates.doneAt : null,
+      agreedAt: null,
+      declinedAt: null,
+      status: "asked",
+      importedAt: Object.prototype.hasOwnProperty.call(dates, "importedAt") ? dates.importedAt : prev.importedAt,
+      edited: Object.prototype.hasOwnProperty.call(dates, "edited") ? !!dates.edited : prev.edited,
+    }),
   };
 }
 

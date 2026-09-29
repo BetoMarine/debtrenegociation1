@@ -204,6 +204,7 @@ const zh = {
 
   needName: "請先填你的姓名，信件才用得上。",
   pdfError: "未能產生 PDF。請再試一次。",
+  ftHost: {},
 };
 
 const en = {
@@ -410,18 +411,35 @@ const en = {
 
   needName: "Add your name so the letter can be in your name.",
   pdfError: "Could not create the PDF. Try again.",
+  ftHost: {},
 };
 
 export const STRINGS = { zh, en };
 
-export function t(lang, key, vars) {
-  const table = STRINGS[lang] || zh;
-  const parts = key.split(".");
+export function lookupCopy(table, key) {
+  const parts = String(key || "").split(".");
   let cur = table;
   for (const part of parts) {
-    cur = cur?.[part];
+    if (cur == null) return undefined;
+    cur = cur[part];
   }
-  let text = cur ?? key;
+  return cur;
+}
+
+/** Fortune host reads ftHost first. Standalone ignores it. One string table either way. */
+export function resolveCopy(table, key, opts) {
+  if (opts?.host === "fortune" && table?.ftHost) {
+    const over = lookupCopy(table.ftHost, key);
+    if (typeof over === "string") return over;
+  }
+  const value = lookupCopy(table, key);
+  return typeof value === "string" ? value : undefined;
+}
+
+export function t(lang, key, vars, opts) {
+  const table = STRINGS[lang] || zh;
+  let text = resolveCopy(table, key, opts);
+  if (typeof text !== "string") text = key;
   if (vars && typeof text === "string") {
     text = text.replace(/\{(\w+)\}/g, (_, name) => (vars[name] == null ? "" : String(vars[name])));
   }

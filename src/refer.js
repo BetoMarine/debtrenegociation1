@@ -1,4 +1,5 @@
 import { productHref } from "./paths.js";
+import { prefixedSessionStore } from "./shared/storage/web.js";
 
 export const FROM_FORTUNE = "fortune";
 export const FROM_PARAM = "from";
@@ -7,11 +8,7 @@ export const BACK_TO_FORTUNE_LABEL = "Back to Fortune Teller";
 const STORAGE_KEY = "pyl.from";
 
 function sessionStore() {
-  try {
-    return sessionStorage;
-  } catch {
-    return null;
-  }
+  return prefixedSessionStore();
 }
 
 /** Append `?from=fortune` so Right Door / Sunday Pack can offer a return chip. */

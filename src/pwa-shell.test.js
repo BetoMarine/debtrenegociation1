@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { htmlShellForPath, productIdForPath } from "./pwa-shell.js";
-import { siteRootFromPath } from "./register-sw.js";
+import { resolvedServiceWorkerScope, siteRootFromPath } from "./register-sw.js";
 import { APP_VERSION, FORTUNE_STRINGS } from "./fortune/copy.js";
 import { STRINGS } from "./i18n.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
@@ -9,7 +9,7 @@ import { SUNDAY_STRINGS } from "./sunday/copy.js";
 const viteConfig = readFileSync(new URL("../vite.config.js", import.meta.url), "utf8");
 const swSrc = readFileSync(new URL("./sw.js", import.meta.url), "utf8");
 const htmlFiles = {
-  "right-door": readFileSync(new URL("../index.html", import.meta.url), "utf8"),
+  rd: readFileSync(new URL("../index.html", import.meta.url), "utf8"),
   fortune: readFileSync(new URL("../fortune/index.html", import.meta.url), "utf8"),
   sunday: readFileSync(new URL("../sunday/index.html", import.meta.url), "utf8"),
 };
@@ -57,7 +57,7 @@ describe("product HTML shell guard", () => {
   it("labels each app document and heals a wrong cached shell", () => {
     expect(productIdForPath("/fortune/")).toBe("fortune");
     expect(productIdForPath("/sunday/")).toBe("sunday");
-    expect(productIdForPath("/")).toBe("right-door");
+    expect(productIdForPath("/")).toBe("rd");
     for (const [app, html] of Object.entries(htmlFiles)) {
       expect(html).toContain(`data-pyl-app="${app}"`);
       expect(html).toContain("pyl-shell-guard");
@@ -73,5 +73,11 @@ describe("service worker registration", () => {
     expect(siteRootFromPath("/debtrenegociation1/sunday")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/index.html")).toBe("/debtrenegociation1/");
+    expect(resolvedServiceWorkerScope("/debtrenegociation1/preview/pr-9/fortune/")).toBe(
+      "/debtrenegociation1/preview/pr-9/",
+    );
+    expect(resolvedServiceWorkerScope("/debtrenegociation1/preview/pr-9/fortune/").startsWith("/debtrenegociation1/preview/pr-")).toBe(
+      true,
+    );
   });
 });

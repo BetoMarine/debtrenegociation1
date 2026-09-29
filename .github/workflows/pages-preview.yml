@@ -1,0 +1,86 @@
+name: Pages preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-push
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.number != 26
+    runs-on: ubuntu-latest
+    env:
+      VITE_STORAGE_NS: pyl-preview-pr${{ github.event.number }}
+      VITE_DEPLOY: preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Preview bundle gate
+        run: node scripts/ci/check-preview-bundle.mjs
+      - name: Publish PR preview under preview/pr-N
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: preview/pr-${{ github.event.number }}
+          keep_files: true
+          enable_jekyll: false
+      - name: Preview URL
+        run: |
+          echo "Cold-load (bypasses live SW nav): https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/index.html"
+          echo "Cold-load (bypasses live SW nav): https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/sunday/index.html"
+          echo "Cold-load (bypasses live SW nav): https://betomarine.github.io/debtrenegociation1/preview/pr-${{ github.event.number }}/fortune/index.html"
+
+  tombstone:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.number != 26
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-branch
+      - name: Replace preview/pr-N with a tombstone
+        run: node scripts/ci/write-tombstone.mjs end gh-pages-branch ${{ github.event.number }}
+      - name: Publish tombstone
+        working-directory: gh-pages-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "no tombstone changes" || git commit -m "Tombstone preview pr-${{ github.event.number }}"
+          git push
+
+  expire-tombstones:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-branch
+      - name: Delete tombstones older than 30 days
+        run: node scripts/ci/write-tombstone.mjs expire gh-pages-branch
+      - name: Publish expiry
+        working-directory: gh-pages-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "no expired tombstones" || git commit -m "Expire preview tombstones older than 30 days"
+          git push

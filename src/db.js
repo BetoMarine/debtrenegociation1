@@ -1,194 +1,141 @@
-const DB_NAME = "right-door";
-const DB_VERSION = 1;
+import { ATT, KV } from "./shared/storage/keys.js";
+import { noteMeaningfulSave } from "./shared/storage/persist.js";
+import { eraseFortune, eraseRightDoor, eraseSunday } from "./shared/storage/erase.js";
+import { addSharedEvent, listEventsRaw, openScope } from "./shared/storage/store.js";
 
-function openDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
-      if (!db.objectStoreNames.contains("attachments")) db.createObjectStore("attachments");
-      if (!db.objectStoreNames.contains("events")) db.createObjectStore("events", { autoIncrement: true });
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+function rd() {
+  return openScope("rd.app");
 }
 
-function txDone(tx) {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error || new Error("aborted"));
-  });
+function ft() {
+  return openScope("ft.app");
 }
 
-export async function getKv(key) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("kv", "readonly");
-    const req = tx.objectStore("kv").get(key);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => reject(req.error);
-  });
+function sun() {
+  return openScope("sun.app");
 }
 
-export async function setKv(key, value) {
-  const db = await openDb();
-  const tx = db.transaction("kv", "readwrite");
-  tx.objectStore("kv").put(value, key);
-  await txDone(tx);
+function attScope(id) {
+  return String(id).startsWith(ATT.ft) ? openScope("ft.rdSteps") : openScope("rd.app");
 }
 
 export async function getPack() {
-  return getKv("pack");
+  return rd().get(KV.rdPack);
 }
 
 export async function savePack(pack) {
   const next = { ...pack, updatedAt: Date.now() };
-  await setKv("pack", next);
+  await rd().put(KV.rdPack, next);
+  noteMeaningfulSave();
   return next;
 }
 
 export async function getLang() {
-  return (await getKv("lang")) || "zh";
+  return (await rd().get(KV.rdLang)) || "zh";
 }
 
 export async function setLang(lang) {
-  await setKv("lang", lang);
+  await rd().put(KV.rdLang, lang);
+  noteMeaningfulSave();
 }
 
 export async function getSundayPack() {
-  return getKv("sundayPack");
+  return sun().get(KV.sunPack);
 }
 
 export async function saveSundayPack(pack) {
   const next = { ...pack, updatedAt: Date.now() };
-  await setKv("sundayPack", next);
+  await sun().put(KV.sunPack, next);
+  noteMeaningfulSave();
   return next;
 }
 
 export async function getSundayLang() {
-  return (await getKv("sundayLang")) || "en";
+  return (await sun().get(KV.sunLang)) || "en";
 }
 
 export async function setSundayLang(lang) {
-  await setKv("sundayLang", lang);
+  await sun().put(KV.sunLang, lang);
+  noteMeaningfulSave();
 }
 
 export async function wipeSundayPack() {
-  const db = await openDb();
-  const tx = db.transaction("kv", "readwrite");
-  tx.objectStore("kv").delete("sundayPack");
-  tx.objectStore("kv").delete("sundayLang");
-  await txDone(tx);
+  await eraseSunday();
 }
 
 export async function getFortunePlan() {
-  return getKv("fortunePlan");
+  return ft().get(KV.ftPlan);
 }
 
 export async function saveFortunePlan(plan) {
   const next = { ...plan, updatedAt: Date.now() };
-  await setKv("fortunePlan", next);
+  await ft().put(KV.ftPlan, next);
+  noteMeaningfulSave();
   return next;
 }
 
 export async function getFortuneForecast() {
-  return getKv("fortuneForecast");
+  return ft().get(KV.ftForecast);
 }
 
 export async function saveFortuneForecast(forecast) {
-  await setKv("fortuneForecast", forecast);
+  await ft().put(KV.ftForecast, forecast);
+  noteMeaningfulSave();
   return forecast;
 }
 
 export async function getFortuneHandoff() {
-  return getKv("fortuneFireHandoff");
+  return ft().get(KV.ftHandoff);
 }
 
 export async function saveFortuneHandoff(value) {
-  await setKv("fortuneFireHandoff", value);
+  await ft().put(KV.ftHandoff, value);
+  noteMeaningfulSave();
   return value;
 }
 
 export async function getFortuneUi() {
-  return getKv("fortuneUi");
+  return ft().get(KV.ftUi);
 }
 
 export async function saveFortuneUi(state) {
-  await setKv("fortuneUi", state);
+  await ft().put(KV.ftUi, state);
+  noteMeaningfulSave();
   return state;
 }
 
 /** Clears Fortune Teller only. Right Door and Sunday Pack stay put. */
 export async function wipeFortune() {
-  const db = await openDb();
-  const tx = db.transaction("kv", "readwrite");
-  tx.objectStore("kv").delete("fortunePlan");
-  tx.objectStore("kv").delete("fortuneForecast");
-  tx.objectStore("kv").delete("fortuneUi");
-  await txDone(tx);
+  await eraseFortune();
 }
 
-/** Clears the Right Door vault only. sundayPack / sundayLang stay put. */
+/** Clears the Right Door vault only. Sunday Pack and Fortune stay put. */
 export async function wipeRightDoor() {
-  const db = await openDb();
-  const tx = db.transaction(["kv", "attachments"], "readwrite");
-  tx.objectStore("kv").delete("pack");
-  tx.objectStore("kv").delete("lang");
-  tx.objectStore("attachments").clear();
-  await txDone(tx);
+  await eraseRightDoor();
 }
 
 export async function addEvent(event) {
-  const db = await openDb();
-  const tx = db.transaction("events", "readwrite");
-  tx.objectStore("events").add(event);
-  await txDone(tx);
+  const type = String(event?.type || "");
+  if (type.startsWith("fortune_")) return openScope("ft.app").addEvent(event);
+  if (type.startsWith("sunday_")) return openScope("sun.app").addEvent(event);
+  if (type === "app_open") return addSharedEvent(event);
+  return openScope("rd.app").addEvent(event);
 }
 
 export async function listEvents() {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("events", "readonly");
-    const req = tx.objectStore("events").getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
+  return listEventsRaw();
 }
 
 export async function putAttachment(id, blob) {
-  const db = await openDb();
-  const tx = db.transaction("attachments", "readwrite");
-  tx.objectStore("attachments").put(blob, id);
-  await txDone(tx);
+  await attScope(id).putAtt(id, blob);
 }
 
 export async function getAttachment(id) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("attachments", "readonly");
-    const req = tx.objectStore("attachments").get(id);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
+  return attScope(id).getAtt(id);
 }
 
 export async function deleteAttachment(id) {
-  const db = await openDb();
-  const tx = db.transaction("attachments", "readwrite");
-  tx.objectStore("attachments").delete(id);
-  await txDone(tx);
-}
-
-export async function wipeAll() {
-  const db = await openDb();
-  const tx = db.transaction(["kv", "attachments", "events"], "readwrite");
-  tx.objectStore("kv").clear();
-  tx.objectStore("attachments").clear();
-  tx.objectStore("events").clear();
-  await txDone(tx);
+  await attScope(id).removeAtt(id);
 }
 
 export function newPack(lang) {

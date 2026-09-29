@@ -1,0 +1,32 @@
+{
+  "counts": {
+    "html2canvas.esm.js": {
+      "XMLHttpRequest": 4,
+      "https://": 2,
+      "http://": 2
+    },
+    "index.es.js": {
+      "fetch(": 4,
+      "https://": 2
+    },
+    "main.js": {
+      "https://": 9
+    },
+    "purify.es.js": {
+      "http://": 4
+    },
+    "register-sw.js": {
+      "fetch(": 1,
+      "XMLHttpRequest": 3,
+      "https://": 3,
+      "http://": 8
+    },
+    "sunday.js": {
+      "https://": 7
+    },
+    "sw.js": {
+      "fetch(": 6,
+      "https://": 1
+    }
+  }
+}

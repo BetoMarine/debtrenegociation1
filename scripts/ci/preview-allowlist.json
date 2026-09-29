@@ -1,0 +1,8 @@
+{
+  "scoped": {
+    "sw.js": {
+      "caches.delete": 2,
+      "caches.keys": 2
+    }
+  }
+}

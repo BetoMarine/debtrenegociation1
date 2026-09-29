@@ -13,6 +13,7 @@ import {
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
+import { RD_PRODUCT } from "../shared/product-id.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral } from "../refer.js";
 import { makeFireHandoff } from "../handoff.js";
@@ -251,7 +252,7 @@ function shell(body) {
         <p class="tiny">${escapeHtml(s("localOnly"))}</p>
         <p class="tiny">${escapeHtml(s("weDoNotEmailEnrich"))}</p>
         <p class="tiny">${escapeHtml(s("otherTools"))}<br/>
-          <a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(s("otherToolsRight"))}</a>
+          <a class="link" href="${escapeHtml(productHref(RD_PRODUCT))}">${escapeHtml(s("otherToolsRight"))}</a>
           ·
           <a class="link" href="${escapeHtml(productHref("fortune"))}">${escapeHtml(s("otherToolsFortune"))}</a>
         </p>

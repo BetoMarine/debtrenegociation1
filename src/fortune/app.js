@@ -47,6 +47,7 @@ import {
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
+import { RD_PRODUCT } from "../shared/product-id.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 import { clearFortuneReferral } from "../refer.js";
 
@@ -181,7 +182,7 @@ async function runAndPersistForecast({ persistEvent = true, keepScroll = true } 
 }
 
 function fortuneFooter() {
-  const tools = `<a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(ft("otherToolsRight"))}</a>
+  const tools = `<a class="link" href="${escapeHtml(productHref(RD_PRODUCT))}">${escapeHtml(ft("otherToolsRight"))}</a>
           ·
           <a class="link" href="${escapeHtml(productHref("sunday"))}">${escapeHtml(ft("otherToolsSunday"))}</a>`;
   const version = `<button class="version" type="button" data-act="version">${escapeHtml(ft("version"))}</button>`;

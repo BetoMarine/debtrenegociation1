@@ -115,10 +115,10 @@ describe("product copy", () => {
     const fortuneApp = readFileSync(new URL("./fortune/app.js", import.meta.url), "utf8");
     expect(fortuneApp).toMatch(/function fortuneFooter/);
     expect(fortuneApp).toMatch(/APP_VERSION/);
-    expect(fortuneApp).toMatch(/productHref\("right-door"\)/);
+    expect(fortuneApp).toMatch(/productHref\(RD_PRODUCT\)/);
     expect(fortuneApp).toMatch(/productHref\("sunday"\)/);
     expect(fortuneApp).toMatch(/clearFortuneReferral\(\)/);
-    expect(fortuneApp).not.toMatch(/fortuneOutboundHref\("right-door"\)/);
+    expect(fortuneApp).not.toMatch(/fortuneOutboundHref\(/);
   });
 
   it("bumps Right Door / Sunday Pack versions and keeps Back to Fortune Teller in the header", () => {

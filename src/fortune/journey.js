@@ -3,10 +3,11 @@
  * Pure module — stage rows, rollups, and labels. No DOM.
  */
 import { INVEST_PLACEHOLDER_ID, INVEST_PLACEHOLDER_NAME, EF_MILESTONE_ID, fixGoalLabel } from "../handoff.js";
+import { JOURNEY_STAGES } from "../shared/stage-words.js";
 import { clampGoalMonths, emergencyCurrentHkd, isLivingGoal, milestoneRole, monthYearLabel } from "./model.js";
 import { fireFixMonths, needsFireCard, receivedFixMilestone, stabilizeSnapshot } from "./stabilize.js";
 
-export const JOURNEY_STAGES = ["fix", "stabilize", "plan", "invest"];
+export { JOURNEY_STAGES };
 
 /** Vertical drag on a row handle: down = later, up = sooner. Phone-sized. */
 export const TIME_DRAG_PX_PER_MONTH = 12;
