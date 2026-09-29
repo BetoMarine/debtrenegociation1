@@ -5,9 +5,10 @@ export function noteMeaningfulSave() {
   if (asked) return;
   asked = true;
   try {
-    const persist = globalThis.__PYL_PERSIST__ || globalThis.navigator?.storage?.persist;
+    const storage = globalThis.navigator?.storage;
+    const persist = globalThis.__PYL_PERSIST__ || storage?.persist;
     if (typeof persist !== "function") return;
-    Promise.resolve(persist.call(globalThis.navigator.storage)).catch(() => {});
+    Promise.resolve(persist.call(storage)).catch(() => {});
   } catch {
     /* unsupported */
   }
