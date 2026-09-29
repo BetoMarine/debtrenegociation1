@@ -75,7 +75,7 @@ export function foundationPlugins({ command, storageNs, preview }) {
       name: "pyl-preview-migration-stub",
       enforce: "pre",
       resolveId(source) {
-        if (!isPreview) return null;
+        if (command !== "build" || !isPreview) return null;
         if (source.includes("migrate-ns-v1")) return "\0pyl-migrate-ns-v1-stub";
         return null;
       },

@@ -17,9 +17,6 @@ jobs:
   preview:
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.number != 26
     runs-on: ubuntu-latest
-    env:
-      VITE_STORAGE_NS: pyl-preview-pr${{ github.event.number }}
-      VITE_DEPLOY: preview
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,7 +25,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build
+      - name: Preview build
+        run: npm run build
+        env:
+          VITE_STORAGE_NS: pyl-preview-pr${{ github.event.number }}
+          VITE_DEPLOY: preview
       - name: Preview bundle gate
         run: node scripts/ci/check-preview-bundle.mjs
       - name: Publish PR preview under preview/pr-N
