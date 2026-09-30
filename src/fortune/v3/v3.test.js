@@ -112,7 +112,7 @@ describe("Fortune v3 routing", () => {
 });
 
 describe("status truth", () => {
-  const screens = ["cover", "map", "a2", "code", "s01", "s05", "s12", "cards", "e1"];
+  const screens = ["cover", "map", "a2", "choice", "code", "s01", "s05", "s12", "cards", "e1"];
 
   it("keeps the three lines behind one About tap on the cover and the map", () => {
     for (const screen of ["cover", "map"]) {

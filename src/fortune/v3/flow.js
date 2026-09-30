@@ -6,6 +6,7 @@ import {
   declineStage1,
   emptyStage1,
   isLivingGoal,
+  migrateFortunePlan,
   newFortunePlan,
   normalizeStage1,
   stage1Ticked,
@@ -73,6 +74,7 @@ export function emptyUi() {
     goalMonths: 14,
     goalChance: 70,
     coverHintSeen: false,
+    exitKept: false,
   };
 }
 
@@ -157,8 +159,80 @@ export function goalPinned(plan) {
   return (plan?.milestones || []).some((m) => m.pinned && isLivingGoal(m));
 }
 
-export function mapAction(plan) {
-  if (!stage1Ticked(plan)) return { stage: "fix", kind: "start" };
+/** Fix screens past the first question. Resuming one of these is mid-Fix, not a fresh start. */
+const FIX_RESUME = new Set(["s01a", "s01b", "s01c", "letter", "s02", "s03", "s03a", "s03b", "n1", "n1b", "dates"]);
+const IMPORTED_SOURCES = new Set(["rd-export", "code"]);
+
+export const ROOT_SCREENS = new Set(["map", "cover", "e1", "choice"]);
+
+export function stickyMidFix(plan, ui) {
+  const screen = ui?.lastByStage?.fix;
+  if (!FIX_RESUME.has(screen)) return false;
+  return !stage1Ticked(plan);
+}
+
+/** Stage 1 was brought in from Right Door or a code, and that export is no longer on this phone. */
+export function orphanedImport(plan, foundExport) {
+  if (foundExport) return false;
+  return IMPORTED_SOURCES.has(plan?.stage1?.source);
+}
+
+export function needsExitChoice(state) {
+  if (state?.ui?.exitKept) return false;
+  if (state?.foundExport) return false;
+  return stickyMidFix(state?.plan, state?.ui) || orphanedImport(state?.plan, state?.foundExport);
+}
+
+export function openedFortuneState({
+  plan,
+  ui,
+  pendingErase = false,
+  foundExport = null,
+  manualExport = false,
+  standalone = false,
+  rd,
+} = {}) {
+  const storedUi = ui && typeof ui === "object" ? ui : {};
+  return freshState({
+    plan: migrateFortunePlan(plan) || newFortunePlan(),
+    ui: { ...emptyUi(), ...storedUi, lastByStage: storedUi.lastByStage || {} },
+    rd: rd || emptyRd(),
+    screen: pendingErase ? "e1" : "cover",
+    pendingErase: !!pendingErase,
+    foundExport: foundExport || null,
+    manualExport: !!manualExport,
+    standalone: !!standalone,
+  });
+}
+
+function withoutFixResume(state) {
+  return {
+    ...state,
+    plan: { ...state.plan, stage1: normalizeStage1(emptyStage1()) },
+    ui: {
+      ...state.ui,
+      lastByStage: {},
+      lenderCount: null,
+      askedRoute: null,
+      declinedRoutes: [],
+      caritasPrimary: false,
+      exitKept: false,
+      transition: null,
+    },
+    rd: emptyRd(),
+    codeDraft: "",
+    codeError: "",
+    revealed: false,
+    history: [],
+    sheet: null,
+  };
+}
+
+export function mapAction(plan, ui) {
+  if (!stage1Ticked(plan)) {
+    if (stickyMidFix(plan, ui)) return { stage: "fix", kind: "continue" };
+    return { stage: "fix", kind: "start" };
+  }
   if (!plan?.cushionStartedAt) return { stage: "stabilize", kind: "continue" };
   if (!plan?.cushionBuiltAt && !goalPinned(plan)) return { stage: "plan", kind: "continue" };
   if (!plan?.cushionBuiltAt) return { stage: null, kind: "none" };
@@ -200,7 +274,7 @@ function remember(ui, screen) {
 
 function go(state, screen, extra = {}) {
   const history = [...(state.history || [])];
-  if (state.screen && state.screen !== "cover" && state.screen !== "map" && state.screen !== "e1") {
+  if (state.screen && !ROOT_SCREENS.has(state.screen)) {
     history.push(state.screen);
   }
   return {
@@ -293,7 +367,7 @@ export function reduce(state, action) {
     };
   }
   if (type === "back") {
-    if (state.screen === "map" || state.screen === "cover" || state.screen === "e1") return state;
+    if (ROOT_SCREENS.has(state.screen)) return state;
     const history = [...(state.history || [])];
     const prev = history.pop();
     if (!prev) return { ...state, screen: "map", history: [], sheet: null };
@@ -307,15 +381,17 @@ export function reduce(state, action) {
   if (type === "cover-continue") {
     if (state.pendingErase) return { ...state, screen: "e1", pendingErase: true };
     if (state.foundExport && !state.manualExport) return go({ ...state, history: [] }, "a2");
+    if (needsExitChoice(state)) return { ...state, screen: "choice", history: [], sheet: null, revealed: false };
     return { ...state, screen: "map", history: [], sheet: null };
   }
+  if (type === "keep-plan") return toMap(state, null, { ui: { ...state.ui, exitKept: true, transition: null } });
+  if (type === "start-clear" || type === "fresh") return toMap(withoutFixResume(state), null);
   if (type === "used-already") return go(state, state.foundExport || state.manualExport ? "a2" : "code");
   if (type === "bring") {
     if (!state.foundExport) return state;
     const plan = applyBroughtIn(state.plan, state.foundExport, "rd-export", ym());
     return toMap(state, "import", { plan });
   }
-  if (type === "fresh") return toMap(state, null);
   if (type === "code-input") return { ...state, codeDraft: action.value, codeError: "" };
   if (type === "code-submit") {
     const decoded = decodeShortCode(state.codeDraft);
@@ -471,9 +547,10 @@ export function reduce(state, action) {
     return go(state, "s01", { plan, ui: { ...state.ui, lenderCount: null, askedRoute: null, declinedRoutes: [], caritasPrimary: false } });
   }
   if (type === "map-go") {
-    const actionMap = mapAction(state.plan);
+    const actionMap = mapAction(state.plan, state.ui);
     if (actionMap.kind === "none" || !actionMap.stage) return { ...state, ui: { ...state.ui, transition: null } };
-    const screen = state.ui.lastByStage?.[actionMap.stage] || STAGE_START[actionMap.stage];
+    const resumed = state.ui.lastByStage?.[actionMap.stage];
+    const screen = actionMap.kind === "start" ? STAGE_START[actionMap.stage] : resumed || STAGE_START[actionMap.stage];
     return go(state, screen, { ui: { ...state.ui, transition: null } });
   }
   if (type === "about") return { ...state, sheet: { type: "status" } };

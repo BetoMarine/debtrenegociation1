@@ -2,13 +2,13 @@ import { isStandalone } from "../../dom.js";
 import { clearFortuneReferral } from "../../refer.js";
 import { getFortunePlan, getFortuneUi, saveFortunePlan, saveFortuneUi, wipeFortune } from "../../db.js";
 import { a2FoundState } from "../import/found.js";
-import { migrateFortunePlan, newFortunePlan } from "../model.js";
+import { migrateFortunePlan } from "../model.js";
 import { KV } from "../../shared/storage/keys.js";
 import { openScope } from "../../shared/storage/store.js";
 import { sessionGet, sessionRemove, sessionSet } from "../../shared/storage/web.js";
-import { emptyUi, freshState, reduce } from "./flow.js";
+import { emptyUi, openedFortuneState, reduce } from "./flow.js";
 import { renderV3 } from "./render.js";
-import { addFtPhoto, fortuneLetterText, loadFtRd, saveFtRd, shareFortuneLetter } from "../rd-host.js";
+import { addFtPhoto, fortuneLetterText, loadFtRd, resetFtRd, saveFtRd, shareFortuneLetter } from "../rd-host.js";
 
 const ERASE_FLAG = "ft.eraseNotice";
 
@@ -37,16 +37,15 @@ async function loadFound() {
 
 export async function bootV3(root = document.getElementById("app")) {
   clearFortuneReferral();
-  const storedPlan = migrateFortunePlan(await getFortunePlan()) || newFortunePlan();
+  const storedPlan = await getFortunePlan();
   const storedUi = (await getFortuneUi()) || {};
   const found = await loadFound();
   const rd = await loadFtRd();
   const pending = sessionGet(ERASE_FLAG) === "1";
-  let state = freshState({
+  let state = openedFortuneState({
     plan: storedPlan,
-    ui: { ...emptyUi(), ...storedUi, lastByStage: storedUi.lastByStage || {} },
+    ui: storedUi,
     rd,
-    screen: pending ? "e1" : "cover",
     pendingErase: pending,
     ...found,
   });
@@ -78,10 +77,11 @@ export async function bootV3(root = document.getElementById("app")) {
     if (action.type === "confirm-erase") {
       sessionSet(ERASE_FLAG, "1");
       await wipeFortune();
-      state = reduce(freshState({ standalone: state.standalone }), { type: "erased" });
+      state = reduce(openedFortuneState({ standalone: state.standalone }), { type: "erased" });
       draw();
       return;
     }
+    if (action.type === "start-clear" || action.type === "fresh") await resetFtRd();
     if (action.type === "e1-ok" || (action.type === "exit" && state.screen === "e1")) sessionRemove(ERASE_FLAG);
     state = reduce(state, action);
     if (action.type !== "exit" && action.type !== "e1-ok") await persist();

@@ -6,6 +6,7 @@ import { v3 } from "./copy.js";
 import {
   RD_SCREENS,
   addYm,
+  ROOT_SCREENS,
   buttonLabel,
   counsellingOn,
   documentReason,
@@ -13,9 +14,11 @@ import {
   formatMonth,
   mapAction,
   noDestination,
+  orphanedImport,
   otherRoute,
   rowStatus,
   stageForScreen,
+  stickyMidFix,
 } from "./flow.js";
 import { INVEST_CARDS, badYearLossPercent } from "./invest.js";
 import { fortuneLetterText } from "../rd-host.js";
@@ -38,7 +41,7 @@ function infoBtn(id) {
 }
 
 function chrome(state) {
-  const back = !["map", "cover", "e1"].includes(state.screen);
+  const back = !ROOT_SCREENS.has(state.screen);
   const lang = RD_SCREENS.has(state.screen);
   const exitWord = lang && state.lang === "zh" ? v3("exitZh") : v3("exit");
   const stageId = stageForScreen(state.screen);
@@ -204,7 +207,7 @@ function rangeLabel(plan) {
 
 function screenMap(state) {
   const plan = state.plan;
-  const action = mapAction(plan);
+  const action = mapAction(plan, state.ui);
   const rows = ["fix", "stabilize", "plan", "invest"]
     .map((id) => {
       const status = rowStatus(id, plan);
@@ -250,9 +253,11 @@ function screenMap(state) {
   const line = lineKey === "month" ? v3("transitionMonth") : lineKey === "import" ? v3("transitionImport") : lineKey === "cushion" ? v3("transitionCushion") : lineKey === "pinned" ? v3("transitionPinned") : lineKey === "built" ? v3("transitionBuilt") : "";
   const primary = action.kind === "none" ? "" : btn(buttonLabel(action.kind, action.stage), "map-go");
   const changed = plan.cushionBuiltAt ? quiet(v3("somethingChanged"), "redo") : "";
+  const canClear = stickyMidFix(plan, state.ui) || orphanedImport(plan, state.foundExport);
+  const startClear = canClear ? quiet(v3("choice.clear"), "start-clear") : "";
   const mixes = plan.cushionBuiltAt ? quiet(v3("mixesQuiet"), "open-cards") : "";
   const used = state.standalone || state.foundExport ? quiet(v3("a2.used"), "used-already") : "";
-  return `<div class="v3-stack"><h1 class="v3-h1">${escapeHtml(v3("yourPath"))}</h1><p class="v3-body">${escapeHtml(v3("oneStep"))}</p>${rows}${reveal}${line ? `<p class="v3-body">${escapeHtml(line)}</p>` : ""}${primary}${changed}${mixes}${used}</div>`;
+  return `<div class="v3-stack"><h1 class="v3-h1">${escapeHtml(v3("yourPath"))}</h1><p class="v3-body">${escapeHtml(v3("oneStep"))}</p>${rows}${reveal}${line ? `<p class="v3-body">${escapeHtml(line)}</p>` : ""}${primary}${startClear}${changed}${mixes}${used}</div>`;
 }
 
 function screenCushion(state) {
@@ -322,6 +327,13 @@ function screenA2() {
   return `<div class="v3-stack">${h1(v3("a2.title"))}${btn(v3("a2.bring"), "bring")}${quiet(v3("a2.fresh"), "fresh")}</div>`;
 }
 
+function screenChoice(state) {
+  const orphan = orphanedImport(state.plan, state.foundExport);
+  const title = orphan ? v3("a2.orphanTitle") : v3("choice.title");
+  const body = orphan ? v3("a2.orphanBody") : v3("choice.body");
+  return `<div class="v3-stack" data-choice="${orphan ? "orphan" : "mid"}">${h1(title)}<p class="v3-body">${escapeHtml(body)}</p>${btn(v3("choice.keep"), "keep-plan")}${quiet(v3("choice.clear"), "start-clear")}</div>`;
+}
+
 function screenCode(state) {
   const errKey = state.codeError === "version" ? "a2.codeVersion" : state.codeError === "length" ? "a2.codeLength" : state.codeError ? "a2.codeCheck" : "";
   return `<div class="v3-stack">${h1(v3("a2.codeTitle"))}
@@ -348,6 +360,8 @@ function main(state) {
       return screenMap(state);
     case "a2":
       return screenA2();
+    case "choice":
+      return screenChoice(state);
     case "code":
       return screenCode(state);
     case "s01":

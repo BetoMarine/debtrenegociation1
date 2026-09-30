@@ -66,6 +66,18 @@ export async function loadFtRd() {
   return viewFromRecord(await readRecord());
 }
 
+/** Drops Fortune's own copy of this month's answers. Does not touch Right Door or Sunday. */
+export async function resetFtRd() {
+  const record = await readRecord();
+  const ids = normalizeDocuments(record.documents).flatMap((row) => row.attachmentIds || []);
+  for (const id of ids) {
+    if (String(id).startsWith(ATT.ft)) await scope().removeAtt(id);
+  }
+  const blank = blankRecord();
+  await writeRecord(blank);
+  return viewFromRecord(blank);
+}
+
 export async function saveFtRd(patch) {
   const record = await readRecord();
   const next = {
