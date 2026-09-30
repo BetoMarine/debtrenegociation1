@@ -102,12 +102,67 @@ function markSelected(buttons, active) {
   for (const btn of buttons) btn.classList.toggle("selected", btn === active);
 }
 
-function linkBtn(href, text) {
-  return `<a class="btn btn-primary ext" href="${href}" target="_blank" rel="noopener">${text}</a>`;
+const EYE = `<svg class="v3-eye" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 4l18 16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+
+export const SUNDAY_PILL_GAP_PX = 16;
+export const SUNDAY_PILL_MIN_PX = 44;
+
+/** Browser and WhatsApp links ask first. tel: — including 999 — never does. */
+export function shouldLeaveApp(href) {
+  const value = String(href || "");
+  if (/^tel:/i.test(value)) return false;
+  return /^https?:/i.test(value);
 }
 
-function telBtn(href, text) {
-  return `<a class="btn ext" href="${href}">${text}</a>`;
+export function sundayCornerHtml(ex, lang = "en") {
+  const gap = SUNDAY_PILL_GAP_PX;
+  const min = SUNDAY_PILL_MIN_PX;
+  return `<div class="sunday-corner" data-sunday-corner style="gap:${gap}px">
+    <a class="pill-999" data-act="call-999" href="${POLICE.phoneHref}" aria-label="${ex(st(lang, "call999"))}" style="min-width:${min}px;min-height:${min}px">999</a>
+    <button class="eye-off" type="button" data-act="exit" aria-label="${ex(st(lang, "exitAria"))}" style="min-width:${min}px;min-height:${min}px">${EYE}</button>
+  </div>`;
+}
+
+function showLeaveSheet(host, anchorEl, { href, destName, kind }) {
+  if (!shouldLeaveApp(href)) return;
+  const ex = host.escapeHtml;
+  const parent = anchorEl?.closest?.(".shell") || document.body;
+  parent.querySelector("[data-leave-sheet]")?.remove();
+  parent.querySelector("[data-leave-scrim]")?.remove();
+  const body = kind === "enrich" ? t(host, "leaveEnrichBody") : t(host, "leaveNamedBody", { name: destName });
+  const open = kind === "enrich" ? t(host, "leaveOpenEnrich") : t(host, "leaveOpenNamed", { name: destName });
+  const scrim = host.el(`<div class="leave-scrim" data-leave-scrim></div>`);
+  const sheet = host.el(`<div class="leave-sheet" data-leave-sheet role="dialog" aria-modal="true" aria-labelledby="leave-title">
+    <h2 id="leave-title">${ex(t(host, "leaveTitle"))}</h2>
+    <p>${ex(body)}</p>
+    <p>${ex(t(host, "leavePackStays"))}</p>
+    <button class="btn btn-primary" type="button" data-act="confirm-leave">${ex(open)}</button>
+    <button class="btn btn-ghost" type="button" data-act="stay-here">${ex(t(host, "leaveStay"))}</button>
+  </div>`);
+  const close = () => {
+    scrim.remove();
+    sheet.remove();
+  };
+  scrim.addEventListener("click", close);
+  sheet.querySelector("[data-act='stay-here']").addEventListener("click", close);
+  sheet.querySelector("[data-act='confirm-leave']").addEventListener("click", () => {
+    close();
+    if (typeof host.openExternal === "function") host.openExternal(href);
+    else window.open(href, "_blank", "noopener");
+  });
+  parent.append(scrim, sheet);
+}
+
+function outbound(host, { href, label, className, kind, destName }) {
+  const { el, escapeHtml: ex } = host;
+  if (!shouldLeaveApp(href)) {
+    return el(`<a class="${className}" href="${ex(href)}">${ex(label)}</a>`);
+  }
+  const btn = el(
+    `<button class="${className}" type="button" data-leave="${ex(kind || "site")}" data-href="${ex(href)}">${ex(label)}</button>`,
+  );
+  btn.addEventListener("click", () => showLeaveSheet(host, btn, { href, destName, kind }));
+  return btn;
 }
 
 export function sundayStatusHtml(ex, lang = "en") {
@@ -260,17 +315,16 @@ function renderTriage(host) {
 }
 
 function consulateLinks(host, nationality) {
-  const { el, escapeHtml: ex } = host;
   const which = consulateFor(nationality);
   const nodes = [];
   if (which === "ph" || which === "both") {
-    nodes.push(el(telBtn(CONSULATE_PH.phoneHref, ex(t(host, "callConsulatePh", { phone: CONSULATE_PH.phone })))));
-    nodes.push(el(telBtn(CONSULATE_PH.emergencyHref, ex(t(host, "callConsulatePhEmergency", { phone: CONSULATE_PH.emergency })))));
-    nodes.push(el(linkBtn(CONSULATE_PH.site, ex(t(host, "consulatePhSite")))));
+    nodes.push(outbound(host, { href: CONSULATE_PH.phoneHref, label: t(host, "callConsulatePh", { phone: CONSULATE_PH.phone }), className: "btn ext" }));
+    nodes.push(outbound(host, { href: CONSULATE_PH.emergencyHref, label: t(host, "callConsulatePhEmergency", { phone: CONSULATE_PH.emergency }), className: "btn ext" }));
+    nodes.push(outbound(host, { href: CONSULATE_PH.site, label: t(host, "consulatePhSite"), className: "btn", kind: "site", destName: "Philippine Consulate" }));
   }
   if (which === "id" || which === "both") {
-    nodes.push(el(telBtn(CONSULATE_ID.phoneHref, ex(t(host, "callConsulateId", { phone: CONSULATE_ID.phone })))));
-    nodes.push(el(linkBtn(CONSULATE_ID.site, ex(t(host, "consulateIdSite")))));
+    nodes.push(outbound(host, { href: CONSULATE_ID.phoneHref, label: t(host, "callConsulateId", { phone: CONSULATE_ID.phone }), className: "btn ext" }));
+    nodes.push(outbound(host, { href: CONSULATE_ID.site, label: t(host, "consulateIdSite"), className: "btn", kind: "site", destName: "Indonesian Consulate" }));
   }
   return nodes;
 }
@@ -280,22 +334,22 @@ function renderCrisis(host) {
   const body = el(`<div class="stack"><h1>${ex(t(host, "crisisTitle"))}</h1><p class="lede">${ex(t(host, "crisisLead"))}</p></div>`);
   if (sunday.flags.includes("passport")) {
     body.append(el(`<div class="card warn"><p>${ex(t(host, "crisisPassport"))}</p></div>`));
-    body.append(el(telBtn(POLICE.phoneHref, ex(t(host, "call999")))));
-    body.append(el(telBtn(HELP.phoneHref, ex(t(host, "callHelp", { phone: HELP.phone })))));
-    body.append(el(linkBtn(HELP.whatsappHref, ex(t(host, "waHelp", { phone: HELP.whatsapp })))));
-    body.append(el(linkBtn(HELP.site, ex(t(host, "helpSite")))));
+    body.append(outbound(host, { href: POLICE.phoneHref, label: t(host, "call999"), className: "btn ext" }));
+    body.append(outbound(host, { href: HELP.phoneHref, label: t(host, "callHelp", { phone: HELP.phone }), className: "btn ext" }));
+    body.append(outbound(host, { href: HELP.whatsappHref, label: t(host, "waHelp", { phone: HELP.whatsapp }), className: "btn", kind: "whatsapp", destName: t(host, "whatsAppName") }));
+    body.append(outbound(host, { href: HELP.site, label: t(host, "helpSite"), className: "btn", kind: "site", destName: t(host, "helpName") }));
     consulateLinks(host, sunday.nationality).forEach((n) => body.append(n));
   }
   if (sunday.flags.includes("shark")) {
     body.append(el(`<div class="card warn"><p>${ex(t(host, "crisisShark"))}</p></div>`));
-    body.append(el(telBtn(HELP.phoneHref, ex(t(host, "callHelp", { phone: HELP.phone })))));
-    body.append(el(linkBtn(HELP.whatsappHref, ex(t(host, "waHelp", { phone: HELP.whatsapp })))));
-    body.append(el(linkBtn(HELP.site, ex(t(host, "helpSite")))));
-    body.append(el(telBtn(POLICE.phoneHref, ex(t(host, "call999")))));
+    body.append(outbound(host, { href: HELP.phoneHref, label: t(host, "callHelp", { phone: HELP.phone }), className: "btn ext" }));
+    body.append(outbound(host, { href: HELP.whatsappHref, label: t(host, "waHelp", { phone: HELP.whatsapp }), className: "btn", kind: "whatsapp", destName: t(host, "whatsAppName") }));
+    body.append(outbound(host, { href: HELP.site, label: t(host, "helpSite"), className: "btn", kind: "site", destName: t(host, "helpName") }));
+    body.append(outbound(host, { href: POLICE.phoneHref, label: t(host, "call999"), className: "btn ext" }));
   }
   if (sunday.flags.includes("agency")) {
     body.append(el(`<div class="card warn"><p>${ex(t(host, "crisisAgency"))}</p></div>`));
-    body.append(el(telBtn(LABOUR_FDH.phoneHref, ex(t(host, "callLabour", { phone: LABOUR_FDH.phone })))));
+    body.append(outbound(host, { href: LABOUR_FDH.phoneHref, label: t(host, "callLabour", { phone: LABOUR_FDH.phone }), className: "btn ext" }));
     consulateLinks(host, sunday.nationality).forEach((n) => body.append(n));
   }
   body.append(el(`<p class="tiny">${ex(t(host, "weNeverMessage"))}</p>`));
@@ -580,39 +634,60 @@ function doorCopy(host, door) {
 function renderDoor(host) {
   const { el, escapeHtml: ex, sunday } = host;
   const door = sunday.door || recommendSundayDoor(sunday.flags);
-  const copy = doorCopy(host, door);
-  const body = el(`<div class="stack"><h1>${ex(t(host, "doorTitle"))}</h1><p class="hint">${ex(t(host, "doorLead"))}</p><h2>${ex(copy.title)}</h2><p>${ex(copy.body)}</p></div>`);
+  const back = sunday.split && (sunday.split.bills !== "" || hasCrisisFlags(sunday.flags)) ? "sunday-split" : "sunday-crisis";
+  const body = el(`<div class="stack" data-screen="sunday-door"></div>`);
+  body.append(el(`<button class="text-back" data-go="${back}" type="button">‹ ${ex(t(host, "back"))}</button>`));
+  body.append(el(`<h1>${ex(t(host, "nextDoorTitle"))}</h1>`));
 
+  if (door !== SUNDAY_DOORS.ENRICH) {
+    const copy = doorCopy(host, door);
+    body.append(el(`<h2>${ex(copy.title)}</h2>`));
+    body.append(el(`<p>${ex(copy.body)}</p>`));
+  }
   if (door === SUNDAY_DOORS.PASSPORT || door === SUNDAY_DOORS.SHARK) {
-    body.append(el(telBtn(POLICE.phoneHref, ex(t(host, "call999")))));
-    body.append(el(telBtn(HELP.phoneHref, ex(t(host, "callHelp", { phone: HELP.phone })))));
-    body.append(el(linkBtn(HELP.whatsappHref, ex(t(host, "waHelp", { phone: HELP.whatsapp })))));
-    body.append(el(linkBtn(HELP.site, ex(t(host, "helpSite")))));
+    body.append(outbound(host, { href: HELP.phoneHref, label: t(host, "callHelp", { phone: HELP.phone }), className: "btn" }));
+    body.append(outbound(host, { href: HELP.whatsappHref, label: t(host, "waHelp", { phone: HELP.whatsapp }), className: "btn", kind: "whatsapp", destName: t(host, "whatsAppName") }));
+    body.append(outbound(host, { href: HELP.site, label: t(host, "helpSite"), className: "btn", kind: "site", destName: t(host, "helpName") }));
   }
   if (door === SUNDAY_DOORS.PASSPORT || door === SUNDAY_DOORS.AGENCY) {
     consulateLinks(host, sunday.nationality).forEach((n) => body.append(n));
   }
   if (door === SUNDAY_DOORS.AGENCY) {
-    body.append(el(telBtn(LABOUR_FDH.phoneHref, ex(t(host, "callLabour", { phone: LABOUR_FDH.phone })))));
+    body.append(outbound(host, { href: LABOUR_FDH.phoneHref, label: t(host, "callLabour", { phone: LABOUR_FDH.phone }), className: "btn" }));
   }
   if (door === SUNDAY_DOORS.ENRICH || door === SUNDAY_DOORS.SHARK) {
-    const cta = el(`
-      <div class="card cta-box stack">
-        <strong>${ex(t(host, "doors.enrichTitle"))}</strong>
-        <a class="btn btn-primary ext" href="${ENRICH.booking}" target="_blank" rel="noopener">${ex(t(host, "openEnrich"))}</a>
-        <p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>
-        <a class="link" href="${ENRICH.whatsappEnTlHref}" target="_blank" rel="noopener">${ex(t(host, "enrichWaEn", { phone: ENRICH.whatsappEnTl }))}</a>
-        <a class="link" href="${ENRICH.whatsappIdHref}" target="_blank" rel="noopener">${ex(t(host, "enrichWaId", { phone: ENRICH.whatsappId }))}</a>
-        <p class="tiny">${ex(t(host, "enrichNoLend"))}</p>
-      </div>
-    `);
-    body.append(cta);
-  } else {
-    body.append(
-      el(
-        `<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`,
-      ),
+    const card = el(`<div class="card cta-box stack" data-enrich-card></div>`);
+    card.append(el(`<h2>${ex(t(host, "enrichCardTitle"))}</h2>`));
+    card.append(el(`<p>${ex(t(host, "enrichCardBody"))}</p>`));
+    card.append(
+      outbound(host, {
+        href: ENRICH.booking,
+        label: t(host, "bookEnrich"),
+        className: "btn btn-primary",
+        kind: "enrich",
+        destName: "Enrich",
+      }),
     );
+    card.append(el(`<p class="tiny sunday-affiliation" data-affiliation>${ex(t(host, "notAffiliatedEnrich"))}</p>`));
+    card.append(
+      outbound(host, {
+        href: ENRICH.whatsappEnTlHref,
+        label: t(host, "enrichWaEn", { phone: ENRICH.whatsappEnTl }),
+        className: "link leave-link",
+        kind: "whatsapp",
+        destName: t(host, "whatsAppName"),
+      }),
+    );
+    card.append(
+      outbound(host, {
+        href: ENRICH.whatsappIdHref,
+        label: t(host, "enrichWaId", { phone: ENRICH.whatsappId }),
+        className: "link leave-link",
+        kind: "whatsapp",
+        destName: t(host, "whatsAppName"),
+      }),
+    );
+    body.append(card);
   }
 
   body.append(
@@ -620,16 +695,13 @@ function renderDoor(host) {
       `<p class="tiny">${ex(t(host, "alsoAvailable"))} <a class="link" href="${CARITAS.phoneHref}">${ex(t(host, "caritas", { phone: CARITAS.phone }))}</a> · <a class="link" href="${TWGH_FDCC.phoneHref}">${ex(t(host, "twgh", { phone: TWGH_FDCC.phone }))}</a></p>`,
     ),
   );
-  const next = el(`<button class="btn btn-accent" type="button">${ex(t(host, "generateSecondary"))}</button>`);
-  const box = el(`<div class="nav"></div>`);
-  const back = sunday.split && (sunday.split.bills !== "" || hasCrisisFlags(sunday.flags)) ? "sunday-split" : "sunday-crisis";
-  box.append(next, el(`<button class="btn btn-ghost" data-go="${back}" type="button">${ex(t(host, "back"))}</button>`));
-  body.append(box);
+  const save = el(`<button class="btn btn-primary" type="button" data-act="save-pack">${ex(t(host, "saveMyPack"))}</button>`);
+  body.append(save);
   host.shellSunday(body);
-  next.addEventListener("click", async () => {
-    await host.persistSunday("sunday-review");
+  save.addEventListener("click", async () => {
+    await host.persistSunday("sunday-done");
     await host.log("sunday_pack_created");
-    host.go("sunday-review");
+    host.go("sunday-done");
   });
 }
 
@@ -675,22 +747,24 @@ function renderReview(host) {
 }
 
 function renderDone(host) {
-  const { el, escapeHtml: ex } = host;
-  const body = el(`<div class="stack"><h1>${ex(t(host, "doneTitle"))}</h1><p class="lede">${ex(t(host, "doneLead"))}</p></div>`);
-  body.append(
-    el(`<div class="card"><p>${ex(t(host, "doneCheck1"))}</p></div>`),
-    el(`<div class="card"><p>${ex(t(host, "doneCheck2"))}</p></div>`),
-    el(`<div class="card"><p>${ex(t(host, "doneCheck3"))}</p></div>`),
-    el(`<a class="btn btn-primary ext" href="${ENRICH.booking}" target="_blank" rel="noopener">${ex(t(host, "openEnrich"))}</a>`),
-    el(`<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`),
-  );
-  if (host.fromFortune) {
-    body.append(el(host.fortuneReturnCta(t(host, "backToFortune"))));
-  }
-  const clear = el(`<button class="btn" type="button">${ex(t(host, "clearPack"))}</button>`);
-  const box = el(`<div class="nav"></div>`);
-  box.append(clear);
-  body.append(box);
+  const { el, escapeHtml: ex, sunday } = host;
+  const body = el(`<div class="stack" data-screen="sunday-done"></div>`);
+  body.append(el(`<button class="text-back" data-go="sunday-door" type="button">‹ ${ex(t(host, "backDoor"))}</button>`));
+  body.append(el(`<h1>${ex(t(host, "savedTitle"))}</h1>`));
+  body.append(el(`<p class="lede">${ex(t(host, "savedLead"))}</p>`));
+  const done = el(`<button class="btn btn-primary" type="button" data-act="done">${ex(t(host, "done"))}</button>`);
+  const pdf = el(`<button class="link pdf-copy" type="button" data-act="pdf-copy">${ex(t(host, "savePdfCopy"))}</button>`);
+  const clear = el(`<button class="btn btn-ghost" type="button">${ex(t(host, "clearPack"))}</button>`);
+  body.append(done, pdf, clear);
   host.shellSunday(body);
-  clear.addEventListener("click", () => host.clearSunday());
+  done.addEventListener("click", () => host.go("sunday-door"));
+  pdf.addEventListener("click", () => {
+    if (!canGeneratePdf(sunday)) {
+      host.setNotice(t(host, "needLoanOrCrisis"));
+      host.render();
+      return;
+    }
+    host.handleSundayPdf?.("download");
+  });
+  clear.addEventListener("click", () => host.clearSunday?.());
 }

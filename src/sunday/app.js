@@ -1,12 +1,11 @@
 import { st as sundayT } from "./copy.js";
-import { SUNDAY_SCREENS, attachSundayStatus, nextSundayLang, renderSunday } from "./ui.js";
+import { SUNDAY_SCREENS, attachSundayStatus, nextSundayLang, renderSunday, sundayCornerHtml } from "./ui.js";
 import {
   addEvent,
   getSundayLang,
   getSundayPack,
   listEvents,
   saveSundayPack,
-  saveFortuneHandoff,
   setSundayLang as persistSundayLang,
   wipeSundayPack,
 } from "../db.js";
@@ -16,7 +15,6 @@ import { productHref } from "../paths.js";
 import { RD_PRODUCT } from "../shared/product-id.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral } from "../refer.js";
-import { makeFireHandoff } from "../handoff.js";
 import { emptyDraftLoan, migrateSundayPack, newSundayPack, normalizeLoan } from "./model.js";
 import { buildSundayPdf } from "./pdf.js";
 
@@ -35,23 +33,18 @@ let versionTaps = 0;
 let draftLoan = emptyDraftLoan();
 let busy = false;
 let notice = "";
+let covered = false;
 
 export async function boot() {
   captureFortuneReferral();
   sundayLang = await getSundayLang();
   sunday = migrateSundayPack(await getSundayPack(), sundayLang);
   await ensureSunday();
-  await persistFireHandoff();
   await log("app_open");
   await log("sunday_started");
   window.addEventListener("hashchange", onHash);
   syncScreenFromHash();
   render();
-}
-
-async function persistFireHandoff() {
-  if (!isFortuneReferral()) return;
-  await saveFortuneHandoff(makeFireHandoff({ source: "sunday", months: null }));
 }
 
 async function log(type, extraEnum) {
@@ -118,7 +111,6 @@ function persistSunday(nextScreen) {
     if (nextScreen) sunday.screen = nextScreen;
     sunday.updatedAt = Date.now();
     await saveSundayPack(sunday);
-    await persistFireHandoff();
     return sunday;
   });
   sundayWrite = job.then(
@@ -255,7 +247,10 @@ function shell(body) {
             ${pylWordmarkHtml()}
             <button class="brand" type="button" data-go="sunday-privacy">${escapeHtml(s("brand"))}</button>
           </div>
-          <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
+          <div class="top-tools">
+            ${sundayCornerHtml(escapeHtml, sundayLang)}
+            <button class="lang" type="button" data-act="lang">${escapeHtml(s(`nextLang.${sundayLang}`))}</button>
+          </div>
         </div>
       </header>
       <main></main>
@@ -287,6 +282,13 @@ function shell(body) {
 function bind(root) {
   root.querySelector('[data-act="lang"]')?.addEventListener("click", toggleLang);
   root.querySelector('[data-act="version"]')?.addEventListener("click", tapVersion);
+  root.querySelector('[data-act="exit"]')?.addEventListener("click", () => {
+    quickExit();
+  });
+  root.querySelector('[data-act="uncover"]')?.addEventListener("click", () => {
+    covered = false;
+    render();
+  });
   attachSundayStatus(root, sundayLang, escapeHtml);
   root.querySelectorAll("[data-go]").forEach((btn) => {
     btn.addEventListener("click", () => go(btn.dataset.go));
@@ -305,8 +307,27 @@ function tapVersion() {
   }
 }
 
+async function quickExit() {
+  if (covered) return;
+  await persistSunday();
+  covered = true;
+  render();
+}
+
+function coverBody() {
+  const body = el(`<div class="stack" data-screen="sunday-cover"></div>`);
+  body.append(el(`<h1>${escapeHtml(s("brand"))}</h1>`));
+  body.append(el(`<p class="lede">${escapeHtml(s("coverLead"))}</p>`));
+  body.append(el(`<button class="btn btn-primary" type="button" data-act="uncover">${escapeHtml(s("continue"))}</button>`));
+  return body;
+}
+
 function render() {
-  persistFireHandoff();
+  if (covered) {
+    shell(coverBody());
+    window.scrollTo(0, 0);
+    return;
+  }
   if (screen === "counters") {
     renderCounters();
     window.scrollTo(0, 0);

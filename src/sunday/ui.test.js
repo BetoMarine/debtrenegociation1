@@ -6,7 +6,17 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { el, escapeHtml } from "../dom.js";
 import { emptyDraftLoan, newSundayPack } from "./model.js";
-import { SITUATION_PERSIST_MS, attachSundayStatus, renderSunday, sundayStatusHtml } from "./ui.js";
+import { ENRICH, HELP, POLICE } from "./contacts.js";
+import {
+  SITUATION_PERSIST_MS,
+  SUNDAY_PILL_GAP_PX,
+  SUNDAY_PILL_MIN_PX,
+  attachSundayStatus,
+  renderSunday,
+  shouldLeaveApp,
+  sundayCornerHtml,
+  sundayStatusHtml,
+} from "./ui.js";
 import { st } from "./copy.js";
 
 afterEach(() => {
@@ -48,6 +58,9 @@ function mount(screen, sunday, { replaceOnSave = false } = {}) {
     log: vi.fn(),
     addSundayLoan: vi.fn(),
     removeSundayLoan: vi.fn(),
+    openExternal: vi.fn(),
+    handleSundayPdf: vi.fn(),
+    clearSunday: vi.fn(),
   };
   renderSunday(screen, host);
   return { root, host, renders };
@@ -212,5 +225,139 @@ describe("Sunday status truth", () => {
     expect(root.textContent).not.toContain("Testing");
     root.querySelector("[data-act='close-status']").click();
     expect(root.querySelector("[data-status-sheet]")).toBeNull();
+  });
+});
+
+describe("Sunday next door 3a–3c", () => {
+  it("dials 999 directly, with a 44px pill and a 16px gap before the eye", () => {
+    expect(shouldLeaveApp("tel:999")).toBe(false);
+    expect(shouldLeaveApp(POLICE.phoneHref)).toBe(false);
+    expect(shouldLeaveApp(ENRICH.booking)).toBe(true);
+    expect(SUNDAY_PILL_GAP_PX).toBe(16);
+    expect(SUNDAY_PILL_MIN_PX).toBe(44);
+    const css = readFileSync(join(process.cwd(), "src/styles.css"), "utf8");
+    const cornerCss = css.slice(css.indexOf(".sunday-corner {"), css.indexOf(".pill-999 {"));
+    const pillCss = css.slice(css.indexOf(".pill-999 {"), css.indexOf(".eye-off {"));
+    const eyeCss = css.slice(css.indexOf(".eye-off {"), css.indexOf(".text-back {"));
+    expect(cornerCss).toContain("gap: 16px");
+    expect(pillCss).toContain("min-height: 44px");
+    expect(pillCss).toContain("min-width: 44px");
+    expect(eyeCss).toContain("min-height: 44px");
+    expect(eyeCss).toContain("min-width: 44px");
+
+    const wrap = document.createElement("div");
+    wrap.innerHTML = sundayCornerHtml(escapeHtml, "en");
+    document.body.append(wrap);
+    const cluster = wrap.querySelector(".sunday-corner");
+    const pill = wrap.querySelector(".pill-999");
+    const eye = wrap.querySelector(".eye-off");
+    expect(cluster.style.gap).toBe("16px");
+    expect(pill.tagName).toBe("A");
+    expect(pill.getAttribute("href")).toBe("tel:999");
+    expect(pill.style.minHeight).toBe("44px");
+    expect(pill.style.minWidth).toBe("44px");
+    expect(eye.style.minHeight).toBe("44px");
+    expect(eye.style.minWidth).toBe("44px");
+    expect(pill.nextElementSibling).toBe(eye);
+    pill.click();
+    expect(document.querySelector("[data-leave-sheet]")).toBeNull();
+    expect(pill.getAttribute("data-leave")).toBeNull();
+  });
+
+  it("puts Not affiliated with Enrich under Book, and asks before opening Enrich", async () => {
+    const sunday = newSundayPack("en");
+    sunday.door = "enrich";
+    sunday.privacyAccepted = true;
+    sunday.loans = [{ id: "1", nickname: "School", type: "hk_money_lender", balanceBand: "lt_1k", monthlyBand: "lt_1k", guarantor: "no", stillBorrowing: "no" }];
+    const { root, host } = mount("sunday-door", sunday);
+    expect(root.textContent).toContain("Your next door");
+    expect(root.textContent).toContain("Enrich: money counselling");
+    expect(root.textContent).toContain("A confidential session. You book it.");
+    expect(root.textContent).not.toMatch(/Step 1 of 4/);
+    const book = [...root.querySelectorAll("button")].find((btn) => btn.textContent === "Book with Enrich");
+    expect(book.tagName).toBe("BUTTON");
+    expect(book.getAttribute("href")).toBeNull();
+    expect(book.nextElementSibling?.dataset.affiliation).toBe("");
+    expect(book.nextElementSibling.textContent).toBe("Not affiliated with Enrich");
+    book.click();
+    const sheet = document.querySelector("[data-leave-sheet]");
+    expect(sheet.textContent).toContain("Leaving Plan Your Life");
+    expect(sheet.textContent).toContain("Enrich's form opens in your browser.");
+    expect(sheet.textContent).toContain("Your pack stays saved here.");
+    expect(sheet.textContent).toContain("Open Enrich");
+    expect(sheet.textContent).toContain("Stay here");
+    sheet.querySelector("[data-act='stay-here']").click();
+    expect(document.querySelector("[data-leave-sheet]")).toBeNull();
+    expect(host.openExternal).not.toHaveBeenCalled();
+    book.click();
+    document.querySelector("[data-act='confirm-leave']").click();
+    expect(host.openExternal).toHaveBeenCalledWith(ENRICH.booking);
+
+    const save = root.querySelector("[data-act='save-pack']");
+    save.click();
+    await vi.waitFor(() => expect(host.go).toHaveBeenCalledWith("sunday-done"));
+    expect(host.persistSunday).toHaveBeenCalledWith("sunday-done");
+    expect(host.log).toHaveBeenCalledWith("sunday_pack_created");
+  });
+
+  it("uses the same leaving sheet for WhatsApp and keeps tel links direct", () => {
+    const sunday = newSundayPack("en");
+    sunday.flags = ["shark"];
+    sunday.door = "shark";
+    const { root, host } = mount("sunday-door", sunday);
+    const dials = [...root.querySelectorAll("a[href^='tel:']")];
+    expect(dials.length).toBeGreaterThan(0);
+    for (const link of dials) {
+      expect(link.getAttribute("data-leave")).toBeNull();
+      link.click();
+    }
+    expect(document.querySelector("[data-leave-sheet]")).toBeNull();
+    const wa = [...root.querySelectorAll("[data-leave='whatsapp']")].find((btn) => btn.getAttribute("data-href") === HELP.whatsappHref);
+    expect(wa).toBeTruthy();
+    wa.click();
+    const sheet = document.querySelector("[data-leave-sheet]");
+    expect(sheet.textContent).toContain("Open WhatsApp");
+    expect(sheet.textContent).toContain("WhatsApp opens in your browser.");
+    sheet.querySelector("[data-act='stay-here']").click();
+    expect(host.openExternal).not.toHaveBeenCalled();
+    wa.click();
+    document.querySelector("[data-act='confirm-leave']").click();
+    expect(host.openExternal).toHaveBeenCalledWith(HELP.whatsappHref);
+  });
+
+  it("keeps a crisis 999 control on tel:999 and off the leaving sheet", () => {
+    const sunday = newSundayPack("en");
+    sunday.flags = ["passport"];
+    const { root } = mount("sunday-crisis", sunday);
+    const pill = [...root.querySelectorAll("a")].find((link) => link.getAttribute("href") === "tel:999");
+    expect(pill).toBeTruthy();
+    pill.click();
+    expect(document.querySelector("[data-leave-sheet]")).toBeNull();
+    expect(root.querySelector("[data-leave='whatsapp']")).toBeTruthy();
+  });
+
+  it("shows the saved screen with Done and a PDF copy", () => {
+    const sunday = newSundayPack("en");
+    sunday.privacyAccepted = true;
+    sunday.loans = [{ id: "1", nickname: "School", type: "hk_money_lender", balanceBand: "lt_1k", monthlyBand: "lt_1k", guarantor: "no", stillBorrowing: "no" }];
+    const { root, host } = mount("sunday-done", sunday);
+    expect(root.textContent).toContain("Saved on this phone.");
+    expect(root.textContent).toContain("Pick it up on your next day off.");
+    expect(root.textContent).not.toMatch(/Step 1 of 4/);
+    root.querySelector("[data-act='done']").click();
+    expect(host.go).toHaveBeenCalledWith("sunday-door");
+    root.querySelector("[data-act='pdf-copy']").click();
+    expect(host.handleSundayPdf).toHaveBeenCalledWith("download");
+    expect(root.querySelector("[data-go='sunday-door']").textContent).toContain("Door");
+  });
+});
+
+describe("Sunday no longer hands a Fortune step", () => {
+  it("does not write a sunday handoff from the Sunday app", () => {
+    const src = readFileSync(join(process.cwd(), "src/sunday/app.js"), "utf8");
+    expect(src).not.toMatch(/makeFireHandoff/);
+    expect(src).not.toMatch(/source:\s*["']sunday["']/);
+    expect(src).toContain("sundayCornerHtml");
+    expect(src).not.toMatch(/Step 1 of 4/);
   });
 });

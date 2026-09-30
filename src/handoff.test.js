@@ -46,14 +46,13 @@ describe("Fire Fix handoff", () => {
     expect(packImpliedFixMonths({ situation: { tenorMonths: "6" } })).toBeNull();
   });
 
-  it("Sunday handoff without tenor lets Fortune pick 3 vs 6 once", () => {
-    const created = makeFireHandoff({ source: "sunday", months: null });
-    const received = receiveFireHandoff(newFortunePlan(), created);
-    const fix = receivedFixMilestone(received);
-    expect(fix.source).toBe("sunday");
-    expect(received.fixMonthsPicked).toBe(false);
-    expect(fix.months).toBe(3);
-    expect(fix.name).toBe("Debt renegotiation · 3 or 6 months");
+  it("does not treat Sunday Pack as a Fortune handoff", () => {
+    const fresh = newFortunePlan();
+    expect(makeFireHandoff({ source: "sunday", months: null })).toBeNull();
+    expect(isFireHandoff({ source: "sunday", name: FIX_GOAL_NAME, months: 3 })).toBe(false);
+    const received = receiveFireHandoff(fresh, { source: "sunday", name: FIX_GOAL_NAME, months: null });
+    expect(received).toBe(fresh);
+    expect(receivedFixMilestone(received)).toBeNull();
   });
 
   it("keeps an emergency-fund milestone even when current amount is 0", () => {
