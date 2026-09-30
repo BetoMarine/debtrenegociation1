@@ -153,7 +153,7 @@ describe("invest cards and copy guards", () => {
     expect(document.querySelector("[aria-pressed='true']")).toBeNull();
   });
 
-  it("has no pylinvest mention and leaves the export writer for step 3", () => {
+  it("has no pylinvest mention and does not let Fortune write the export", () => {
     const files = ["copy.js", "flow.js", "render.js", "boot.js", "invest.js"].map((name) =>
       readFileSync(join(process.cwd(), "src/fortune/v3", name), "utf8"),
     );
@@ -161,6 +161,13 @@ describe("invest cards and copy guards", () => {
     expect(blob).not.toMatch(/pylinvest|PYL Invest Brazil|com\.marinelli\.pylinvest/);
     expect(blob).not.toMatch(/sooner by|months sooner/i);
     expect(exportWriteAvailable()).toBe(false);
+  });
+
+  it("clears a typed handoff code on quick exit", () => {
+    const state = reduce(freshState({ screen: "code", codeDraft: "6H1-G2S", codeError: "length" }), { type: "exit" });
+    expect(state.screen).toBe("cover");
+    expect(state.codeDraft).toBe("");
+    expect(state.codeError).toBe("");
   });
 
   it("keeps standalone creditor copy and serves the lender question only on the fortune host", () => {
