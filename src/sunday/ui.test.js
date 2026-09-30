@@ -1,6 +1,8 @@
 /**
  * @vitest-environment happy-dom
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { el, escapeHtml } from "../dom.js";
 import { emptyDraftLoan, newSundayPack } from "./model.js";
@@ -147,6 +149,18 @@ describe("Sunday situation screen keeps its place", () => {
     expect(host.sunday.screen).toBe("sunday-debts");
     await vi.advanceTimersByTimeAsync(SITUATION_PERSIST_MS + 50);
     expect(host.persistSunday.mock.calls.map((call) => call[0])).toEqual(["sunday-debts"]);
+  });
+});
+
+describe("Sunday situation choice taps", () => {
+  it("does not call host.render from nationality, who-knows, or goal taps", () => {
+    const src = readFileSync(join(process.cwd(), "src/sunday/ui.js"), "utf8");
+    const body = src.slice(src.indexOf("function renderSituation"), src.indexOf("function renderDebts"));
+    const taps = [...body.matchAll(/data-sunday-choice[\s\S]*?addEventListener\("click", \(\) => \{([\s\S]*?)\n    \}\);/g)].map(
+      (match) => match[1],
+    );
+    expect(taps).toHaveLength(3);
+    for (const tap of taps) expect(tap).not.toContain("host.render");
   });
 });
 

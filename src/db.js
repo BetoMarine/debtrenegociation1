@@ -1,3 +1,4 @@
+import { acceptRdExport } from "./rd/export.js";
 import { ATT, KV } from "./shared/storage/keys.js";
 import { noteMeaningfulSave } from "./shared/storage/persist.js";
 import { eraseFortune, eraseRightDoor, eraseSunday } from "./shared/storage/erase.js";
@@ -28,6 +29,19 @@ export async function savePack(pack) {
   await rd().put(KV.rdPack, next);
   noteMeaningfulSave();
   return next;
+}
+
+export async function getRdExport() {
+  return rd().get(KV.rdExport);
+}
+
+/** Persist a minimal export. Rejects extra fields and a mismatched end month. */
+export async function saveRdExport(record) {
+  const accepted = acceptRdExport(record);
+  if (!accepted) return null;
+  await rd().put(KV.rdExport, accepted);
+  noteMeaningfulSave();
+  return accepted;
 }
 
 export async function getLang() {

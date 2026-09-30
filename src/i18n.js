@@ -205,6 +205,16 @@ const zh = {
 
   needName: "請先填你的姓名，信件才用得上。",
   pdfError: "未能產生 PDF。請再試一次。",
+  // zh unreviewed — live blocker, not a preview blocker
+  r1: {
+    title: "這個月之後，下一步是什麼？",
+    body: "只會留下這些月份，給 Fortune Teller 用。姓名、照片和信件不會帶走。",
+    primary: "儲存這些月份",
+    notNow: "暫時不要",
+    codeTitle: "在另一部手機輸入這組代碼。",
+    codeHint: "離開後，畫面上看不見這組代碼。",
+    exit: "離開",
+  },
   ftHost: FT_HOST_ZH,
 };
 
@@ -412,6 +422,15 @@ const en = {
 
   needName: "Add your name so the letter can be in your name.",
   pdfError: "Could not create the PDF. Try again.",
+  r1: {
+    title: "What's next, after this month?",
+    body: "Only these months are kept for Fortune Teller. Not your name, photos, or letter.",
+    primary: "Save these months",
+    notNow: "Not now",
+    codeTitle: "On the other phone, type this code.",
+    codeHint: "Exit clears this code from the screen.",
+    exit: "Exit",
+  },
   ftHost: FT_HOST_EN,
 };
 

@@ -10,6 +10,7 @@ import {
   putAttachment,
   saveFortuneHandoff,
   savePack,
+  saveRdExport,
   setLang,
   wipeRightDoor,
 } from "./db.js";
@@ -23,8 +24,10 @@ import { pylWordmarkHtml } from "./pyl-brand.js";
 import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral, withFromFortune } from "./refer.js";
 import { makeFireHandoff, packImpliedFixMonths } from "./handoff.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
+import { renderR1Screen, R1_NOT_NOW_KEY, applyR1Action, consumeQuickExitPress, r1CompletionKey, shouldShowR1 } from "./rd/r1.js";
 import { RD_PRODUCT } from "./shared/product-id.js";
 import { stageWord } from "./shared/stage-words.js";
+import { sessionGet, sessionSet } from "./shared/storage/web.js";
 import { renderRdStep } from "./rd/steps/index.js";
 
 const STATUSES = ["draft", "sent", "waiting", "accepted", "rejected", "gave_up"];
@@ -35,6 +38,10 @@ let lang = "zh";
 let pack = null;
 let screen = "home";
 let versionTaps = 0;
+let r1Phase = "ask";
+let r1Code = "";
+let r1Armed = false;
+let exitAt = 0;
 let draftCreditor = { nickname: "", type: "hsbc", amount: "", ref: "" };
 let busy = false;
 let notice = "";
@@ -73,6 +80,7 @@ export async function boot() {
   await log("app_open");
   await persistFireHandoff();
   window.addEventListener("hashchange", onHash);
+  window.addEventListener("keydown", onQuickExitKey);
   syncScreenFromHash();
   render();
 }
@@ -91,7 +99,7 @@ function onHash() {
   render();
 }
 
-const RD_SCREENS = new Set(["home", "reason", "creditors", "situation", "door", "documents", "pack", "counters"]);
+const RD_SCREENS = new Set(["home", "reason", "creditors", "situation", "door", "documents", "pack", "r1", "counters"]);
 
 function syncScreenFromHash() {
   const raw = (location.hash || "#/").replace(/^#\/?/, "");
@@ -264,12 +272,99 @@ function stepCtx() {
   };
 }
 
+function r1NotNow() {
+  return sessionGet(R1_NOT_NOW_KEY) === "1";
+}
+
+function offerR1() {
+  const now = new Date();
+  if (!shouldShowR1({ host: "standalone", pack, notNow: r1NotNow(), offeredFor: pack?.r1OfferedFor, now })) return false;
+  const key = r1CompletionKey(pack, now);
+  pack.r1OfferedFor = key;
+  const pending = pack;
+  void savePack(pending).then((saved) => {
+    if (pack === pending) pack = saved;
+  });
+  r1Armed = true;
+  return true;
+}
+
 function render() {
   persistFireHandoff();
+  if (screen === "pack" && offerR1()) {
+    r1Phase = "ask";
+    r1Code = "";
+    screen = "r1";
+    if (location.hash !== "#/r1") location.hash = "/r1";
+  }
+  if (screen === "r1" && r1Phase !== "code" && (!r1Armed || r1NotNow() || !r1CompletionKey(pack))) {
+    r1Armed = false;
+    screen = "pack";
+  }
   if (screen === "home") renderHome();
   else if (screen === "counters") renderCounters();
+  else if (screen === "r1") renderR1();
   else if (["reason", "creditors", "situation", "door", "documents", "pack"].includes(screen)) renderRdStep(screen, stepCtx());
   window.scrollTo(0, 0);
+}
+
+function renderR1() {
+  const body = renderR1Screen({
+    phase: r1Phase === "code" ? "code" : "ask",
+    code: r1Code,
+    s,
+    el,
+    escapeHtml,
+    onPrimary: () => {
+      void onR1Primary();
+    },
+    onNotNow: () => onR1NotNow(),
+    onExit: () => quickExitR1(),
+    onContinue: () => continueFromCode(),
+  });
+  shell(body);
+}
+
+async function onR1Primary() {
+  const decision = applyR1Action("primary", { pack, now: new Date() });
+  if (!decision.write) return;
+  const saved = await saveRdExport(decision.record);
+  if (!saved) return;
+  r1Code = decision.code;
+  r1Phase = "code";
+  screen = "r1";
+  r1Armed = true;
+  render();
+}
+
+function onR1NotNow() {
+  applyR1Action("not-now", { sessionSet });
+  r1Code = "";
+  r1Phase = "ask";
+  r1Armed = false;
+  go("pack");
+}
+
+function quickExitR1() {
+  applyR1Action("exit");
+  r1Code = "";
+  r1Phase = "ask";
+  r1Armed = false;
+  go("home");
+}
+
+function continueFromCode() {
+  r1Code = "";
+  r1Phase = "ask";
+  r1Armed = false;
+  go("pack");
+}
+
+function onQuickExitKey(event) {
+  if (event.key !== "Escape" || screen !== "r1" || r1Phase !== "code" || !r1Code) return;
+  const press = consumeQuickExitPress(exitAt, Date.now());
+  exitAt = press.at;
+  if (press.clear) quickExitR1();
 }
 
 function reminderState() {

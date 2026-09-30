@@ -126,7 +126,7 @@ export function letterFileName(date = new Date()) {
   return `letter-${monthStamp(date)}.pdf`;
 }
 
-/** The nudge that writes an export is step 3 and is not mounted. */
+/** Standalone R1 writes the export. This Fortune host never does. */
 export function exportWriteAvailable() {
   return false;
 }
