@@ -1,6 +1,6 @@
 import { RD_PRODUCT } from "./shared/product-id.js";
 
-/** Shared Fix-milestone handoff. Created by Right Door / Sunday Pack; Fortune receives it. */
+/** Shared Fix-milestone handoff. Created by Right Door. Sunday Pack does not hand a step to Fortune. */
 
 export const FIX_MILESTONE_ID = "fix-renegotiate";
 export const EF_MILESTONE_ID = "ef-floor";
@@ -39,10 +39,10 @@ export function packImpliedFixMonths(pack) {
 }
 
 export function makeFireHandoff({ source, months } = {}) {
-  const src = source === "sunday" ? "sunday" : RD_PRODUCT;
+  if (source === "sunday") return null;
   const known = months === 3 || months === 6 ? months : null;
   return {
-    source: src,
+    source: RD_PRODUCT,
     name: FIX_GOAL_NAME,
     months: known,
     createdAt: Date.now(),
@@ -51,5 +51,5 @@ export function makeFireHandoff({ source, months } = {}) {
 
 export function isFireHandoff(raw) {
   if (!raw || typeof raw !== "object") return false;
-  return raw.source === RD_PRODUCT || raw.source === "sunday";
+  return raw.source === RD_PRODUCT;
 }

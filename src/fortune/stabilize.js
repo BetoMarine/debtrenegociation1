@@ -44,7 +44,7 @@ export function receivedFixMilestone(plan) {
   return (plan?.milestones || []).find((m) => milestoneRole(m) === "fix") || null;
 }
 
-/** Fortune receives a Fix milestone created by Right Door or Sunday Pack. Does not invent one. */
+/** Fortune receives a Fix milestone created by Right Door. Does not invent one, and does not take one from Sunday Pack. */
 export function receiveFireHandoff(plan, handoff) {
   if (!plan || !isFireHandoff(handoff)) return plan;
   const existing = receivedFixMilestone(plan);

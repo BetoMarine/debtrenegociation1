@@ -185,7 +185,7 @@ describe("receiveFireHandoff still owns Fix tenor", () => {
   it("keeps a 3-or-6 Fix even after living goals overlap that window", () => {
     const handed = receiveFireHandoff(
       applyTheme({ ...newFortunePlan(), theme: "rebuild", debtHeat: "heavy" }, "rebuild"),
-      makeFireHandoff({ source: "sunday", months: 3 }),
+      makeFireHandoff({ source: "right-door", months: 3 }),
     );
     const phone = handed.milestones.find((m) => /phone/i.test(m.name));
     const next = setLivingGoalMonths(handed, phone.id, 2);
