@@ -1,8 +1,10 @@
 import { missingAttachments } from "../docs.js";
 import { packImpliedFixMonths } from "../handoff.js";
 import { RD_PRODUCT } from "../shared/product-id.js";
-import { monthStamp } from "../shared/storage/keys.js";
+import { KV, monthStamp } from "../shared/storage/keys.js";
+import { noteMeaningfulSave } from "../shared/storage/persist.js";
 import { monthsAskedBucket } from "../shared/shortcode.js";
+import { openScope } from "../shared/storage/store.js";
 
 /** Minimal rd:export fields. Anything else is rejected. */
 export const RD_EXPORT_FIELDS = [
@@ -102,4 +104,17 @@ export function buildRdExport(pack, now = new Date()) {
     doneAt: done ? monthStamp(when) : null,
     exportedAt: isoDate(when),
   });
+}
+
+export async function readRdExport() {
+  return openScope("rd.app").get(KV.rdExport);
+}
+
+/** Persist a minimal export. Rejects extra fields and a mismatched end month. */
+export async function saveRdExport(record) {
+  const accepted = acceptRdExport(record);
+  if (!accepted) return null;
+  await openScope("rd.app").put(KV.rdExport, accepted);
+  noteMeaningfulSave();
+  return accepted;
 }

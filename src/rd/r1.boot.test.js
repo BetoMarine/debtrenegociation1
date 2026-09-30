@@ -3,7 +3,8 @@
  */
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getRdExport, savePack } from "../db.js";
+import { savePack } from "../db.js";
+import { readRdExport } from "./export.js";
 import { a2FoundState } from "../fortune/import/found.js";
 import { KV } from "../shared/storage/keys.js";
 import { openScope, resetStorageForTests } from "../shared/storage/store.js";
@@ -56,15 +57,15 @@ describe("standalone R1 boot", () => {
     expect(document.querySelector("[data-r1=ask]")).toBeTruthy();
     expect(document.querySelector("[data-stage-line]")).toBeNull();
     expect(document.querySelector("[data-r1-code]")).toBeNull();
-    expect(await getRdExport()).toBeNull();
+    expect(await readRdExport()).toBeNull();
 
     document.querySelector("[data-act=r1-primary]").click();
     await vi.waitFor(async () => {
-      expect(await getRdExport()).toBeTruthy();
+      expect(await readRdExport()).toBeTruthy();
     });
     const code = document.querySelector("[data-r1-code]").textContent;
     expect(code).toMatch(/^[0-9A-HJKMNP-TV-Z]{3}-[0-9A-HJKMNP-TV-Z]{3}$/);
-    const saved = await getRdExport();
+    const saved = await readRdExport();
     expect(saved.hkid).toBeUndefined();
     expect(JSON.stringify(saved)).not.toMatch(/Ada|A123|9123/);
 
@@ -73,7 +74,7 @@ describe("standalone R1 boot", () => {
       expect(document.querySelector("[data-r1-code]")).toBeNull();
     });
     expect(document.body.textContent).not.toContain(code);
-    expect((await getRdExport()).exportedAt).toBe(saved.exportedAt);
+    expect((await readRdExport()).exportedAt).toBe(saved.exportedAt);
 
     const seen = await openScope("ft.import").get(KV.rdExport);
     expect(a2FoundState({ rdExport: seen }).found).toBe(true);

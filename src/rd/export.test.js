@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { a2FoundState } from "../fortune/import/found.js";
 import { applyBroughtIn } from "../fortune/v3/flow.js";
 import { newFortunePlan } from "../fortune/model.js";
-import { getRdExport, saveRdExport } from "../db.js";
+import { readRdExport, saveRdExport } from "./export.js";
 import { LEGACY_DB_NAMES } from "../shared/storage/migrate-ns-v1.js";
 import { KV } from "../shared/storage/keys.js";
 import { openNamedDb, requestResult, txDone } from "../shared/storage/idb.js";
@@ -108,7 +108,7 @@ describe("preview namespace round trip", () => {
     globalThis.__PYL_STORAGE_NS__ = PREVIEW;
     const record = buildRdExport(readyPack(), NOW);
     expect(await saveRdExport({ ...record, phone: "900" })).toBeNull();
-    expect(await getRdExport()).toBeNull();
+    expect(await readRdExport()).toBeNull();
     expect(await saveRdExport(record)).toEqual(record);
 
     const importer = openScope("ft.import");

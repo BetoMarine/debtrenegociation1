@@ -10,7 +10,6 @@ import {
   putAttachment,
   saveFortuneHandoff,
   savePack,
-  saveRdExport,
   setLang,
   wipeRightDoor,
 } from "./db.js";
@@ -24,6 +23,7 @@ import { pylWordmarkHtml } from "./pyl-brand.js";
 import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral, withFromFortune } from "./refer.js";
 import { makeFireHandoff, packImpliedFixMonths } from "./handoff.js";
 import { buildPackPdf, compressImage } from "./pdf.js";
+import { saveRdExport } from "./rd/export.js";
 import { renderR1Screen, R1_NOT_NOW_KEY, applyR1Action, consumeQuickExitPress, r1CompletionKey, shouldShowR1 } from "./rd/r1.js";
 import { RD_PRODUCT } from "./shared/product-id.js";
 import { stageWord } from "./shared/stage-words.js";
