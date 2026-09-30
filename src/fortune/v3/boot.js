@@ -8,7 +8,20 @@ import { openScope } from "../../shared/storage/store.js";
 import { sessionGet, sessionRemove, sessionSet } from "../../shared/storage/web.js";
 import { emptyUi, openedFortuneState, reduce } from "./flow.js";
 import { renderV3 } from "./render.js";
+import { createWriteQueue } from "./write-queue.js";
 import { addFtPhoto, fortuneLetterText, loadFtRd, resetFtRd, saveFtRd, shareFortuneLetter } from "../rd-host.js";
+
+const writes = createWriteQueue();
+
+export function resetFortuneWritesForTests() {
+  writes.bump();
+  writes.beforeWrite = null;
+}
+
+/** Test seam. Holds a save after it has joined the queue and before it writes. */
+export function setFortuneWriteGateForTests(gate) {
+  writes.beforeWrite = gate || null;
+}
 
 const ERASE_FLAG = "ft.eraseNotice";
 
@@ -52,16 +65,30 @@ export async function bootV3(root = document.getElementById("app")) {
   let escAt = 0;
 
   async function persist() {
-    state.plan = migrateFortunePlan(await saveFortunePlan(state.plan)) || state.plan;
-    const savedUi = await saveFortuneUi(state.ui);
-    state.ui = { ...emptyUi(), ...savedUi, lastByStage: savedUi?.lastByStage || {} };
-    state.rd = await saveFtRd({
-      fullName: state.rd.fullName,
-      tenorMonths: state.rd.tenorMonths,
-      reason: state.rd.reason,
-      letter: state.rd.letter,
-      letterTouched: state.rd.letterTouched,
-      askedRoute: state.ui.askedRoute,
+    const seen = writes.epoch;
+    await writes.enqueue(async () => {
+      if (seen !== writes.epoch) return;
+      const plan = state.plan;
+      const ui = state.ui;
+      const rd = {
+        fullName: state.rd.fullName,
+        tenorMonths: state.rd.tenorMonths,
+        reason: state.rd.reason,
+        letter: state.rd.letter,
+        letterTouched: state.rd.letterTouched,
+        askedRoute: state.ui.askedRoute,
+      };
+      if (writes.beforeWrite) await writes.beforeWrite();
+      if (seen !== writes.epoch) return;
+      const savedPlan = migrateFortunePlan(await saveFortunePlan(plan)) || plan;
+      if (seen !== writes.epoch) return;
+      state.plan = savedPlan;
+      const savedUi = await saveFortuneUi(ui);
+      if (seen !== writes.epoch) return;
+      state.ui = { ...emptyUi(), ...savedUi, lastByStage: savedUi?.lastByStage || {} };
+      const savedRd = await saveFtRd(rd);
+      if (seen !== writes.epoch) return;
+      state.rd = savedRd;
     });
   }
 
@@ -76,15 +103,17 @@ export async function bootV3(root = document.getElementById("app")) {
     if (action.type === "exit" && state.screen !== "e1") await persist();
     if (action.type === "confirm-erase") {
       sessionSet(ERASE_FLAG, "1");
-      await wipeFortune();
-      state = reduce(openedFortuneState({ standalone: state.standalone }), { type: "erased" });
+      writes.bump();
+      const standalone = state.standalone;
+      state = reduce(openedFortuneState({ standalone }), { type: "erased" });
+      await writes.enqueue(() => wipeFortune());
       draw();
       return;
     }
-    if (action.type === "start-clear" || action.type === "fresh") await resetFtRd();
+    if (action.type === "start-clear" || action.type === "fresh") await writes.enqueue(() => resetFtRd());
     if (action.type === "e1-ok" || (action.type === "exit" && state.screen === "e1")) sessionRemove(ERASE_FLAG);
     state = reduce(state, action);
-    if (action.type !== "exit" && action.type !== "e1-ok") await persist();
+    if (action.type !== "exit" && action.type !== "e1-ok" && action.type !== "ask-erase") await persist();
     draw();
   }
 
