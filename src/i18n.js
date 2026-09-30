@@ -1,4 +1,5 @@
 import { CITI_CONTACT, HSBC_CONTACT, VERIFIED_URLS } from "./door.js";
+import { FT_HOST_EN, FT_HOST_ZH } from "./shared/ft-host-copy.js";
 
 const zh = {
   appName: "正確的門",
@@ -204,7 +205,7 @@ const zh = {
 
   needName: "請先填你的姓名，信件才用得上。",
   pdfError: "未能產生 PDF。請再試一次。",
-  ftHost: {},
+  ftHost: FT_HOST_ZH,
 };
 
 const en = {
@@ -411,7 +412,7 @@ const en = {
 
   needName: "Add your name so the letter can be in your name.",
   pdfError: "Could not create the PDF. Try again.",
-  ftHost: {},
+  ftHost: FT_HOST_EN,
 };
 
 export const STRINGS = { zh, en };

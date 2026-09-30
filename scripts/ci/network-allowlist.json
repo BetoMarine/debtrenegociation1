@@ -1,5 +1,8 @@
 {
   "counts": {
+    "docs.js": {
+      "https://": 1
+    },
     "html2canvas.esm.js": {
       "XMLHttpRequest": 4,
       "https://": 2,
@@ -9,6 +12,11 @@
       "fetch(": 4,
       "https://": 2
     },
+    "jspdf.es.min.js": {
+      "XMLHttpRequest": 3,
+      "https://": 3,
+      "http://": 8
+    },
     "main.js": {
       "https://": 9
     },
@@ -16,10 +24,7 @@
       "http://": 4
     },
     "register-sw.js": {
-      "fetch(": 1,
-      "XMLHttpRequest": 3,
-      "https://": 3,
-      "http://": 8
+      "fetch(": 1
     },
     "sunday.js": {
       "https://": 7
