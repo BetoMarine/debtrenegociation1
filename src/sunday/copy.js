@@ -26,6 +26,10 @@ const en = {
   remove: "Remove",
   optional: "Optional",
   version: "PoC v0.8.0",
+  about: "About",
+  statusTitle: "About this app",
+  statusLive: "Live",
+  statusClose: "Close",
   pylStudio: "Plan Your Life",
   localOnly:
     "This pack stays on this phone. No account. Uninstall wipes it. We never email Enrich, NGOs, banks, or lenders for you.",

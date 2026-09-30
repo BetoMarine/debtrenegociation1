@@ -28,6 +28,20 @@ describe("foundation guards", () => {
     expect(bad).toHaveLength(1);
   });
 
+  it("allows only the exact status-truth lines", () => {
+    const ok = unexpectedRule17(
+      [
+        { key: "v3.status.fortune", text: "Fortune Teller Testing" },
+        { key: "v3.status.invest", text: "Invest Concept" },
+        { key: "v3.status.door", text: "Right Door Live" },
+      ],
+      [],
+    );
+    expect(ok).toEqual([]);
+    expect(unexpectedRule17([{ key: "v3.cardsTitle", text: "Invest Concept" }], [])).toHaveLength(1);
+    expect(unexpectedRule17([{ key: "v3.status.invest", text: "Invest now" }], [])).toHaveLength(1);
+  });
+
   it("strips unscoped cache healing from preview HTML", () => {
     const html = `<html data-pyl-app="rd"><script>
       /* pyl-cache-heal:start */

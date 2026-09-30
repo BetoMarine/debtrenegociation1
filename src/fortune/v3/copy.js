@@ -9,6 +9,14 @@ export const V3_ZH_REVIEW = "unreviewed";
 
 export const V3_EN = {
   brand: "Fortune Teller",
+  about: "About",
+  status: {
+    title: "About this app",
+    fortune: "Fortune Teller Testing",
+    invest: "Invest Concept",
+    door: "Right Door Live",
+    close: "Close",
+  },
   coverLead: "Stays on this phone.",
   coverHint: "Exit keeps your answers on this phone.",
   continue: "Continue",

@@ -420,7 +420,18 @@ function sheet(state) {
   if (kind === "bring") {
     return `<div class="v3-sheet" role="dialog"><p>${escapeHtml(v3("bringAgainBody"))}</p>${btn(v3("bringAgain"), "confirm-bring")}${quiet(v3("erase.stay"), "close-sheet")}</div>`;
   }
+  if (kind === "status") {
+    return `<div class="v3-sheet" role="dialog" aria-labelledby="v3-status-title"><h2 id="v3-status-title" class="v3-h2">${escapeHtml(v3("status.title"))}</h2>
+      <p class="v3-status-line">${escapeHtml(v3("status.fortune"))}</p>
+      <p class="v3-status-line">${escapeHtml(v3("status.invest"))}</p>
+      <p class="v3-status-line">${escapeHtml(v3("status.door"))}</p>
+      ${btn(v3("status.close"), "close-sheet")}</div>`;
+  }
   return "";
+}
+
+function footer() {
+  return `<footer class="v3-foot"><button class="v3-about" type="button" data-act="about">${escapeHtml(v3("about"))}</button></footer>`;
 }
 
 export function renderV3(state) {
@@ -428,6 +439,7 @@ export function renderV3(state) {
   root.append(chrome(state));
   const body = el(`<main class="v3-main">${main(state)}</main>`);
   root.append(body);
+  root.append(el(footer()));
   if (state.sheet) root.append(el(sheet(state)));
   return root;
 }

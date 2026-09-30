@@ -1,5 +1,5 @@
 import { st as sundayT } from "./copy.js";
-import { SUNDAY_SCREENS, nextSundayLang, renderSunday } from "./ui.js";
+import { SUNDAY_SCREENS, attachSundayStatus, nextSundayLang, renderSunday } from "./ui.js";
 import {
   addEvent,
   getSundayLang,
@@ -268,6 +268,7 @@ function shell(body) {
           ·
           <a class="link" href="${escapeHtml(productHref("fortune"))}">${escapeHtml(s("otherToolsFortune"))}</a>
         </p>
+        <button class="status-about" type="button" data-act="status">${escapeHtml(s("about"))}</button>
         <button class="version" type="button" data-act="version">${escapeHtml(s("version"))}</button>
       </footer>
     </div>
@@ -286,6 +287,7 @@ function shell(body) {
 function bind(root) {
   root.querySelector('[data-act="lang"]')?.addEventListener("click", toggleLang);
   root.querySelector('[data-act="version"]')?.addEventListener("click", tapVersion);
+  attachSundayStatus(root, sundayLang, escapeHtml);
   root.querySelectorAll("[data-go]").forEach((btn) => {
     btn.addEventListener("click", () => go(btn.dataset.go));
   });

@@ -111,6 +111,36 @@ describe("Fortune v3 routing", () => {
   });
 });
 
+describe("status truth", () => {
+  const screens = ["cover", "map", "a2", "code", "s01", "s05", "s12", "cards", "e1"];
+
+  it("keeps the three lines behind one About tap on the cover and the map", () => {
+    for (const screen of ["cover", "map"]) {
+      const closed = textOf(freshState({ screen }));
+      expect(closed).not.toContain("Fortune Teller Testing");
+      expect(closed).not.toContain("Invest Concept");
+      expect(closed).not.toContain("Right Door Live");
+      expect(closed).not.toMatch(/Offshore/i);
+      expect(document.querySelector("[data-act='about']")).toBeTruthy();
+      const open = reduce(freshState({ screen }), { type: "about" });
+      expect(open.sheet).toEqual({ type: "status" });
+      const sheet = textOf(open);
+      expect(sheet).toContain("Fortune Teller Testing");
+      expect(sheet).toContain("Invest Concept");
+      expect(sheet).toContain("Right Door Live");
+      expect(sheet).not.toMatch(/Offshore/i);
+      expect(reduce(open, { type: "close-sheet" }).sheet).toBeNull();
+    }
+  });
+
+  it("offers About on every Fortune screen", () => {
+    for (const screen of screens) {
+      textOf(freshState({ screen }));
+      expect(document.querySelector("[data-act='about']")).toBeTruthy();
+    }
+  });
+});
+
 describe("invest cards and copy guards", () => {
   it("computes 10/15/20/25 and never assigns a card", () => {
     expect(assignedCard({ income: 1 })).toBeNull();

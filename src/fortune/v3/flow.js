@@ -476,6 +476,7 @@ export function reduce(state, action) {
     const screen = state.ui.lastByStage?.[actionMap.stage] || STAGE_START[actionMap.stage];
     return go(state, screen, { ui: { ...state.ui, transition: null } });
   }
+  if (type === "about") return { ...state, sheet: { type: "status" } };
   if (type === "info") return { ...state, sheet: { type: "info", id: action.id } };
   if (type === "leave") return { ...state, sheet: { type: "leave", href: action.href } };
   if (type === "ask-erase") return { ...state, sheet: { type: "erase" } };

@@ -4,7 +4,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { el, escapeHtml } from "../dom.js";
 import { emptyDraftLoan, newSundayPack } from "./model.js";
-import { SITUATION_PERSIST_MS, renderSunday } from "./ui.js";
+import { SITUATION_PERSIST_MS, attachSundayStatus, renderSunday, sundayStatusHtml } from "./ui.js";
+import { st } from "./copy.js";
 
 afterEach(() => {
   vi.clearAllTimers();
@@ -176,5 +177,26 @@ describe("Sunday text fields that already stay mounted", () => {
     expect(root.querySelector("#note")).toBe(note);
     expect(sunday.split.bills).toBe("40");
     expect(sunday.splitNote).toBe("allowance only");
+  });
+});
+
+describe("Sunday status truth", () => {
+  it("says Live in one tap and leaves Offshore outside the phone flow", () => {
+    expect(st("en", "version")).toBe("PoC v0.8.0");
+    expect(st("tl", "statusLive")).toBe("Live");
+    expect(st("id", "statusLive")).toBe("Live");
+    const root = document.createElement("div");
+    root.innerHTML = `<button class="status-about" type="button" data-act="status">About</button><button type="button" data-act="version">PoC v0.8.0</button>`;
+    document.body.append(root);
+    expect(root.textContent).not.toMatch(/\bLive\b/);
+    expect(sundayStatusHtml(escapeHtml, "en")).not.toMatch(/Offshore|Testing/i);
+    attachSundayStatus(root, "en", escapeHtml);
+    root.querySelector("[data-act='status']").click();
+    expect(root.textContent).toContain("Sunday Pack");
+    expect(root.textContent).toContain("Live");
+    expect(root.textContent).not.toMatch(/Offshore/i);
+    expect(root.textContent).not.toContain("Testing");
+    root.querySelector("[data-act='close-status']").click();
+    expect(root.querySelector("[data-status-sheet]")).toBeNull();
   });
 });

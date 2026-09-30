@@ -4,6 +4,9 @@ import { join } from "node:path";
 export const RULE17 = /Door|Fix|Pack|growth pot|Step \d|Stabili|Invest|Grow it/;
 export const BANK_NAME = /HSBC|Hang Seng|Citibank|\bCiti\b|\bBOC\b|Bank of China|Standard Chartered|恒生|滙豐|花旗|中銀/;
 export const RIGHT_DOOR_OK = /(^|\.)(r1\.|a2\.|e1\.)|(^|\.)fromRightDoor$/;
+/** TP-H30 status lines. Exact text under status.* only — other Invest / Door copy still fails. */
+export const STATUS_TRUTH_KEY = /(^|\.)status\.(fortune|invest|door)$/;
+export const STATUS_TRUTH_TEXT = new Set(["Fortune Teller Testing", "Invest Concept", "Right Door Live"]);
 export const SOONER = /sooner|earlier than|faster|\{n\} months?/i;
 export const SOONER_ZH = /提早|早\s*\d+\s*個?月/;
 export const SOONER_NUMBER = /sooner by|\d+\s+months?\s+sooner|earlier than/i;
@@ -34,6 +37,7 @@ export function unexpectedRule17(entries, baseline) {
     const id = `${entry.key}\n${entry.text}`;
     if (allowed.has(id)) continue;
     if (entry.text.includes("Right Door") && RIGHT_DOOR_OK.test(entry.key)) continue;
+    if (STATUS_TRUTH_KEY.test(entry.key) && STATUS_TRUTH_TEXT.has(entry.text)) continue;
     bad.push(entry);
   }
   return bad;

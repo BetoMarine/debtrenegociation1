@@ -8,6 +8,7 @@ import {
   POLICE,
   TWGH_FDCC,
 } from "./contacts.js";
+import { el as domEl } from "../dom.js";
 import { st } from "./copy.js";
 import { SUNDAY_DOORS, consulateFor, hasCrisisFlags, recommendSundayDoor } from "./door.js";
 import {
@@ -107,6 +108,24 @@ function linkBtn(href, text) {
 
 function telBtn(href, text) {
   return `<a class="btn ext" href="${href}">${text}</a>`;
+}
+
+export function sundayStatusHtml(ex, lang = "en") {
+  return `<div class="status-sheet" role="dialog" data-status-sheet aria-labelledby="sunday-status-title">
+    <h2 id="sunday-status-title">${ex(st(lang, "statusTitle"))}</h2>
+    <p>${ex(st(lang, "brand"))}</p>
+    <p class="status-live">${ex(st(lang, "statusLive"))}</p>
+    <button class="btn" type="button" data-act="close-status">${ex(st(lang, "statusClose"))}</button>
+  </div>`;
+}
+
+export function attachSundayStatus(root, lang = "en", ex = (value) => value) {
+  root.querySelector("[data-act='status']")?.addEventListener("click", () => {
+    if (root.querySelector("[data-status-sheet]")) return;
+    const sheet = domEl(sundayStatusHtml(ex, lang));
+    root.append(sheet);
+    sheet.querySelector("[data-act='close-status']")?.addEventListener("click", () => sheet.remove());
+  });
 }
 
 export function renderSunday(screen, host) {
