@@ -97,10 +97,11 @@ function go(name) {
 async function ensureSunday() {
   if (!sunday) {
     sunday = migrateSundayPack(newSundayPack(sundayLang), sundayLang);
-    sunday = await saveSundayPack(sunday);
-  } else {
-    sunday = migrateSundayPack(sunday, sundayLang);
+    await saveSundayPack(sunday);
+    return sunday;
   }
+  const migrated = migrateSundayPack(sunday, sundayLang);
+  if (migrated && migrated !== sunday) Object.assign(sunday, migrated);
   return sunday;
 }
 
@@ -108,14 +109,23 @@ function setNotice(value) {
   notice = value;
 }
 
-async function persistSunday(nextScreen) {
-  await ensureSunday();
-  sunday.lang = sundayLang;
-  if (nextScreen) sunday.screen = nextScreen;
-  sunday.updatedAt = Date.now();
-  sunday = await saveSundayPack(sunday);
-  await persistFireHandoff();
-  return sunday;
+let sundayWrite = Promise.resolve();
+
+function persistSunday(nextScreen) {
+  const job = sundayWrite.then(async () => {
+    await ensureSunday();
+    sunday.lang = sundayLang;
+    if (nextScreen) sunday.screen = nextScreen;
+    sunday.updatedAt = Date.now();
+    await saveSundayPack(sunday);
+    await persistFireHandoff();
+    return sunday;
+  });
+  sundayWrite = job.then(
+    () => {},
+    () => {},
+  );
+  return job;
 }
 
 async function setSundayLanguage(code) {
@@ -144,7 +154,9 @@ function navSunday(backTo, nextTo) {
 
 function sundayHost() {
   return {
-    sunday,
+    get sunday() {
+      return sunday;
+    },
     sundayLang,
     draftLoan,
     busy,
