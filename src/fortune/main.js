@@ -1,7 +1,7 @@
 import "../styles.css";
-import { boot } from "./app.js";
+import { bootV3 } from "./v3/boot.js";
 import { registerServiceWorker } from "../register-sw.js";
 
 document.documentElement.classList.add("fortune-root");
 registerServiceWorker();
-boot();
+bootV3();

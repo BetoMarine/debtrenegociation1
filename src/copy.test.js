@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FORTUNE_STRINGS } from "./fortune/copy.js";
+import { FT_HOST_EN } from "./shared/ft-host-copy.js";
 import { STRINGS } from "./i18n.js";
 import { productHref } from "./paths.js";
 import { PYL_NAME } from "./pyl-brand.js";
@@ -75,7 +76,7 @@ describe("product copy", () => {
     expect(SUNDAY_STRINGS.tl.pylStudio).toBe("Plan Your Life");
     expect(SUNDAY_STRINGS.id.pylStudio).toBe("Plan Your Life");
     expect(FORTUNE_STRINGS.en.pylStudio).toBe("Plan Your Life");
-    expect(FORTUNE_STRINGS.en.compliance).toMatch(/not affiliated with HSBC/i);
+    expect(FT_HOST_EN.complianceLender).toBe("Not affiliated with any bank or lender.");
     expect(SUNDAY_STRINGS.en.pdf.footerOrg).toMatch(/not affiliated with Enrich/i);
   });
 

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { FORTUNE_STRINGS } from "../../src/fortune/copy.js";
+import { V3_EN } from "../../src/fortune/v3/copy.js";
 import { DOOR_KEYS, DOCUMENT_KEYS, SCRIPT_KEYS } from "../../src/rd/steps/index.js";
 import { lookupCopy, STRINGS } from "../../src/i18n.js";
 import { STAGE_WORDS } from "../../src/shared/stage-words.js";
@@ -21,12 +22,14 @@ function fail(message) {
 }
 
 const fortuneEntries = walkStrings(FORTUNE_STRINGS.en, [], "ft");
-const ftHostEntries = [];
+const ftHostEntries = walkStrings(STRINGS.en.ftHost, [], "ftHost");
 for (const key of [...SCRIPT_KEYS, ...DOOR_KEYS, ...DOCUMENT_KEYS]) {
   const text = lookupCopy(STRINGS.en.ftHost, key);
-  if (typeof text === "string") ftHostEntries.push({ key: `ftHost.${key}`, text });
+  if (typeof text === "string" && !ftHostEntries.some((entry) => entry.key === `ftHost.${key}`)) {
+    ftHostEntries.push({ key: `ftHost.${key}`, text });
+  }
 }
-const scanned = [...fortuneEntries, ...ftHostEntries];
+const scanned = [...fortuneEntries, ...ftHostEntries, ...walkStrings(V3_EN, [], "v3")];
 const baseline = JSON.parse(readFileSync(join(root, "scripts/ci/rule17-baseline.json"), "utf8"));
 const ruleBad = unexpectedRule17(scanned, baseline);
 if (ruleBad.length) {
@@ -89,7 +92,7 @@ for (const file of walkFiles(join(root, "src"))) {
   }
 }
 
-const uiRoots = ["src/app.js", "src/fortune/ui.js", "src/fortune/app.js", "src/sunday", "src/rd", "src/fortune/import", "src/fortune/map"];
+const uiRoots = ["src/app.js", "src/fortune/ui.js", "src/fortune/app.js", "src/fortune/rd-host.js", "src/fortune/v3", "src/sunday", "src/rd", "src/fortune/import", "src/fortune/map"];
 for (const file of walkFiles(join(root, "src"))) {
   const rel = relative(root, file).replaceAll("\\", "/");
   if (!file.endsWith(".js") || file.endsWith(".test.js")) continue;
