@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fortune Teller">
+  <rect width="512" height="512" rx="96" fill="#fafafa"/>
+  <circle cx="188" cy="256" r="118" fill="none" stroke="#7e22ce" stroke-width="28"/>
+  <circle cx="188" cy="256" r="70" fill="none" stroke="#7e22ce" stroke-width="14" opacity="0.45"/>
+  <circle cx="332" cy="256" r="118" fill="none" stroke="#06b6d4" stroke-width="28"/>
+  <circle cx="332" cy="256" r="70" fill="none" stroke="#06b6d4" stroke-width="14" opacity="0.45"/>
+  <circle cx="260" cy="256" r="22" fill="#7e22ce"/>
+</svg>

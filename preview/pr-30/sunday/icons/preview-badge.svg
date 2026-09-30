@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#7e22ce"/>
+  <text x="256" y="230" text-anchor="middle" font-family="sans-serif" font-size="72" fill="#ffffff">Preview</text>
+  <text x="256" y="340" text-anchor="middle" font-family="sans-serif" font-size="120" font-weight="700" fill="#ffffff">PR 30</text>
+</svg>
