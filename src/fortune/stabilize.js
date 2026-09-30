@@ -3,6 +3,7 @@
  * Rebuild still does fire triage + floor-first; the board is not gated on a funded floor.
  */
 import { EF_MILESTONE_ID, FIX_MILESTONE_ID, fixGoalLabel, isFireHandoff } from "../handoff.js";
+import { RD_PRODUCT } from "../shared/product-id.js";
 import { emergencyCurrentHkd, milestoneRole, monthYearLabel, resolveMoney } from "./model.js";
 
 export const DEBT_HEAT_IDS = ["none", "paying", "heavy", "fdw"];
@@ -27,7 +28,7 @@ export function prefersSunday(heat) {
 /** Right Door first for banked heat; Sunday Pack first for FDW stress. */
 export function fireLinkOrder(heat) {
   if (!needsFireCard(heat)) return [];
-  return prefersSunday(heat) ? ["sunday", "right-door"] : ["right-door", "sunday"];
+  return prefersSunday(heat) ? ["sunday", RD_PRODUCT] : [RD_PRODUCT, "sunday"];
 }
 
 /** Debt renegotiation horizon. Default 3 months; 6 stays available. */

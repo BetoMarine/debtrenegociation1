@@ -13,6 +13,7 @@ import {
 import { downloadBlob, el, escapeHtml, isStandalone } from "../dom.js";
 import { countEvents, makeEvent } from "../events.js";
 import { productHref } from "../paths.js";
+import { RD_PRODUCT } from "../shared/product-id.js";
 import { pylWordmarkHtml } from "../pyl-brand.js";
 import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isFortuneReferral } from "../refer.js";
 import { makeFireHandoff } from "../handoff.js";
@@ -96,10 +97,11 @@ function go(name) {
 async function ensureSunday() {
   if (!sunday) {
     sunday = migrateSundayPack(newSundayPack(sundayLang), sundayLang);
-    sunday = await saveSundayPack(sunday);
-  } else {
-    sunday = migrateSundayPack(sunday, sundayLang);
+    await saveSundayPack(sunday);
+    return sunday;
   }
+  const migrated = migrateSundayPack(sunday, sundayLang);
+  if (migrated && migrated !== sunday) Object.assign(sunday, migrated);
   return sunday;
 }
 
@@ -107,14 +109,23 @@ function setNotice(value) {
   notice = value;
 }
 
-async function persistSunday(nextScreen) {
-  await ensureSunday();
-  sunday.lang = sundayLang;
-  if (nextScreen) sunday.screen = nextScreen;
-  sunday.updatedAt = Date.now();
-  sunday = await saveSundayPack(sunday);
-  await persistFireHandoff();
-  return sunday;
+let sundayWrite = Promise.resolve();
+
+function persistSunday(nextScreen) {
+  const job = sundayWrite.then(async () => {
+    await ensureSunday();
+    sunday.lang = sundayLang;
+    if (nextScreen) sunday.screen = nextScreen;
+    sunday.updatedAt = Date.now();
+    await saveSundayPack(sunday);
+    await persistFireHandoff();
+    return sunday;
+  });
+  sundayWrite = job.then(
+    () => {},
+    () => {},
+  );
+  return job;
 }
 
 async function setSundayLanguage(code) {
@@ -143,7 +154,9 @@ function navSunday(backTo, nextTo) {
 
 function sundayHost() {
   return {
-    sunday,
+    get sunday() {
+      return sunday;
+    },
     sundayLang,
     draftLoan,
     busy,
@@ -251,7 +264,7 @@ function shell(body) {
         <p class="tiny">${escapeHtml(s("localOnly"))}</p>
         <p class="tiny">${escapeHtml(s("weDoNotEmailEnrich"))}</p>
         <p class="tiny">${escapeHtml(s("otherTools"))}<br/>
-          <a class="link" href="${escapeHtml(productHref("right-door"))}">${escapeHtml(s("otherToolsRight"))}</a>
+          <a class="link" href="${escapeHtml(productHref(RD_PRODUCT))}">${escapeHtml(s("otherToolsRight"))}</a>
           ·
           <a class="link" href="${escapeHtml(productHref("fortune"))}">${escapeHtml(s("otherToolsFortune"))}</a>
         </p>

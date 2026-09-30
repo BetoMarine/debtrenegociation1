@@ -12,5 +12,5 @@ export function productIdForPath(pathname) {
   if (/\/fortune(?:\/|$)/.test(path)) return "fortune";
   if (/\/sunday(?:\/|$)/.test(path)) return "sunday";
   if (/\/pyl(?:\/|$)/.test(path)) return "pyl";
-  return "right-door";
+  return "rd";
 }

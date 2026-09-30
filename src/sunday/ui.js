@@ -53,6 +53,54 @@ function choiceClass(on) {
   return on ? "choice selected" : "choice";
 }
 
+/** Pause before writing months left. Choice taps save immediately. */
+export const SITUATION_PERSIST_MS = 300;
+
+const SITUATION_LATER_SCREENS = new Set([
+  "sunday-debts",
+  "sunday-split",
+  "sunday-door",
+  "sunday-review",
+  "sunday-done",
+]);
+
+let situationPersistTimer = 0;
+
+function cancelSituationPersist() {
+  clearTimeout(situationPersistTimer);
+  situationPersistTimer = 0;
+}
+
+function situationStillCurrent(host) {
+  return !SITUATION_LATER_SCREENS.has(host.sunday?.screen);
+}
+
+function scheduleSituationPersist(host) {
+  cancelSituationPersist();
+  situationPersistTimer = setTimeout(() => {
+    situationPersistTimer = 0;
+    if (!situationStillCurrent(host)) return;
+    host.persistSunday("sunday-situation");
+  }, SITUATION_PERSIST_MS);
+}
+
+function syncDigits(input, max = 3) {
+  const raw = String(input.value ?? "");
+  const next = raw.replace(/\D/g, "").slice(0, max);
+  if (next !== raw) {
+    const caret = input.selectionStart ?? raw.length;
+    const digitsBefore = raw.slice(0, caret).replace(/\D/g, "").length;
+    input.value = next;
+    const pos = Math.min(digitsBefore, next.length);
+    if (typeof input.setSelectionRange === "function") input.setSelectionRange(pos, pos);
+  }
+  return next;
+}
+
+function markSelected(buttons, active) {
+  for (const btn of buttons) btn.classList.toggle("selected", btn === active);
+}
+
 function linkBtn(href, text) {
   return `<a class="btn btn-primary ext" href="${href}" target="_blank" rel="noopener">${text}</a>`;
 }
@@ -251,17 +299,21 @@ function renderCrisis(host) {
 }
 
 function renderSituation(host) {
+  cancelSituationPersist();
   const { el, escapeHtml: ex, sunday } = host;
   const body = el(`<div class="stack"><h1>${ex(t(host, "situationTitle"))}</h1><p class="hint">${ex(t(host, "situationHint"))}</p></div>`);
   body.append(el(`<p class="tiny">${ex(t(host, "nationality"))}</p>`));
-  NATIONALITIES.forEach((key) => {
-    const btn = el(`<button class="${choiceClass(sunday.nationality === key)}" type="button">${ex(t(host, `nationalities.${key}`))}</button>`);
-    btn.addEventListener("click", async () => {
-      sunday.nationality = key;
-      await host.persistSunday("sunday-situation");
-      host.render();
+  const nationalityButtons = NATIONALITIES.map((key) => {
+    const btn = el(
+      `<button class="${choiceClass(sunday.nationality === key)}" type="button" data-sunday-choice="nationality" data-value="${ex(key)}">${ex(t(host, `nationalities.${key}`))}</button>`,
+    );
+    btn.addEventListener("click", () => {
+      host.sunday.nationality = key;
+      markSelected(nationalityButtons, btn);
+      host.persistSunday("sunday-situation");
     });
     body.append(btn);
+    return btn;
   });
   const months = el(`
     <label class="field">${ex(t(host, "monthsLeft"))}
@@ -269,27 +321,33 @@ function renderSituation(host) {
     </label>
   `);
   body.append(months);
+  const monthsInput = months.querySelector("#months");
   body.append(el(`<p class="tiny">${ex(t(host, "whoKnows"))}</p>`));
-  WHO_KNOWS.forEach((key) => {
-    const btn = el(`<button class="${choiceClass(sunday.whoKnows === key)}" type="button">${ex(t(host, `whoKnowsOpts.${key}`))}</button>`);
-    btn.addEventListener("click", async () => {
-      sunday.whoKnows = key;
-      await host.persistSunday("sunday-situation");
-      host.render();
+  const whoButtons = WHO_KNOWS.map((key) => {
+    const btn = el(
+      `<button class="${choiceClass(sunday.whoKnows === key)}" type="button" data-sunday-choice="who" data-value="${ex(key)}">${ex(t(host, `whoKnowsOpts.${key}`))}</button>`,
+    );
+    btn.addEventListener("click", () => {
+      host.sunday.whoKnows = key;
+      markSelected(whoButtons, btn);
+      host.persistSunday("sunday-situation");
     });
     body.append(btn);
+    return btn;
   });
   body.append(el(`<p class="tiny">${ex(t(host, "meetingGoal"))}</p>`));
   GOALS.forEach((key) => {
-    const on = sunday.goals.includes(key);
-    const btn = el(`<button class="${choiceClass(on)}" type="button">${ex(t(host, `goals.${key}`))}</button>`);
-    btn.addEventListener("click", async () => {
-      const set = new Set(sunday.goals);
+    const btn = el(
+      `<button class="${choiceClass(sunday.goals.includes(key))}" type="button" data-sunday-choice="goal" data-value="${ex(key)}">${ex(t(host, `goals.${key}`))}</button>`,
+    );
+    btn.addEventListener("click", () => {
+      const pack = host.sunday;
+      const set = new Set(pack.goals);
       if (set.has(key)) set.delete(key);
       else set.add(key);
-      sunday.goals = GOALS.filter((g) => set.has(g));
-      await host.persistSunday("sunday-situation");
-      host.render();
+      pack.goals = GOALS.filter((g) => set.has(g));
+      btn.classList.toggle("selected", set.has(key));
+      host.persistSunday("sunday-situation");
     });
     body.append(btn);
   });
@@ -299,23 +357,40 @@ function renderSituation(host) {
   box.append(next, el(`<button class="btn btn-ghost" data-go="${back}" type="button">${ex(t(host, "back"))}</button>`));
   body.append(box);
   host.shellSunday(body);
-  months.querySelector("#months").addEventListener("input", async (e) => {
-    sunday.monthsLeft = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
-    await host.persistSunday("sunday-situation");
+
+  const rememberMonths = () => {
+    host.sunday.monthsLeft = syncDigits(monthsInput);
+  };
+  monthsInput.addEventListener("input", () => {
+    rememberMonths();
+    scheduleSituationPersist(host);
+  });
+  monthsInput.addEventListener("blur", () => {
+    if (!situationPersistTimer) return;
+    rememberMonths();
+    cancelSituationPersist();
+    if (!situationStillCurrent(host)) return;
+    host.persistSunday("sunday-situation");
   });
   next.addEventListener("click", async () => {
-    if (!sunday.nationality) {
+    rememberMonths();
+    cancelSituationPersist();
+    const pack = host.sunday;
+    if (!pack.nationality) {
       host.setNotice(t(host, "needNationality"));
+      await host.persistSunday("sunday-situation");
       host.render();
       return;
     }
-    if (!sunday.whoKnows) {
+    if (!pack.whoKnows) {
       host.setNotice(t(host, "needWhoKnows"));
+      await host.persistSunday("sunday-situation");
       host.render();
       return;
     }
-    if (!sunday.goals.length) {
+    if (!pack.goals.length) {
       host.setNotice(t(host, "needGoal"));
+      await host.persistSunday("sunday-situation");
       host.render();
       return;
     }

@@ -2,46 +2,59 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { foundationPlugins } from "./vite.foundation.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
-  appType: "mpa",
-  base: "./",
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(root, "index.html"),
-        sunday: resolve(root, "sunday/index.html"),
-        fortune: resolve(root, "fortune/index.html"),
+export default defineConfig(({ command }) => {
+  const storageNs = process.env.VITE_STORAGE_NS || "";
+  const preview = process.env.VITE_DEPLOY === "preview" || storageNs.startsWith("pyl-preview-");
+  return {
+    appType: "mpa",
+    base: "./",
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(root, "index.html"),
+          sunday: resolve(root, "sunday/index.html"),
+          fortune: resolve(root, "fortune/index.html"),
+        },
+        output: {
+          manualChunks(id) {
+            const norm = id.replaceAll("\\", "/");
+            if (norm.includes("/src/shared/storage/")) return "ns-storage";
+            if (norm.includes("/src/rd/steps/")) return "rd-steps";
+          },
+        },
       },
     },
-  },
-  plugins: [
-    VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: false,
-      strategies: "injectManifest",
-      srcDir: "src",
-      filename: "sw.js",
-      includeAssets: [
-        "icons/icon-192.png",
-        "icons/icon-512.png",
-        "apple-touch-icon.png",
-        "sunday/icons/icon-192.png",
-        "sunday/icons/icon-512.png",
-        "sunday/apple-touch-icon.png",
-        "fortune/icons/icon-192.png",
-        "fortune/icons/icon-512.png",
-        "fortune/apple-touch-icon.png",
-      ],
-      manifest: false,
-      injectManifest: {
-        globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
-      },
-    }),
-  ],
-  test: {
-    environment: "node",
-  },
+    plugins: [
+      ...foundationPlugins({ command, storageNs, preview }),
+      VitePWA({
+        registerType: "autoUpdate",
+        injectRegister: false,
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.js",
+        includeAssets: [
+          "icons/icon-192.png",
+          "icons/icon-512.png",
+          "apple-touch-icon.png",
+          "sunday/icons/icon-192.png",
+          "sunday/icons/icon-512.png",
+          "sunday/apple-touch-icon.png",
+          "fortune/icons/icon-192.png",
+          "fortune/icons/icon-512.png",
+          "fortune/apple-touch-icon.png",
+        ],
+        manifest: false,
+        injectManifest: {
+          globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
+        },
+      }),
+    ],
+    test: {
+      environment: "node",
+    },
+  };
 });

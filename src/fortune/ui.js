@@ -1,3 +1,4 @@
+import { RD_PRODUCT } from "../shared/product-id.js";
 import { fortuneOutboundHref } from "../refer.js";
 import { CRUMB_COPY, crumbText } from "./crumbs.js";
 import { ft } from "./copy.js";
@@ -203,7 +204,7 @@ function renderWhere(host) {
 
 function renderFireCard(heat, escapeHtml) {
   const order = fireLinkOrder(heat);
-  const labels = { "right-door": t("fireRightDoor"), sunday: t("fireSunday") };
+  const labels = { [RD_PRODUCT]: t("fireRightDoor"), sunday: t("fireSunday") };
   const links = order
     .map((which, i) => {
       const cls = i === 0 ? "btn btn-primary ext" : "btn ext";
