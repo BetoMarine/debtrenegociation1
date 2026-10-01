@@ -195,41 +195,31 @@ export function needsWhere(state) {
   return true;
 }
 
-function settledMonth(plan) {
-  return {
-    ...plan,
-    stage1: normalizeStage1({
-      route: "managing",
-      source: "ft-rd-steps",
-      status: "asked",
-      done: true,
-      doneAt: ym(),
-    }),
-  };
+/** Theme bands are not a cushion. Ready means it was built, or savings were captured and the floor is funded. */
+export function cushionReady(plan) {
+  if (plan?.cushionBuiltAt) return true;
+  const captured =
+    !!plan?.moneyCapturedAtStabilize ||
+    (plan?.net?.currentHkd != null && Number.isFinite(Number(plan.net.currentHkd)));
+  if (!captured) return false;
+  return stabilizeSnapshot(plan).ready;
 }
 
-/** Stressed, stable, or grow. Stable with the floor already funded opens plan, not the month question. */
+/** Stressed opens the month question. Stable opens the cushion unless it is already funded. Grow opens the plan and does not pretend the cushion is built. */
 export function placeWhere(state, id) {
   if (id !== "rebuild" && id !== "steady" && id !== "grow") return state;
   let plan = applyTheme(state.plan, id);
+  plan = { ...plan, stage1: normalizeStage1(emptyStage1()) };
+  const ui = { ...state.ui, transition: null };
   if (id === "rebuild") {
-    plan = { ...plan, stage1: normalizeStage1(emptyStage1()), cushionStartedAt: null, cushionBuiltAt: null };
-    return go(state, "s01", { plan, ui: { ...state.ui, transition: null } });
-  }
-  plan = settledMonth(plan);
-  const floorReady = id === "grow" || stabilizeSnapshot(plan).ready;
-  if (!floorReady) {
     plan = { ...plan, cushionStartedAt: null, cushionBuiltAt: null };
-    return go(state, "s05", { plan, ui: { ...state.ui, transition: null } });
+    return go(state, "s01", { plan, ui });
   }
-  const month = ym();
-  plan = {
-    ...plan,
-    cushionStartedAt: plan.cushionStartedAt || month,
-    cushionBuiltAt: plan.cushionBuiltAt || month,
-    stabilizeMonthsPicked: true,
-  };
-  return go(state, "s07", { plan, ui: { ...state.ui, transition: null } });
+  if (id === "steady" && !cushionReady(plan)) {
+    plan = { ...plan, cushionStartedAt: null, cushionBuiltAt: null };
+    return go(state, "s05", { plan, ui });
+  }
+  return go(state, "s07", { plan, ui });
 }
 
 export function openedFortuneState({
@@ -242,16 +232,24 @@ export function openedFortuneState({
   rd,
 } = {}) {
   const storedUi = ui && typeof ui === "object" ? ui : {};
-  return freshState({
-    plan: migrateFortunePlan(plan) || newFortunePlan(),
+  const storedPlan = migrateFortunePlan(plan);
+  const next = freshState({
+    plan: storedPlan || newFortunePlan(),
     ui: { ...emptyUi(), ...storedUi, lastByStage: storedUi.lastByStage || {} },
     rd: rd || emptyRd(),
-    screen: pendingErase ? "e1" : "cover",
     pendingErase: !!pendingErase,
     foundExport: foundExport || null,
     manualExport: !!manualExport,
     standalone: !!standalone,
   });
+  return { ...next, screen: coldScreen(next, !!storedPlan) };
+}
+
+/** No saved Fortune plan opens the ask. A saved plan, or a newer Right Door export, still opens the cover. */
+function coldScreen(state, hasStoredPlan) {
+  if (state.pendingErase) return "e1";
+  if (!hasStoredPlan && !(state.foundExport && !state.manualExport)) return "where";
+  return "cover";
 }
 
 function withoutFixResume(state) {
@@ -286,26 +284,33 @@ export function mapAction(plan, ui) {
     if (stickyMidFix(plan, ui)) return { stage: "fix", kind: "continue" };
     return { stage: "fix", kind: "start" };
   }
-  if (!plan?.cushionStartedAt && !plan?.cushionBuiltAt) return { stage: "stabilize", kind: "continue" };
+  if (plan?.theme === "grow" && !cushionReady(plan)) return { stage: "plan", kind: "continue" };
+  if (!plan?.cushionStartedAt && !plan?.cushionBuiltAt && !cushionReady(plan)) {
+    return { stage: "stabilize", kind: "continue" };
+  }
   if (!goalPinned(plan)) return { stage: "plan", kind: "continue" };
-  if (!plan?.cushionBuiltAt) return { stage: null, kind: "none" };
+  if (!cushionReady(plan)) return { stage: null, kind: "none" };
   return { stage: "invest", kind: "continue" };
 }
 
 export function rowStatus(id, plan) {
-  if (id === "fix") return pastFix(plan) ? "done" : "here";
+  if (id === "fix") {
+    if (stage1Ticked(plan)) return "done";
+    if (plan?.theme === "steady" || plan?.theme === "grow") return "skipped";
+    return "here";
+  }
   if (id === "stabilize") {
-    if (plan?.cushionBuiltAt) return "done";
+    if (cushionReady(plan)) return "done";
     if (plan?.cushionStartedAt) return "progress";
-    if (pastFix(plan)) return "here";
+    if (pastFix(plan) && plan?.theme !== "grow") return "here";
     return "upcoming";
   }
   if (id === "plan") {
     if (goalPinned(plan)) return "done";
-    if (plan?.cushionStartedAt || plan?.cushionBuiltAt) return "here";
+    if (plan?.theme === "grow" || plan?.cushionStartedAt || plan?.cushionBuiltAt || cushionReady(plan)) return "here";
     return "upcoming";
   }
-  if (!plan?.cushionBuiltAt) return "locked";
+  if (!cushionReady(plan)) return "locked";
   if (!goalPinned(plan)) return "open";
   return mapAction(plan).stage === "invest" ? "here" : "upcoming";
 }
@@ -607,7 +612,7 @@ export function reduce(state, action) {
     return go(state, screen, { ui: { ...state.ui, transition: null } });
   }
   if (type === "pick-where") return placeWhere(state, action.id);
-  if (type === "open-stage" && action.stage === "invest" && state.plan?.cushionBuiltAt) {
+  if (type === "open-stage" && action.stage === "invest" && cushionReady(state.plan)) {
     return go(state, "s12", { ui: { ...state.ui, transition: null } });
   }
   if (type === "dig-in") {

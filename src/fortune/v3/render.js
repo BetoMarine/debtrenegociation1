@@ -22,7 +22,6 @@ import {
   stickyMidFix,
 } from "./flow.js";
 import { INVEST_CARDS, badYearLossPercent } from "./invest.js";
-import { ft } from "../copy.js";
 import { fortuneLetterText } from "../rd-host.js";
 import { stabilizeSnapshot } from "../stabilize.js";
 
@@ -219,6 +218,7 @@ function screenMap(state) {
       else if (status === "done") badge = "✓";
       else if (status === "progress") badge = v3("inProgress");
       else if (status === "locked") badge = v3("lockedGrow");
+      else if (status === "skipped") badge = v3("skipped");
       const act = status === "here" ? "map-go" : status === "open" ? "open-stage" : status === "done" || status === "progress" ? "toggle-reveal" : "";
       return `<button class="v3-row is-${status}" type="button" ${act ? `data-act="${act}"` : "disabled"} data-stage="${id}"><span>${escapeHtml(name)}</span><span class="v3-badge">${escapeHtml(badge)}</span></button>`;
     })
@@ -270,14 +270,16 @@ function digInJumps() {
 }
 
 function screenWhere(state) {
-  const cards = ["rebuild", "steady", "grow"]
-    .map((id) => {
-      const label = ft(`themes.${id}.label`);
-      const blurb = ft(`themes.${id}.blurb`);
-      return `<button class="v3-choice" type="button" data-act="pick-where" data-id="${id}"><strong>${escapeHtml(label)}</strong><span class="v3-tiny">${escapeHtml(blurb)}</span></button>`;
+  const cards = [
+    ["rebuild", "where.stress"],
+    ["steady", "where.stable"],
+    ["grow", "where.grow"],
+  ]
+    .map(([id, key]) => {
+      return `<button class="v3-choice" type="button" data-act="pick-where" data-id="${id}"><strong>${escapeHtml(v3(key))}</strong></button>`;
     })
     .join("");
-  return `<div class="v3-stack" data-where><p class="v3-tiny">${escapeHtml(ft("whereKicker"))}</p><h1 class="v3-h1">${escapeHtml(ft("whereTitle"))}</h1><p class="v3-body">${escapeHtml(ft("whereLead"))}</p>${cards}${state.digIn ? digInJumps() : ""}</div>`;
+  return `<div class="v3-stack" data-where><h1 class="v3-h1">${escapeHtml(v3("where.title"))}</h1><p class="v3-body">${escapeHtml(v3("where.lead"))}</p>${cards}${state.digIn ? digInJumps() : ""}</div>`;
 }
 
 function screenCushion(state) {

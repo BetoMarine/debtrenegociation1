@@ -139,8 +139,11 @@ describe("cold open after erase", () => {
     expect(cold[KV.ftPlan]).toBeUndefined();
     expect(cold[KV.ftUi]).toBeUndefined();
     expect(cold[KV.sunPack].id).toBe("sun");
-    await click("cover-continue");
+    expect(fortuneKeys(cold)).toEqual([KV.ftErasedAt]);
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    expect(document.querySelector("[data-act='cover-continue']")).toBeNull();
+    expect(document.querySelector("[data-act='ask-erase']")).toBeNull();
+    expect(document.body.textContent).toContain("Under money stress");
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
     expect(document.querySelector("[data-dig-in]")).toBeNull();
     await click("pick-where");
@@ -232,10 +235,11 @@ describe("cold open after erase", () => {
 
     document.body.innerHTML = '<div id="app"></div>';
     await bootV3(document.getElementById("app"));
-    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("cover");
-    expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
-    await click("cover-continue");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    expect(document.querySelector("[data-act='cover-continue']")).toBeNull();
+    expect(document.querySelector("[data-act='ask-erase']")).toBeNull();
+    expect(document.body.textContent).toContain("Under money stress");
+    expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
     await click("pick-where");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("s01");
@@ -255,8 +259,9 @@ describe("cold open after erase", () => {
     document.body.innerHTML = '<div id="app"></div>';
     await bootV3(document.getElementById("app"));
     expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
-    await click("cover-continue");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    expect(document.querySelector("[data-act='cover-continue']")).toBeNull();
+    expect(document.querySelector("[data-act='ask-erase']")).toBeNull();
     await click("pick-where");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("s01");
     const after = await readKv();

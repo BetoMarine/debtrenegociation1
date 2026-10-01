@@ -130,6 +130,14 @@ export const V3_EN = {
     label: "Dig-in jumps",
     note: "Test only. Not the way in.",
   },
+  where: {
+    title: "Where are you today?",
+    lead: "Pick the card that fits. You can change it later.",
+    stress: "Under money stress",
+    stable: "Stable — building a cushion",
+    grow: "Ready to plan what's next",
+  },
+  skipped: "Skipped",
 };
 
 export function v3(key, vars) {
