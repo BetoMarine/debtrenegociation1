@@ -130,8 +130,8 @@ describe("cold open after erase", () => {
     expect(wiped[KV.ftRdPack]).toBeUndefined();
     expect(wiped[KV.sunPack].id).toBe("sun");
     await click("e1-ok");
-    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("map");
-    expect(document.querySelector(".v3-primary")?.textContent?.startsWith("Start:")).toBe(true);
+    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    expect(document.body.textContent).toContain("Where are you today?");
 
     document.body.innerHTML = '<div id="app"></div>';
     await bootV3(document.getElementById("app"));
@@ -140,9 +140,10 @@ describe("cold open after erase", () => {
     expect(cold[KV.ftUi]).toBeUndefined();
     expect(cold[KV.sunPack].id).toBe("sun");
     await click("cover-continue");
-    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("map");
+    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
-    await click("map-go");
+    expect(document.querySelector("[data-dig-in]")).toBeNull();
+    await click("pick-where");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("s01");
     const resumed = await readKv();
     expect(resumed[KV.ftPlan].stage1.status).toBe("none");
@@ -225,8 +226,8 @@ describe("cold open after erase", () => {
     expect(document.body.textContent).toContain("Fortune Teller erased");
     expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
     await click("e1-ok");
-    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("map");
-    expect(document.querySelector(".v3-primary")?.textContent?.startsWith("Start:")).toBe(true);
+    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    expect(document.body.textContent).toContain("Where are you today?");
     expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
 
     document.body.innerHTML = '<div id="app"></div>';
@@ -234,10 +235,9 @@ describe("cold open after erase", () => {
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("cover");
     expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
     await click("cover-continue");
-    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("map");
+    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
-    expect(document.querySelector(".v3-primary")?.textContent?.startsWith("Start:")).toBe(true);
-    await click("map-go");
+    await click("pick-where");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("s01");
 
     document.body.innerHTML = '<div id="app"></div>';
@@ -256,8 +256,8 @@ describe("cold open after erase", () => {
     await bootV3(document.getElementById("app"));
     expect(fortuneKeys(await readKv())).toEqual([KV.ftErasedAt]);
     await click("cover-continue");
-    expect(document.querySelector(".v3-primary")?.textContent?.startsWith("Start:")).toBe(true);
-    await click("map-go");
+    expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("where");
+    await click("pick-where");
     expect(document.querySelector("[data-screen]")?.getAttribute("data-screen")).toBe("s01");
     const after = await readKv();
     expect(after[KV.ftUi].lastByStage.fix).toBe("s01");

@@ -2,6 +2,7 @@ import { monthStamp } from "../../shared/storage/keys.js";
 import { decodeShortCode } from "../../shared/shortcode.js";
 import { stageWord } from "../../shared/stage-words.js";
 import {
+  applyTheme,
   askStage1Again,
   declineStage1,
   emptyStage1,
@@ -163,7 +164,7 @@ export function goalPinned(plan) {
 const FIX_RESUME = new Set(["s01a", "s01b", "s01c", "letter", "s02", "s03", "s03a", "s03b", "n1", "n1b", "dates"]);
 const IMPORTED_SOURCES = new Set(["rd-export", "code"]);
 
-export const ROOT_SCREENS = new Set(["map", "cover", "e1", "choice"]);
+export const ROOT_SCREENS = new Set(["map", "cover", "e1", "choice", "where"]);
 
 export function stickyMidFix(plan, ui) {
   const screen = ui?.lastByStage?.fix;
@@ -181,6 +182,54 @@ export function needsExitChoice(state) {
   if (state?.ui?.exitKept) return false;
   if (state?.foundExport) return false;
   return stickyMidFix(state?.plan, state?.ui) || orphanedImport(state?.plan, state?.foundExport);
+}
+
+/** Empty cold start. A chosen theme, a ticked month, or a cushion already in progress is not this ask. */
+export function needsWhere(state) {
+  const plan = state?.plan;
+  if (plan?.theme) return false;
+  if (stage1Ticked(plan)) return false;
+  if (plan?.cushionStartedAt || plan?.cushionBuiltAt) return false;
+  if (stickyMidFix(plan, state?.ui)) return false;
+  if (orphanedImport(plan, state?.foundExport)) return false;
+  return true;
+}
+
+function settledMonth(plan) {
+  return {
+    ...plan,
+    stage1: normalizeStage1({
+      route: "managing",
+      source: "ft-rd-steps",
+      status: "asked",
+      done: true,
+      doneAt: ym(),
+    }),
+  };
+}
+
+/** Stressed, stable, or grow. Stable with the floor already funded opens plan, not the month question. */
+export function placeWhere(state, id) {
+  if (id !== "rebuild" && id !== "steady" && id !== "grow") return state;
+  let plan = applyTheme(state.plan, id);
+  if (id === "rebuild") {
+    plan = { ...plan, stage1: normalizeStage1(emptyStage1()), cushionStartedAt: null, cushionBuiltAt: null };
+    return go(state, "s01", { plan, ui: { ...state.ui, transition: null } });
+  }
+  plan = settledMonth(plan);
+  const floorReady = id === "grow" || stabilizeSnapshot(plan).ready;
+  if (!floorReady) {
+    plan = { ...plan, cushionStartedAt: null, cushionBuiltAt: null };
+    return go(state, "s05", { plan, ui: { ...state.ui, transition: null } });
+  }
+  const month = ym();
+  plan = {
+    ...plan,
+    cushionStartedAt: plan.cushionStartedAt || month,
+    cushionBuiltAt: plan.cushionBuiltAt || month,
+    stabilizeMonthsPicked: true,
+  };
+  return go(state, "s07", { plan, ui: { ...state.ui, transition: null } });
 }
 
 export function openedFortuneState({
@@ -228,33 +277,36 @@ function withoutFixResume(state) {
   };
 }
 
+function pastFix(plan) {
+  return stage1Ticked(plan) || plan?.theme === "steady" || plan?.theme === "grow";
+}
+
 export function mapAction(plan, ui) {
-  if (!stage1Ticked(plan)) {
+  if (!pastFix(plan)) {
     if (stickyMidFix(plan, ui)) return { stage: "fix", kind: "continue" };
     return { stage: "fix", kind: "start" };
   }
-  if (!plan?.cushionStartedAt) return { stage: "stabilize", kind: "continue" };
-  if (!plan?.cushionBuiltAt && !goalPinned(plan)) return { stage: "plan", kind: "continue" };
+  if (!plan?.cushionStartedAt && !plan?.cushionBuiltAt) return { stage: "stabilize", kind: "continue" };
+  if (!goalPinned(plan)) return { stage: "plan", kind: "continue" };
   if (!plan?.cushionBuiltAt) return { stage: null, kind: "none" };
   return { stage: "invest", kind: "continue" };
 }
 
 export function rowStatus(id, plan) {
-  const ticked = stage1Ticked(plan);
-  if (id === "fix") return ticked ? "done" : "here";
+  if (id === "fix") return pastFix(plan) ? "done" : "here";
   if (id === "stabilize") {
     if (plan?.cushionBuiltAt) return "done";
     if (plan?.cushionStartedAt) return "progress";
-    if (ticked) return "here";
+    if (pastFix(plan)) return "here";
     return "upcoming";
   }
   if (id === "plan") {
     if (goalPinned(plan)) return "done";
-    if (plan?.cushionStartedAt && !plan?.cushionBuiltAt) return "here";
-    if (plan?.cushionBuiltAt && !goalPinned(plan)) return "upcoming";
+    if (plan?.cushionStartedAt || plan?.cushionBuiltAt) return "here";
     return "upcoming";
   }
   if (!plan?.cushionBuiltAt) return "locked";
+  if (!goalPinned(plan)) return "open";
   return mapAction(plan).stage === "invest" ? "here" : "upcoming";
 }
 
@@ -274,7 +326,7 @@ function remember(ui, screen) {
 
 function go(state, screen, extra = {}) {
   const history = [...(state.history || [])];
-  if (state.screen && !ROOT_SCREENS.has(state.screen)) {
+  if (state.screen && (!ROOT_SCREENS.has(state.screen) || state.screen === "where")) {
     history.push(state.screen);
   }
   return {
@@ -382,6 +434,7 @@ export function reduce(state, action) {
     if (state.pendingErase) return { ...state, screen: "e1", pendingErase: true };
     if (state.foundExport && !state.manualExport) return go({ ...state, history: [] }, "a2");
     if (needsExitChoice(state)) return { ...state, screen: "choice", history: [], sheet: null, revealed: false };
+    if (needsWhere(state)) return { ...state, screen: "where", history: [], sheet: null, revealed: false };
     return { ...state, screen: "map", history: [], sheet: null };
   }
   if (type === "keep-plan") return toMap(state, null, { ui: { ...state.ui, exitKept: true, transition: null } });
@@ -553,6 +606,22 @@ export function reduce(state, action) {
     const screen = actionMap.kind === "start" ? STAGE_START[actionMap.stage] : resumed || STAGE_START[actionMap.stage];
     return go(state, screen, { ui: { ...state.ui, transition: null } });
   }
+  if (type === "pick-where") return placeWhere(state, action.id);
+  if (type === "open-stage" && action.stage === "invest" && state.plan?.cushionBuiltAt) {
+    return go(state, "s12", { ui: { ...state.ui, transition: null } });
+  }
+  if (type === "dig-in") {
+    if (action.id === "a2") return go(state, "a2");
+    if (action.id === "invest") return go(placeWhere(state, "grow"), "s12");
+    if (action.id === "plan") return placeWhere(state, "grow");
+    if (action.id === "stabilize") {
+      const placed = placeWhere(state, "steady");
+      const plan = { ...placed.plan, cushionStartedAt: null, cushionBuiltAt: null };
+      return go({ ...placed, plan }, "s05", { plan });
+    }
+    if (action.id === "fix") return placeWhere(state, "rebuild");
+    return state;
+  }
   if (type === "about") return { ...state, sheet: { type: "status" } };
   if (type === "info") return { ...state, sheet: { type: "info", id: action.id } };
   if (type === "leave") return { ...state, sheet: { type: "leave", href: action.href } };
@@ -571,7 +640,7 @@ export function reduce(state, action) {
       foundExport: null,
     };
   }
-  if (type === "e1-ok") return { ...freshState({ standalone: state.standalone }), screen: "map" };
+  if (type === "e1-ok") return { ...freshState({ standalone: state.standalone, digIn: !!state.digIn }), screen: "where" };
   return state;
 }
 

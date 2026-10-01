@@ -126,6 +126,10 @@ export const V3_EN = {
     keep: "Keep",
     clear: "Start clear",
   },
+  digIn: {
+    label: "Dig-in jumps",
+    note: "Test only. Not the way in.",
+  },
 };
 
 export function v3(key, vars) {

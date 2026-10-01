@@ -5,6 +5,7 @@ import { a2FoundState } from "../import/found.js";
 import { migrateFortunePlan } from "../model.js";
 import { KV } from "../../shared/storage/keys.js";
 import { openScope } from "../../shared/storage/store.js";
+import { isPreviewDeploy } from "../../shared/storage/ns.js";
 import { sessionGet, sessionRemove, sessionSet } from "../../shared/storage/web.js";
 import { emptyUi, openedFortuneState, reduce } from "./flow.js";
 import { renderV3 } from "./render.js";
@@ -62,6 +63,7 @@ export async function bootV3(root = document.getElementById("app")) {
     pendingErase: pending,
     ...found,
   });
+  state.digIn = isPreviewDeploy();
   let escAt = 0;
 
   async function persist() {
@@ -105,7 +107,9 @@ export async function bootV3(root = document.getElementById("app")) {
       sessionSet(ERASE_FLAG, "1");
       writes.bump();
       const standalone = state.standalone;
+      const digIn = state.digIn;
       state = reduce(openedFortuneState({ standalone }), { type: "erased" });
+      state.digIn = digIn;
       await writes.enqueue(() => wipeFortune());
       draw();
       return;
@@ -128,6 +132,9 @@ export async function bootV3(root = document.getElementById("app")) {
     if (act === "cushion") return void apply({ type: "cushion", months: Number(target.dataset.months) });
     if (act === "goal") return void apply({ type: "goal", id: target.dataset.id });
     if (act === "pick-card") return void apply({ type: "pick-card", id: target.dataset.id });
+    if (act === "pick-where") return void apply({ type: "pick-where", id: target.dataset.id });
+    if (act === "dig-in") return void apply({ type: "dig-in", id: target.dataset.id });
+    if (act === "open-stage") return void apply({ type: "open-stage", stage: target.dataset.stage });
     if (act === "info") return void apply({ type: "info", id: target.dataset.id });
     if (act === "leave") return void apply({ type: "leave", href: target.dataset.href });
     if (act === "confirm-leave") {

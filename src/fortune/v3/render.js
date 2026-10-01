@@ -18,9 +18,11 @@ import {
   otherRoute,
   rowStatus,
   stageForScreen,
+  stageLabel,
   stickyMidFix,
 } from "./flow.js";
 import { INVEST_CARDS, badYearLossPercent } from "./invest.js";
+import { ft } from "../copy.js";
 import { fortuneLetterText } from "../rd-host.js";
 import { stabilizeSnapshot } from "../stabilize.js";
 
@@ -217,7 +219,7 @@ function screenMap(state) {
       else if (status === "done") badge = "✓";
       else if (status === "progress") badge = v3("inProgress");
       else if (status === "locked") badge = v3("lockedGrow");
-      const act = status === "here" ? "map-go" : status === "done" || status === "progress" ? "toggle-reveal" : "";
+      const act = status === "here" ? "map-go" : status === "open" ? "open-stage" : status === "done" || status === "progress" ? "toggle-reveal" : "";
       return `<button class="v3-row is-${status}" type="button" ${act ? `data-act="${act}"` : "disabled"} data-stage="${id}"><span>${escapeHtml(name)}</span><span class="v3-badge">${escapeHtml(badge)}</span></button>`;
     })
     .join("");
@@ -257,7 +259,25 @@ function screenMap(state) {
   const startClear = canClear ? quiet(v3("choice.clear"), "start-clear") : "";
   const mixes = plan.cushionBuiltAt ? quiet(v3("mixesQuiet"), "open-cards") : "";
   const used = state.standalone || state.foundExport ? quiet(v3("a2.used"), "used-already") : "";
-  return `<div class="v3-stack"><h1 class="v3-h1">${escapeHtml(v3("yourPath"))}</h1><p class="v3-body">${escapeHtml(v3("oneStep"))}</p>${rows}${reveal}${line ? `<p class="v3-body">${escapeHtml(line)}</p>` : ""}${primary}${startClear}${changed}${mixes}${used}</div>`;
+  return `<div class="v3-stack"><h1 class="v3-h1">${escapeHtml(v3("yourPath"))}</h1><p class="v3-body">${escapeHtml(v3("oneStep"))}</p>${rows}${reveal}${line ? `<p class="v3-body">${escapeHtml(line)}</p>` : ""}${primary}${startClear}${changed}${mixes}${used}${state.digIn ? digInJumps() : ""}</div>`;
+}
+
+function digInJumps() {
+  const jumps = ["fix", "stabilize", "plan", "invest"]
+    .map((id) => quiet(stageLabel("en", id), "dig-in", `data-id="${id}"`))
+    .join("");
+  return `<section data-dig-in><p class="v3-tiny">${escapeHtml(v3("digIn.label"))}</p><p class="v3-tiny">${escapeHtml(v3("digIn.note"))}</p>${jumps}${quiet(v3("a2.used"), "dig-in", 'data-id="a2"')}</section>`;
+}
+
+function screenWhere(state) {
+  const cards = ["rebuild", "steady", "grow"]
+    .map((id) => {
+      const label = ft(`themes.${id}.label`);
+      const blurb = ft(`themes.${id}.blurb`);
+      return `<button class="v3-choice" type="button" data-act="pick-where" data-id="${id}"><strong>${escapeHtml(label)}</strong><span class="v3-tiny">${escapeHtml(blurb)}</span></button>`;
+    })
+    .join("");
+  return `<div class="v3-stack" data-where><p class="v3-tiny">${escapeHtml(ft("whereKicker"))}</p><h1 class="v3-h1">${escapeHtml(ft("whereTitle"))}</h1><p class="v3-body">${escapeHtml(ft("whereLead"))}</p>${cards}${state.digIn ? digInJumps() : ""}</div>`;
 }
 
 function screenCushion(state) {
@@ -356,6 +376,8 @@ function main(state) {
   switch (state.screen) {
     case "cover":
       return screenCover(state);
+    case "where":
+      return screenWhere(state);
     case "map":
       return screenMap(state);
     case "a2":

@@ -50,14 +50,15 @@ describe("Fortune erase and start clear", () => {
   it("opens an empty map on Start after a true erase, not a mid-Fix screen", () => {
     const opened = openedFortuneState({ plan: null, ui: null, pendingErase: true });
     expect(opened.screen).toBe("e1");
-    const map = reduce(opened, { type: "e1-ok" });
-    expect(map.screen).toBe("map");
-    expect(map.plan.stage1.status).toBe("none");
-    expect(map.ui.lastByStage).toEqual({});
-    textOf(map);
-    expect(primaryLabel()).toBe(v3("startStage", { stage: fixWord }));
+    const asked = reduce(opened, { type: "e1-ok" });
+    expect(asked.screen).toBe("where");
+    expect(asked.plan.stage1.status).toBe("none");
+    expect(asked.ui.lastByStage).toEqual({});
+    textOf(asked);
+    expect(document.body.textContent).toContain("Where are you today?");
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
-    expect(reduce(map, { type: "map-go" }).screen).toBe("s01");
+    expect(reduce(asked, { type: "pick-where", id: "rebuild" }).screen).toBe("s01");
+    expect(reduce(asked, { type: "pick-where", id: "grow" }).screen).not.toBe("s01");
   });
 
   it("makes Start fresh clear stage and resume", () => {
@@ -81,11 +82,12 @@ describe("Fortune erase and start clear", () => {
 describe("Right Door erase leaves a way out", () => {
   it("offers Keep and Start clear for a sticky mid-Fix resume, and an empty map stays Start", () => {
     const empty = reduce(freshState(), { type: "cover-continue" });
-    expect(empty.screen).toBe("map");
+    expect(empty.screen).toBe("where");
     textOf(empty);
-    expect(primaryLabel()).toBe(v3("startStage", { stage: fixWord }));
+    expect(document.body.textContent).toContain("Where are you today?");
+    expect(document.querySelector("[data-act='pick-where'][data-id='steady']")).toBeTruthy();
     expect(document.querySelector("[data-act='start-clear']")).toBeNull();
-    expect(reduce(empty, { type: "map-go" }).screen).toBe("s01");
+    expect(reduce(empty, { type: "pick-where", id: "rebuild" }).screen).toBe("s01");
 
     const opened = openedFortuneState({
       plan: midPlan(),

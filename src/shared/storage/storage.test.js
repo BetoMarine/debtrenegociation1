@@ -288,9 +288,10 @@ describe("erase scopes", () => {
     expect(opened.screen).toBe("e1");
     expect(opened.ui.lastByStage).toEqual({});
     expect(opened.plan.stage1.status).toBe("none");
-    const map = reduce(opened, { type: "e1-ok" });
-    expect(map.screen).toBe("map");
-    expect(reduce(map, { type: "map-go" }).screen).toBe("s01");
+    const asked = reduce(opened, { type: "e1-ok" });
+    expect(asked.screen).toBe("where");
+    expect(reduce(asked, { type: "pick-where", id: "rebuild" }).screen).toBe("s01");
+    expect(reduce(asked, { type: "pick-where", id: "grow" }).screen).not.toBe("s01");
   });
 
   it("a Fortune start-clear drops Fortune's own answers and does not wipe Right Door or Sunday", async () => {
