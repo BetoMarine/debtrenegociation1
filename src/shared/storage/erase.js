@@ -1,9 +1,22 @@
 import { ATT, FT_EVENT_PREFIX, KV, LEGACY_KV, RD_EVENT_TYPES, SUN_EVENT_PREFIX, monthStamp } from "./keys.js";
-import { cursorEach, prefixRange, requestResult, txDone } from "./idb.js";
+import { cursorEach, prefixRange, txDone } from "./idb.js";
 import { openAppDb } from "./store.js";
 
-function deleteKeys(store, keys) {
-  return Promise.all(keys.map((key) => requestResult(store.delete(key))));
+const FORTUNE_KV_KEYS = [
+  KV.ftPlan,
+  KV.ftForecast,
+  KV.ftUi,
+  KV.ftRdPack,
+  KV.ftRdLang,
+  KV.ftHandoff,
+  LEGACY_KV.fortunePlan,
+  LEGACY_KV.fortuneForecast,
+  LEGACY_KV.fortuneUi,
+  LEGACY_KV.fortuneFireHandoff,
+];
+
+function deleteKeysNow(store, keys) {
+  for (const key of keys) store.delete(key);
 }
 
 async function deletePrefix(store, prefix) {
@@ -26,60 +39,72 @@ async function deleteEvents(store, pred) {
   });
 }
 
-async function runErase(work) {
+/**
+ * Start every request before the first await. A transaction that waits
+ * between requests can commit early and roll the deletes back.
+ */
+async function runErase(start) {
   const db = await openAppDb();
   try {
     const tx = db.transaction(["kv", "attachments", "events"], "readwrite");
-    await work(tx);
+    const pending = start(tx);
+    if (pending && typeof pending.then === "function") await pending;
     await txDone(tx);
   } finally {
     db.close();
   }
 }
 
+async function runEraseRetry(start) {
+  try {
+    await runErase(start);
+  } catch {
+    await runErase(start);
+  }
+}
+
+function eraseRightDoorWork(tx) {
+  const kv = tx.objectStore("kv");
+  const atts = tx.objectStore("attachments");
+  const events = tx.objectStore("events");
+  deleteKeysNow(kv, [KV.rdPack, KV.rdLang, KV.rdExport, LEGACY_KV.pack, LEGACY_KV.lang]);
+  const rd = new Set(RD_EVENT_TYPES);
+  return Promise.all([
+    deletePrefix(atts, ATT.rd),
+    deleteUnprefixedAttachments(atts),
+    deleteEvents(events, (event) => rd.has(event?.type)),
+  ]);
+}
+
+function eraseFortuneWork(tx) {
+  const kv = tx.objectStore("kv");
+  const atts = tx.objectStore("attachments");
+  const events = tx.objectStore("events");
+  deleteKeysNow(kv, FORTUNE_KV_KEYS);
+  kv.put(monthStamp(), KV.ftErasedAt);
+  return Promise.all([
+    deletePrefix(atts, ATT.ft),
+    deleteEvents(events, (event) => String(event?.type || "").startsWith(FT_EVENT_PREFIX)),
+  ]);
+}
+
+function eraseSundayWork(tx) {
+  const kv = tx.objectStore("kv");
+  const events = tx.objectStore("events");
+  deleteKeysNow(kv, [KV.sunPack, KV.sunLang, LEGACY_KV.sundayPack, LEGACY_KV.sundayLang]);
+  return deleteEvents(events, (event) => String(event?.type || "").startsWith(SUN_EVENT_PREFIX));
+}
+
 /** Standalone Right Door. Does not clear the attachments store. */
 export async function eraseRightDoor() {
-  await runErase(async (tx) => {
-    const kv = tx.objectStore("kv");
-    const atts = tx.objectStore("attachments");
-    const events = tx.objectStore("events");
-    await deleteKeys(kv, [KV.rdPack, KV.rdLang, KV.rdExport, LEGACY_KV.pack, LEGACY_KV.lang]);
-    await deletePrefix(atts, ATT.rd);
-    await deleteUnprefixedAttachments(atts);
-    const rd = new Set(RD_EVENT_TYPES);
-    await deleteEvents(events, (event) => rd.has(event?.type));
-  });
+  await runEraseRetry(eraseRightDoorWork);
 }
 
 /** Fortune only. Leaves ft:erasedAt as a month stamp and keeps rd:export. */
 export async function eraseFortune() {
-  await runErase(async (tx) => {
-    const kv = tx.objectStore("kv");
-    const atts = tx.objectStore("attachments");
-    const events = tx.objectStore("events");
-    await deleteKeys(kv, [
-      KV.ftPlan,
-      KV.ftForecast,
-      KV.ftUi,
-      KV.ftRdPack,
-      KV.ftRdLang,
-      KV.ftHandoff,
-      LEGACY_KV.fortunePlan,
-      LEGACY_KV.fortuneForecast,
-      LEGACY_KV.fortuneUi,
-      LEGACY_KV.fortuneFireHandoff,
-    ]);
-    await deletePrefix(atts, ATT.ft);
-    await requestResult(kv.put(monthStamp(), KV.ftErasedAt));
-    await deleteEvents(events, (event) => String(event?.type || "").startsWith(FT_EVENT_PREFIX));
-  });
+  await runEraseRetry(eraseFortuneWork);
 }
 
 export async function eraseSunday() {
-  await runErase(async (tx) => {
-    const kv = tx.objectStore("kv");
-    const events = tx.objectStore("events");
-    await deleteKeys(kv, [KV.sunPack, KV.sunLang, LEGACY_KV.sundayPack, LEGACY_KV.sundayLang]);
-    await deleteEvents(events, (event) => String(event?.type || "").startsWith(SUN_EVENT_PREFIX));
-  });
+  await runEraseRetry(eraseSundayWork);
 }

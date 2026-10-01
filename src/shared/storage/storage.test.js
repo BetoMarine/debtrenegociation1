@@ -5,6 +5,8 @@ import { openNamedDb, requestResult, txDone } from "./idb.js";
 import { LEGACY_DB_NAMES, migrateNamespacesV1, snapshotDb } from "./migrate-ns-v1.js";
 import { noteMeaningfulSave, resetPersistForTests } from "./persist.js";
 import { eraseFortune, eraseRightDoor, eraseSunday } from "./erase.js";
+import { openedFortuneState, reduce } from "../../fortune/v3/flow.js";
+import { resetFtRd, loadFtRd } from "../../fortune/rd-host.js";
 import { openScope, resetStorageForTests, StorageScopeError } from "./store.js";
 import { webPrefixFor } from "./ns-policy.js";
 import { sessionGet, sessionSet } from "./web.js";
@@ -238,6 +240,83 @@ describe("erase scopes", () => {
     expect(types).not.toContain("fortune_started");
     expect(types).toContain("pack_created");
     expect(types).toContain("sunday_started");
+  });
+
+  it("Right Door erase keeps Fortune stage and resume for Keep or Start clear", async () => {
+    await useFixture();
+    const ft = openScope("ft.app");
+    const plan = {
+      ...(await ft.get(KV.ftPlan)),
+      templateId: "balanced",
+      stage1: { status: "none", source: "ft-rd-steps", route: "bank" },
+    };
+    await ft.put(KV.ftPlan, plan);
+    await ft.put(KV.ftUi, { lastByStage: { fix: "s03a" }, exitKept: false });
+    await eraseRightDoor();
+    const kv = await readKv("ns-fixture");
+    expect(kv[KV.rdPack]).toBeUndefined();
+    expect(kv[KV.rdExport]).toBeUndefined();
+    expect(kv[KV.ftPlan].stage1.source).toBe("ft-rd-steps");
+    expect(kv[KV.ftPlan].templateId).toBe("balanced");
+    expect(kv[KV.ftUi].lastByStage.fix).toBe("s03a");
+    expect(kv[KV.ftRdPack].secret).toBe(true);
+    expect(kv[KV.sunPack].id).toBe("sun");
+    const choice = reduce(openedFortuneState({ plan: kv[KV.ftPlan], ui: kv[KV.ftUi], manualExport: true }), {
+      type: "cover-continue",
+    });
+    expect(choice.screen).toBe("choice");
+    expect(choice.plan.templateId).toBe("balanced");
+  });
+
+  it("Fortune erase clears stage and resume and leaves Right Door and Sunday", async () => {
+    await useFixture();
+    const ft = openScope("ft.app");
+    await ft.put(KV.ftUi, { lastByStage: { fix: "s03a" } });
+    await ft.put(KV.ftPlan, {
+      ...(await ft.get(KV.ftPlan)),
+      stage1: { status: "asked", source: "rd-export", route: "bank", startMonth: "2026-10", tenorMonths: 6 },
+    });
+    await eraseFortune();
+    const kv = await readKv("ns-fixture");
+    expect(kv[KV.ftPlan]).toBeUndefined();
+    expect(kv[KV.ftUi]).toBeUndefined();
+    expect(kv[KV.ftRdPack]).toBeUndefined();
+    expect(kv[KV.rdExport].exportedAt).toBe("2026-08-01");
+    expect(kv[KV.rdPack].id).toBe("rd");
+    expect(kv[KV.sunPack].id).toBe("sun");
+    const opened = openedFortuneState({ plan: kv[KV.ftPlan], ui: kv[KV.ftUi], pendingErase: true });
+    expect(opened.screen).toBe("e1");
+    expect(opened.ui.lastByStage).toEqual({});
+    expect(opened.plan.stage1.status).toBe("none");
+    const asked = reduce(opened, { type: "e1-ok" });
+    expect(asked.screen).toBe("where");
+    expect(reduce(asked, { type: "pick-where", id: "rebuild" }).screen).toBe("s01");
+    expect(reduce(asked, { type: "pick-where", id: "grow" }).screen).not.toBe("s01");
+  });
+
+  it("a Fortune start-clear drops Fortune's own answers and does not wipe Right Door or Sunday", async () => {
+    await useFixture();
+    const steps = openScope("ft.rdSteps");
+    await steps.put(KV.ftRdPack, {
+      fullName: "Ada",
+      tenorMonths: "9",
+      reason: "job_ended",
+      letter: "Please hold the account.",
+      letterTouched: true,
+      askedRoute: "idrp",
+      documents: [{ key: "hardship_proof", attachmentIds: [`${ATT.ft}photo`] }],
+    });
+    await steps.putAtt(`${ATT.ft}photo`, new Blob(["x"], { type: "image/png" }));
+    const view = await resetFtRd();
+    expect(view.fullName).toBe("");
+    expect(view.proof).toBe(0);
+    expect(await loadFtRd()).toMatchObject({ fullName: "", proof: 0, letter: "" });
+    expect(await steps.getAtt(`${ATT.ft}photo`)).toBeNull();
+    const kv = await readKv("ns-fixture");
+    expect(kv[KV.ftPlan].id).toBe("ft");
+    expect(kv[KV.rdPack].id).toBe("rd");
+    expect(kv[KV.rdExport].exportedAt).toBe("2026-08-01");
+    expect(kv[KV.sunPack].id).toBe("sun");
   });
 
   it("Sunday clear deletes only Sunday keys and legacy twins", async () => {

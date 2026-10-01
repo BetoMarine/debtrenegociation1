@@ -1313,7 +1313,8 @@ html.fortune-root body {
   padding: 12px 14px;
 }
 
-.fortune-root .v3-row.is-locked {
+.fortune-root .v3-row.is-locked,
+.fortune-root .v3-row.is-skipped {
   color: #64748b;
 }
 

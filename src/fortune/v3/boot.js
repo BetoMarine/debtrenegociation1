@@ -2,13 +2,27 @@ import { isStandalone } from "../../dom.js";
 import { clearFortuneReferral } from "../../refer.js";
 import { getFortunePlan, getFortuneUi, saveFortunePlan, saveFortuneUi, wipeFortune } from "../../db.js";
 import { a2FoundState } from "../import/found.js";
-import { migrateFortunePlan, newFortunePlan } from "../model.js";
+import { migrateFortunePlan } from "../model.js";
 import { KV } from "../../shared/storage/keys.js";
 import { openScope } from "../../shared/storage/store.js";
+import { isPreviewDeploy } from "../../shared/storage/ns.js";
 import { sessionGet, sessionRemove, sessionSet } from "../../shared/storage/web.js";
-import { emptyUi, freshState, reduce } from "./flow.js";
+import { emptyUi, openedFortuneState, reduce } from "./flow.js";
 import { renderV3 } from "./render.js";
-import { addFtPhoto, fortuneLetterText, loadFtRd, saveFtRd, shareFortuneLetter } from "../rd-host.js";
+import { createWriteQueue } from "./write-queue.js";
+import { addFtPhoto, fortuneLetterText, loadFtRd, resetFtRd, saveFtRd, shareFortuneLetter } from "../rd-host.js";
+
+const writes = createWriteQueue();
+
+export function resetFortuneWritesForTests() {
+  writes.bump();
+  writes.beforeWrite = null;
+}
+
+/** Test seam. Holds a save after it has joined the queue and before it writes. */
+export function setFortuneWriteGateForTests(gate) {
+  writes.beforeWrite = gate || null;
+}
 
 const ERASE_FLAG = "ft.eraseNotice";
 
@@ -37,32 +51,46 @@ async function loadFound() {
 
 export async function bootV3(root = document.getElementById("app")) {
   clearFortuneReferral();
-  const storedPlan = migrateFortunePlan(await getFortunePlan()) || newFortunePlan();
+  const storedPlan = await getFortunePlan();
   const storedUi = (await getFortuneUi()) || {};
   const found = await loadFound();
   const rd = await loadFtRd();
   const pending = sessionGet(ERASE_FLAG) === "1";
-  let state = freshState({
+  let state = openedFortuneState({
     plan: storedPlan,
-    ui: { ...emptyUi(), ...storedUi, lastByStage: storedUi.lastByStage || {} },
+    ui: storedUi,
     rd,
-    screen: pending ? "e1" : "cover",
     pendingErase: pending,
     ...found,
   });
+  state.digIn = isPreviewDeploy();
   let escAt = 0;
 
   async function persist() {
-    state.plan = migrateFortunePlan(await saveFortunePlan(state.plan)) || state.plan;
-    const savedUi = await saveFortuneUi(state.ui);
-    state.ui = { ...emptyUi(), ...savedUi, lastByStage: savedUi?.lastByStage || {} };
-    state.rd = await saveFtRd({
-      fullName: state.rd.fullName,
-      tenorMonths: state.rd.tenorMonths,
-      reason: state.rd.reason,
-      letter: state.rd.letter,
-      letterTouched: state.rd.letterTouched,
-      askedRoute: state.ui.askedRoute,
+    const seen = writes.epoch;
+    await writes.enqueue(async () => {
+      if (seen !== writes.epoch) return;
+      const plan = state.plan;
+      const ui = state.ui;
+      const rd = {
+        fullName: state.rd.fullName,
+        tenorMonths: state.rd.tenorMonths,
+        reason: state.rd.reason,
+        letter: state.rd.letter,
+        letterTouched: state.rd.letterTouched,
+        askedRoute: state.ui.askedRoute,
+      };
+      if (writes.beforeWrite) await writes.beforeWrite();
+      if (seen !== writes.epoch) return;
+      const savedPlan = migrateFortunePlan(await saveFortunePlan(plan)) || plan;
+      if (seen !== writes.epoch) return;
+      state.plan = savedPlan;
+      const savedUi = await saveFortuneUi(ui);
+      if (seen !== writes.epoch) return;
+      state.ui = { ...emptyUi(), ...savedUi, lastByStage: savedUi?.lastByStage || {} };
+      const savedRd = await saveFtRd(rd);
+      if (seen !== writes.epoch) return;
+      state.rd = savedRd;
     });
   }
 
@@ -77,14 +105,19 @@ export async function bootV3(root = document.getElementById("app")) {
     if (action.type === "exit" && state.screen !== "e1") await persist();
     if (action.type === "confirm-erase") {
       sessionSet(ERASE_FLAG, "1");
-      await wipeFortune();
-      state = reduce(freshState({ standalone: state.standalone }), { type: "erased" });
+      writes.bump();
+      const standalone = state.standalone;
+      const digIn = state.digIn;
+      state = reduce(openedFortuneState({ standalone }), { type: "erased" });
+      state.digIn = digIn;
+      await writes.enqueue(() => wipeFortune());
       draw();
       return;
     }
+    if (action.type === "start-clear" || action.type === "fresh") await writes.enqueue(() => resetFtRd());
     if (action.type === "e1-ok" || (action.type === "exit" && state.screen === "e1")) sessionRemove(ERASE_FLAG);
     state = reduce(state, action);
-    if (action.type !== "exit" && action.type !== "e1-ok") await persist();
+    if (action.type !== "exit" && action.type !== "e1-ok" && action.type !== "ask-erase") await persist();
     draw();
   }
 
@@ -99,6 +132,9 @@ export async function bootV3(root = document.getElementById("app")) {
     if (act === "cushion") return void apply({ type: "cushion", months: Number(target.dataset.months) });
     if (act === "goal") return void apply({ type: "goal", id: target.dataset.id });
     if (act === "pick-card") return void apply({ type: "pick-card", id: target.dataset.id });
+    if (act === "pick-where") return void apply({ type: "pick-where", id: target.dataset.id });
+    if (act === "dig-in") return void apply({ type: "dig-in", id: target.dataset.id });
+    if (act === "open-stage") return void apply({ type: "open-stage", stage: target.dataset.stage });
     if (act === "info") return void apply({ type: "info", id: target.dataset.id });
     if (act === "leave") return void apply({ type: "leave", href: target.dataset.href });
     if (act === "confirm-leave") {

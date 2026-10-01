@@ -24,7 +24,8 @@ describe("Fortune v3 routing", () => {
     expect(v3("s01NotBank")).toBe("Yes, but not a bank");
     expect(v3("s01Managing")).toBe("No, I'm managing");
     let state = reduce(freshState(), { type: "cover-continue" });
-    state = reduce(state, { type: "map-go" });
+    expect(state.screen).toBe("where");
+    state = reduce(state, { type: "pick-where", id: "rebuild" });
     expect(state.screen).toBe("s01");
     const view = textOf(state);
     expect(view).toContain("Yes, bank cards or loans");
@@ -112,7 +113,7 @@ describe("Fortune v3 routing", () => {
 });
 
 describe("status truth", () => {
-  const screens = ["cover", "map", "a2", "code", "s01", "s05", "s12", "cards", "e1"];
+  const screens = ["cover", "where", "map", "a2", "choice", "code", "s01", "s05", "s12", "cards", "e1"];
 
   it("keeps the three lines behind one About tap on the cover and the map", () => {
     for (const screen of ["cover", "map"]) {

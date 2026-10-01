@@ -93,6 +93,8 @@ export const V3_EN = {
     bring: "Bring it in",
     fresh: "Start fresh",
     used: "Used Right Door already?",
+    orphanTitle: "Right Door on this phone was erased.",
+    orphanBody: "Fortune still has that plan. Keep it, or start clear.",
     codeTitle: "Enter the 6-character code",
     codeLength: "That code is 6 letters and numbers. Check and try again.",
     codeCheck: "That code doesn't look right. Check each letter.",
@@ -118,6 +120,24 @@ export const V3_EN = {
   },
   letterTitle: "Letter (edit every word)",
   needName: "Add your name so the letter can be in your name.",
+  choice: {
+    title: "You're part-way through this month.",
+    body: "Keep going, or start clear. Starting clear drops these answers on this phone.",
+    keep: "Keep",
+    clear: "Start clear",
+  },
+  digIn: {
+    label: "Dig-in jumps",
+    note: "Test only. Not the way in.",
+  },
+  where: {
+    title: "Where are you today?",
+    lead: "Pick the card that fits. You can change it later.",
+    stress: "Under money stress",
+    stable: "Stable — building a cushion",
+    grow: "Ready to plan what's next",
+  },
+  skipped: "Skipped",
 };
 
 export function v3(key, vars) {
