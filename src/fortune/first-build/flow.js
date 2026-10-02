@@ -21,6 +21,8 @@ export const SCREEN_IDS = [
   "fd",
   "fd2",
   "fd3",
+  "rc",
+  "sf",
   "tl",
   "tl2",
   "tl3",
@@ -164,6 +166,8 @@ const INPUT_SCREENS = {
   tl2: "lenderContract",
   tl3: "lenderPremium",
   tl4: "lenderDuration",
+  rc: "costCut",
+  sf: "fundTarget",
 };
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
@@ -203,7 +207,11 @@ export function freshState() {
       lenderContract: blankMoney(),
       lenderPremium: blankMoney(),
       lenderDuration: { months: "", note: "" },
+      costCut: blankMoney(),
+      fundTarget: blankMoney(),
     },
+    goals: [],
+    goalIndex: null,
     action: null,
     projectNext: false,
     goalEdit: false,
@@ -308,6 +316,10 @@ export function canContinue(state) {
       return parseDays(state.inputs.lenderDuration.months) !== null;
     case "gd2":
       return parseAmount(state.inputs.cover.amount) !== null;
+    case "rc":
+      return (parseAmount(state.inputs.costCut.amount) || 0) > 0;
+    case "sf":
+      return (parseAmount(state.inputs.fundTarget.amount) || 0) > 0 && String(state.inputs.fundTarget.note || "").trim().length > 0;
     case "f1":
     case "f2":
     case "f3":
@@ -333,6 +345,13 @@ export function monthsToCushion(now, target, save) {
   const gap = target - now;
   if (gap <= 0) return 0;
   return Math.ceil(gap / save);
+}
+
+/** The emergency-fund plan exists once both amounts the person entered are real. */
+export function fundEntered(state) {
+  const now = parseAmount(state?.inputs?.cushionNow?.amount);
+  const target = parseAmount(state?.inputs?.cushionTarget?.amount);
+  return now !== null && target !== null && target > 0;
 }
 
 /** Floor is real only from actual amounts, not from tapping Plan. */
@@ -388,18 +407,25 @@ function advance(state) {
     case "sd3":
       return { ...state, screen: "g0", planFrom: "sd3" };
     case "g1":
-      return { ...state, screen: "ig", showRequired: false, infoOpen: false };
+      if (state.entry === "ok" || fundEntered(state)) {
+        return { ...state, screen: "ig", showRequired: false, infoOpen: false };
+      }
+      if (state.entry === "stressed" && (state.action === "reduce" || state.action === "lenders")) {
+        return { ...state, screen: "sf", showRequired: false, infoOpen: false };
+      }
+      return state;
     case "ig":
-      return { ...state, screen: "ig2", showRequired: false, infoOpen: false };
-    case "ig2":
       return { ...state, screen: "gd", showRequired: false, infoOpen: false };
+    case "ig2":
+      return commitGoal(state);
     case "g2":
       return { ...state, screen: "gd2", showRequired: false, infoOpen: false };
     case "gd":
-      if (state.goalEdit) {
-        return { ...state, screen: "l0", goalEdit: false, showRequired: false, infoOpen: false, projectNext: false };
-      }
-      return { ...state, screen: "g0", showRequired: false, infoOpen: false };
+      return { ...state, screen: "ig2", showRequired: false, infoOpen: false };
+    case "rc":
+      return applyCostCut(state);
+    case "sf":
+      return commitFund(state);
     case "gd2":
       return { ...state, screen: "g0", showRequired: false, infoOpen: false };
     case "tl":
@@ -440,9 +466,13 @@ function backTo(state) {
     case "ig":
       return state.goalEdit ? "l0" : "g1";
     case "ig2":
-      return "ig";
+      return "gd";
     case "gd":
-      return "ig2";
+      return "ig";
+    case "rc":
+      return "fd2";
+    case "sf":
+      return "l0";
     case "tl":
       return "fd2";
     case "tl2":
@@ -599,12 +629,15 @@ function projectLife(state, actionName) {
   };
 }
 
-function applyReduce(state) {
+function applyCostCut(state) {
+  const cut = parseAmount(state.inputs.costCut.amount);
+  if (cut === null || cut <= 0) return { ...state, showRequired: true };
   const before = lifeSnap(state);
   const current = parseAmount(state.inputs.monthlyCosts.amount) ?? 0;
   const inputs = {
     ...state.inputs,
-    monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(Math.max(0, current - 1000)) },
+    monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(Math.max(0, current - cut)) },
+    costCut: blankMoney(),
   };
   return {
     ...projectLife({ ...state, inputs }, "reduce"),
@@ -619,6 +652,57 @@ function applyReduce(state) {
       wasCover: before.cover,
       wasSave: before.save,
       wasBurden: before.burden,
+    },
+  };
+}
+
+function commitFund(state) {
+  const amount = parseAmount(state.inputs.fundTarget.amount);
+  const label = String(state.inputs.fundTarget.note || "").trim();
+  if (amount === null || amount <= 0 || !label) return { ...state, showRequired: true };
+  return {
+    ...state,
+    inputs: {
+      ...state.inputs,
+      cushionTarget: { amount: String(amount), note: label },
+      cushionNow: { amount: "0", note: "" },
+      fundTarget: blankMoney(),
+    },
+    screen: "l0",
+    projectNext: true,
+    fromInput: false,
+    lifeFrom: "sf",
+    showRequired: false,
+    infoOpen: false,
+    lifeDetail: false,
+  };
+}
+
+function commitGoal(state) {
+  const name = String(state.inputs.goalName.text || "").trim();
+  const date = state.inputs.goalDate.date;
+  const price = parseAmount(state.inputs.goalAmount.amount);
+  if (!name || !parseIsoDate(date) || price === null) return { ...state, showRequired: true };
+  const goals = Array.isArray(state.goals) ? state.goals.slice() : [];
+  const next = { name, amount: String(price), date };
+  if (state.goalEdit === true && Number.isInteger(state.goalIndex) && goals[state.goalIndex]) goals[state.goalIndex] = next;
+  else goals.push(next);
+  return {
+    ...state,
+    goals,
+    goalEdit: false,
+    goalIndex: null,
+    projectNext: false,
+    fromInput: false,
+    screen: "l0",
+    showRequired: false,
+    infoOpen: false,
+    lifeDetail: false,
+    inputs: {
+      ...state.inputs,
+      goalName: { text: "", note: "" },
+      goalAmount: blankMoney(),
+      goalDate: { date: "", note: "" },
     },
   };
 }
@@ -646,27 +730,73 @@ function step(state, action) {
         showRequired: false,
       };
     case "pick-grow":
-      if (action.pick === "goals") return { ...state, screen: "g1" };
+      if (action.pick === "goals") {
+        if (state.entry === "ok" || fundEntered(state)) return { ...state, screen: "g1" };
+        if (state.entry === "stressed" && (state.action === "reduce" || state.action === "lenders")) {
+          return { ...state, screen: "sf", showRequired: false, infoOpen: false };
+        }
+        return state;
+      }
       if (action.pick === "insurance") return { ...state, screen: "g2" };
       if (action.pick === "invest") return { ...state, screen: "g3" };
       return state;
     case "pick-next":
       if (state.screen !== "fd2") return state;
-      if (action.pick === "reduce") return applyReduce(state);
+      if (action.pick === "reduce") return { ...state, screen: "rc", showRequired: false, infoOpen: false };
       if (action.pick === "lenders") {
         return { ...state, screen: "tl", showRequired: false, infoOpen: false };
       }
       return state;
     case "project-next":
       if (state.screen !== "l0" || !state.projectNext) return state;
+      if (!fundEntered(state)) {
+        return { ...state, screen: "sf", projectNext: false, showRequired: false, infoOpen: false, lifeDetail: false };
+      }
       return {
         ...state,
-        screen: "s0",
+        screen: "ig",
         projectNext: false,
-        cushionFrom: "project",
+        goalEdit: false,
+        goalIndex: null,
         showRequired: false,
         infoOpen: false,
         lifeDetail: false,
+        inputs: {
+          ...state.inputs,
+          goalName: { text: "", note: "" },
+          goalAmount: blankMoney(),
+          goalDate: { date: "", note: "" },
+        },
+      };
+    case "skip-fund":
+      if (state.screen !== "sf") return state;
+      return {
+        ...state,
+        inputs: { ...state.inputs, fundTarget: blankMoney() },
+        screen: "l0",
+        projectNext: true,
+        fromInput: false,
+        goalEdit: false,
+        showRequired: false,
+        infoOpen: false,
+        lifeDetail: false,
+      };
+    case "add-goal":
+      if (state.entry !== "ok" && !fundEntered(state)) return state;
+      return {
+        ...state,
+        screen: "ig",
+        goalEdit: false,
+        goalIndex: null,
+        projectNext: false,
+        showRequired: false,
+        infoOpen: false,
+        inputs: {
+          ...state.inputs,
+          goalName: { text: "", note: "" },
+          goalAmount: blankMoney(),
+          goalDate: { date: "", note: "" },
+        },
       };
     case "edit":
       return withInput(state, action);
@@ -724,8 +854,26 @@ function step(state, action) {
       return returnToInput(state) || state;
     case "open-milestone": {
       if (state.screen !== "l0") return state;
-      if (action.id === "goals") {
-        return { ...state, screen: "ig", goalEdit: true, showRequired: false, infoOpen: false, lifeDetail: false };
+      if (action.id === "ef" && !fundEntered(state)) return state;
+      if (String(action.id || "").startsWith("goal-")) {
+        const index = Number(String(action.id).slice(5));
+        const goal = state.goals?.[index];
+        if (!goal) return state;
+        return {
+          ...state,
+          screen: "ig",
+          goalEdit: true,
+          goalIndex: index,
+          showRequired: false,
+          infoOpen: false,
+          lifeDetail: false,
+          inputs: {
+            ...state.inputs,
+            goalName: { text: goal.name, note: "" },
+            goalAmount: { amount: String(goal.amount), note: "" },
+            goalDate: { date: goal.date, note: "" },
+          },
+        };
       }
       const screen = MILESTONE_SCREEN[action.id];
       if (!screen) return state;
@@ -861,6 +1009,16 @@ export function hydrate(raw) {
     lifeBaseline: null,
     lifeMove: cleanMove(raw.lifeMove),
     fromInput: raw.fromInput === true && INPUT_SCREENS[raw.lifeFrom] && String(raw.screen || "").startsWith("l"),
+    goals: Array.isArray(raw.goals)
+      ? raw.goals
+          .map((goal) => ({
+            name: cleanText(goal?.name).trim(),
+            amount: cleanAmount(goal?.amount),
+            date: cleanDate(goal?.date),
+          }))
+          .filter((goal) => goal.name && goal.amount !== "" && goal.date)
+      : [],
+    goalIndex: null,
     rightDoorJoined: false,
   };
 }
@@ -1009,6 +1167,25 @@ const INPUT_COPY = {
     mode: "months",
     requiredHint: "Enter the number of months to continue.",
   },
+  rc: {
+    title: "Reduce cost",
+    body: "How much less you will spend.",
+    chip: "This month",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "This lowers monthly costs on Your life.",
+    requiredHint: "Enter how much less you will spend.",
+  },
+  sf: {
+    title: "Emergency fund",
+    body: "Name it, then set the amount you want set aside.",
+    chip: "Cushion",
+    label: "Target",
+    prefix: "HK$",
+    mode: "money",
+    requiredHint: "Enter a label and a target to continue.",
+  },
   gd2: {
     title: "Monthly cover",
     body: "Premium you plan to pay.",
@@ -1142,6 +1319,11 @@ export function present(state) {
       lifeDetail: state.lifeDetail === true && id === "l1",
       fromInput: state.fromInput === true && id === "l0",
       projectNext: state.projectNext === true && id === "l0",
+      addGoal:
+        id === "l0" &&
+        state.projectNext !== true &&
+        state.fromInput !== true &&
+        (state.entry === "ok" || fundEntered(state)),
       disclaimer: LIFE_DISCLAIMER,
       frame: LIFE_FRAME[id],
     };
@@ -1191,7 +1373,9 @@ export function present(state) {
       body: copy.body,
       chip: copy.chip,
       showLifeLink: false,
-      showPlan: true,
+      showPlan: id !== "sf",
+      quiet: id === "sf" ? "Skip" : null,
+      quietAct: id === "sf" ? "skip-fund" : "",
       info: copy.info || null,
       rdLater: copy.rdLater === true,
       showRequired: state.showRequired === true,
@@ -1207,6 +1391,8 @@ export function present(state) {
         mode: copy.mode,
         label: copy.label,
         prefix: copy.prefix,
+        noteLabel: id === "sf" ? "Label" : "",
+        labelFirst: id === "sf",
         amount:
           copy.mode === "days"
             ? field.days
@@ -1274,7 +1460,10 @@ export function present(state) {
       body: "Pick one to work on.",
       chip: "Plan",
       choices: [
-        choice("goals", "Plan future goals"),
+        choice("goals", "Plan future goals", {
+          locked: state.entry !== "ok" && !fundEntered(state),
+          sub: state.entry === "ok" || fundEntered(state) ? "" : "Opens after your emergency fund",
+        }),
         choice("insurance", "Add insurance"),
         choice("invest", "Invest", {
           locked: !ready,
@@ -1312,7 +1501,7 @@ export function present(state) {
       chip: "This month",
       rdLater: state.fixHeldForRightDoor === true,
       choices: [
-        choice("reduce", "Reduce cost", { sub: "\u22121,000 this month" }),
+        choice("reduce", "Reduce cost"),
         choice("lenders", "Talk to lenders"),
       ],
     };

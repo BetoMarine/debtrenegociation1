@@ -49,9 +49,10 @@ function choices(view) {
 }
 
 function noteField(field) {
-  return `<label class="ft-label" for="ft-note">Note</label>
+  const label = field.noteLabel || "Note";
+  return `<label class="ft-label" for="ft-note">${escapeHtml(label)}</label>
     <div class="ft-input is-optional">
-      <input id="ft-note" name="note" data-field="note" data-key="${escapeHtml(field.key)}" autocomplete="off" maxlength="280" placeholder="Optional" value="${escapeHtml(field.note)}" aria-label="Note (optional)" />
+      <input id="ft-note" name="note" data-field="note" data-key="${escapeHtml(field.key)}" autocomplete="off" maxlength="280" placeholder="${field.noteLabel ? "Tap to enter" : "Optional"}" value="${escapeHtml(field.note)}" aria-label="${escapeHtml(label)}" />
     </div>`;
 }
 
@@ -79,12 +80,11 @@ function inputBlock(view) {
   const prefix = money ? `<span class="ft-cur">HK$</span>` : "";
   const amountMode = money ? "decimal" : "numeric";
   const amountName = money ? "amount" : months ? "months" : "days";
-  return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
+  const amountRow = `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
     <div class="ft-input">
       ${prefix}<input id="ft-amount" name="${amountName}" data-field="${amountName}" data-key="${escapeHtml(field.key)}" inputmode="${amountMode}" autocomplete="off" enterkeyhint="done" maxlength="${money ? "16" : "5"}" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" />
-    </div>
-    ${required}
-    ${noteField(field)}`;
+    </div>`;
+  return field.labelFirst ? `${noteField(field)}${amountRow}${required}` : `${amountRow}${required}${noteField(field)}`;
 }
 
 function rowsBlock(view) {
@@ -149,7 +149,7 @@ function actions(view) {
     );
   } else if (view.quiet) {
     parts.push(
-      `<button class="ft-btn quiet" type="button" data-act="back">${escapeHtml(view.quiet)}</button>`,
+      `<button class="ft-btn quiet" type="button" data-act="${escapeHtml(view.quietAct || "back")}">${escapeHtml(view.quiet)}</button>`,
     );
   }
   if (view.showPlan) {
@@ -197,7 +197,7 @@ function efGraph(ef) {
   const net = ef?.net;
   const p = pct == null ? 0 : Math.max(0, Math.min(100, pct));
   const xs = [20, 70, 120, 180, 250];
-  const rise = (34 * p) / 100;
+  const rise = ef?.rising ? 34 : (34 * p) / 100;
   const saveYs = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(55 - t * rise));
   const savePoints = xs.map((x, i) => `${x},${saveYs[i]}`).join(" ");
   const cash =
@@ -229,6 +229,19 @@ function efGraph(ef) {
     cash,
     "#0d9488",
   )}<polyline fill="none" stroke="#5eead4" stroke-width="2.2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" points="${savePoints}"/>${dots(xs.map((x, i) => [x, saveYs[i]]), "#5eead4")}`;
+}
+
+function doughnut(pct) {
+  const p = Math.max(0, Math.min(100, Math.round(pct ?? 0)));
+  const radius = 28;
+  const circ = 2 * Math.PI * radius;
+  const arc = (p / 100) * circ;
+  const gap = circ - arc;
+  const ring =
+    p > 0
+      ? `<circle cx="36" cy="36" r="${radius}" fill="none" stroke="#0d9488" stroke-width="8" stroke-dasharray="${arc} ${gap}" stroke-linecap="round" transform="rotate(-90 36 36)"/>`
+      : "";
+  return `<svg class="ft-doughnut" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="${radius}" fill="none" stroke="#e2e8f0" stroke-width="8"/>${ring}<text x="36" y="41" text-anchor="middle" class="ft-dough-pct">${p}%</text></svg>`;
 }
 
 function goalsGraph(funding) {
@@ -292,6 +305,16 @@ function graph(kind, pct) {
       "#0d9488",
     )}`,
     impact: impactGraph(),
+    "slate-up": `<polyline fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,48 70,40 120,32 180,24 250,16"/>${dots(
+      [
+        [20, 48],
+        [70, 40],
+        [120, 32],
+        [180, 24],
+        [250, 16],
+      ],
+      "#64748b",
+    )}`,
     rise: `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,48 70,38 120,28 180,20 250,12"/>${dots(
       [
         [20, 48],
@@ -394,7 +417,7 @@ function rdBody(rd) {
 }
 
 function efBody(ef) {
-  return `<div class="ft-ms-head"><b>Emergency fund</b><span class="ft-ms-date">${escapeHtml(ef.date)}</span></div>
+  return `<div class="ft-ms-head"><b>${escapeHtml(ef.title || "Emergency fund")}</b><span class="ft-ms-date">${escapeHtml(ef.date)}</span></div>
     <div class="ft-ms-gtitle">Cash flow + emergency savings</div>
     ${graph("ef", ef)}
     <div class="ft-ms-foot" data-ef-now="${ef.now ?? ""}" data-ef-pct="${ef.pct ?? ""}">
@@ -419,11 +442,23 @@ function stubBody(stub) {
     <div class="ft-ms-foot">${funding}${stub.delta ? `<span class="ft-delta">${escapeHtml(stub.delta)}</span>` : ""}</div>`;
 }
 
+function goalBody(goal) {
+  const fund = goal.funding;
+  return `<div class="ft-ms-head"><b>${escapeHtml(goal.title)}</b><span class="ft-ms-date">${escapeHtml(goal.date)}</span></div>
+    <div class="ft-ms-gtitle">Cash flow</div>
+    ${graph(goal.graph)}
+    <div class="ft-goal-row">
+      ${doughnut(fund.pct)}
+      <div class="ft-goal-card"><b>${escapeHtml(fund.name)}</b><span>Date by ${escapeHtml(fund.dateText)}</span><span class="ft-goal-fund">Could cover ${escapeHtml(fund.coverText)} of ${escapeHtml(fund.targetText)} · ${fund.pct}%</span><span class="ft-muted is-thin">Emergency fund left out</span></div>
+    </div>`;
+}
+
 function railOrder(life, focus) {
   const order = ["today"];
   if (life.expected?.show || focus === "expect") order.push("expect");
   if (life.rd.joined || focus === "rd") order.push("rd");
-  if (life.scope !== "today") order.push("ef", "invest", "goals", "age");
+  if (life.showEf || focus === "ef") order.push("ef");
+  for (const goal of life.goals || []) order.push(goal.id);
   return order;
 }
 
@@ -448,7 +483,6 @@ function spine(life) {
 
 function lifeBlock(life, focus) {
   const solo = focus && focus !== "scroll";
-  const later = life.scope !== "today";
   const order = railOrder(life, focus);
   const numberOf = (id) => String(order.indexOf(id) + 1);
   const showRd = focus === "rd" || (!solo && life.rd.joined);
@@ -490,10 +524,11 @@ function lifeBlock(life, focus) {
       }),
     );
   }
-  if (later && (!solo || focus === "ef")) {
+  if (life.showEf && (!solo || focus === "ef")) {
     rows.push(
       msRow({
         n: numberOf("ef"),
+        tone: "steady",
         testId: "ef",
         button: !solo,
         act: "open-milestone",
@@ -502,18 +537,17 @@ function lifeBlock(life, focus) {
       }),
     );
   }
-  for (const stub of life.stubs) {
-    if (!later) continue;
-    if (solo && focus !== stub.id) continue;
+  for (const goal of life.goals || []) {
+    if (solo && focus !== goal.id) continue;
     rows.push(
       msRow({
-        n: numberOf(stub.id),
-        stub: !stub.real,
-        testId: stub.id,
+        n: numberOf(goal.id),
+        tone: "steady",
+        testId: goal.id,
         button: !solo,
         act: "open-milestone",
-        value: stub.id,
-        body: stubBody(stub),
+        value: goal.id,
+        body: goalBody(goal),
       }),
     );
   }
@@ -610,7 +644,9 @@ export function renderFirstBuild(state) {
       ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button></div>`
       : view.projectNext
         ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="project-next">Continue</button></div>`
-        : "";
+        : view.addGoal
+          ? `<div class="ft-actions"><button class="ft-btn quiet" type="button" data-act="add-goal">Add a goal</button></div>`
+          : "";
     return screenShell(view, `${topbar(view)}${stage}${planBack}`);
   }
   return screenShell(view, screenHtml(view));

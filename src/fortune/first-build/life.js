@@ -122,6 +122,7 @@ function moneyInputs(state) {
     goal: amount(inputs.goalAmount?.amount),
     goalName: String(inputs.goalName?.text ?? "").trim(),
     goalDate: parseIsoDate(inputs.goalDate?.date),
+    fundLabel: String(inputs.cushionTarget?.note ?? "").trim(),
     cover: amount(inputs.cover?.amount),
     debt: amount(inputs.lenderDebt?.amount),
     contract: amount(inputs.lenderContract?.amount),
@@ -130,11 +131,14 @@ function moneyInputs(state) {
   };
 }
 
-function phaseOf(state, ready) {
+function phaseOf(state) {
+  const target = amount(state?.inputs?.cushionTarget?.amount);
+  const fund = target != null && target > 0;
   const acted = state?.action === "reduce" || state?.action === "lenders";
+  const hasGoal = Array.isArray(state?.goals) && state.goals.some((goal) => String(goal?.name || "").trim());
   let current = "fix";
-  if (state?.entry === "ok") current = "goals";
-  else if (state?.entry === "stable" || acted) current = ready ? "goals" : "cushion";
+  if (state?.entry === "ok" || hasGoal || (fund && (acted || state?.entry === "stable"))) current = "goals";
+  else if (state?.entry === "stable" || acted) current = "cushion";
   const order = [
     ["fix", "Fix"],
     ["cushion", "Cushion"],
@@ -168,6 +172,28 @@ function monthsOf(now, target, save) {
   const gap = target - now;
   if (gap <= 0) return 0;
   return Math.ceil(gap / save);
+}
+
+/** Whole months from the current month through the month before the goal month. */
+function monthsUntil(from, date) {
+  if (!(from instanceof Date) || !(date instanceof Date)) return 0;
+  const months = (date.getFullYear() - from.getFullYear()) * 12 + (date.getMonth() - from.getMonth());
+  return Math.max(0, months);
+}
+
+/**
+ * Share of a purchase the monthly surplus can cover by the goal month.
+ * The emergency-fund balance and target are not included.
+ * A surplus of zero or less covers none of the purchase.
+ */
+export function goalCover({ net, amount, months }) {
+  const surplus = net != null && net > 0 ? net : 0;
+  const span = months != null && months > 0 ? months : 0;
+  const available = surplus * span;
+  const price = amount != null && amount > 0 ? amount : 0;
+  const pct = price > 0 ? Math.min(100, Math.round((available / price) * 100)) : 0;
+  const shown = price > 0 ? Math.min(available, price) : 0;
+  return { available, shown, pct };
 }
 
 function netOf(money, expenses) {
@@ -256,28 +282,16 @@ export function buildLife(state) {
   const months = monthsOf(money.now, money.target, money.save);
   const tone = toneOf(state?.entry);
   const acted = state?.action === "reduce" || state?.action === "lenders";
-  const lendersDone = state?.action === "lenders";
-  const reduced = state?.action === "reduce" && net != null && net > 0;
   let copy = todayCopy(tone, net);
-  if (reduced) {
+  if (net != null && net > 0) {
     copy = {
       ...copy,
-      kicker: "Positive from today",
-      netClass: "pos",
-      graph: "impact",
-      mark: "steady",
-      ask: "Why the trend turns up.",
-      quiet: "Positive from today.",
-    };
-  } else if (lendersDone) {
-    copy = {
-      ...copy,
-      kicker: "Cash flow turns up",
-      netClass: "pos",
-      graph: "rise",
-      mark: "steady",
-      ask: "Why the trend turns up.",
-      quiet: "Positive from today.",
+      kicker: "This month",
+      netClass: "zero",
+      graph: "slate-up",
+      mark: "even",
+      ask: "Why this month is ahead.",
+      quiet: "This month.",
     };
   }
   const move = state?.lifeMove || null;
@@ -319,26 +333,43 @@ export function buildLife(state) {
     efDelta = `Was ${wasNow} \u00b7 ${wasPct} \u00b7 cushion input`;
   }
 
-  const year = asOf.getFullYear();
-  const scope = state?.entry === "stressed" && !acted ? "today" : "full";
-  const turnsGreen = net != null && (net > 0 || lendersDone);
-  const place = net == null ? null : turnsGreen ? formatDate(asOf) : "When it turns up";
-  const cushionReadyNow =
-    money.now != null && money.target != null && money.target > 0 && money.now >= money.target;
-  const lendersReady =
-    state?.action === "lenders" &&
-    money.debt != null &&
-    money.contract != null &&
-    money.premium != null &&
-    money.duration != null;
-  const funded = 0;
-  const goalPct = money.goal != null && money.goal > 0 ? Math.round((funded / money.goal) * 100) : null;
-  const goalReady = Boolean(money.goalName && money.goalDate && money.goal != null);
-  const goalDateText = money.goalDate ? formatDate(money.goalDate) : "";
+  const showEf = money.target != null && money.target > 0;
+  const fundNow = showEf && money.now == null ? 0 : money.now;
+  const fundPct = showEf ? pctOf(fundNow, money.target) ?? 0 : pct;
+  const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
+  const goalCash = net != null && net < 0 ? "down-red" : net === 0 ? "flat-zero" : net != null && net > 0 ? "up-teal" : "flat";
+  const goals = (Array.isArray(state?.goals) ? state.goals : [])
+    .map((goal, index) => {
+      const name = String(goal?.name ?? "").trim();
+      const date = parseIsoDate(goal?.date);
+      const price = amount(goal?.amount);
+      if (!name || !date || price == null) return null;
+      const span = monthsUntil(asOf, date);
+      const cover = goalCover({ net, amount: price, months: span });
+      return {
+        id: `goal-${index}`,
+        title: name,
+        date: formatDate(date),
+        graph: goalCash,
+        funding: {
+          name,
+          dateText: formatDate(date),
+          available: cover.available,
+          shown: cover.shown,
+          coverText: formatPlain(cover.shown),
+          target: price,
+          targetText: formatPlain(price),
+          pct: cover.pct,
+          months: span,
+        },
+      };
+    })
+    .filter(Boolean);
   return {
     tone,
-    scope,
-    phase: phaseOf(state, cushionReadyNow),
+    scope: showEf || goals.length ? "plan" : "today",
+    showEf,
+    phase: phaseOf(state),
     pill: pillOf(state?.entry),
     today: {
       date: formatDate(asOf),
@@ -348,7 +379,7 @@ export function buildLife(state) {
       graph: copy.graph,
       mark: copy.mark,
       net,
-      netText: lendersDone && !(net > 0) ? "Positive from today" : `Net ${formatSigned(net)}`,
+      netText: `Net ${formatSigned(net)}`,
       meta: `Income ${formatPlain(money.income)} \u00b7 Expenses ${formatPlain(expenses)}`,
       delta: netMoved ? deltaLine(move, net, move.wasNet) : "",
       moved: netMoved,
@@ -378,7 +409,7 @@ export function buildLife(state) {
       note: "Live Right Door as-is \u2014 this frame shows Your life effect only.",
     },
     expected: {
-      show: lendersReady,
+      show: false,
       date: formatDate(asOf),
       debt: formatPlain(money.debt),
       contract: formatPlain(money.contract),
@@ -387,21 +418,23 @@ export function buildLife(state) {
       graph: "rise",
     },
     ef: {
+      title: money.fundLabel || "Emergency fund",
       date: place || formatDate(addMonths(asOf, 12)),
-      now: money.now,
+      now: fundNow,
       target: money.target,
-      pct,
+      pct: fundPct,
+      rising: showEf,
       net,
       targetText: formatPlain(money.target),
-      nowText: formatPlain(money.now),
-      pctText: pct == null ? "\u2014" : `${pct}%`,
+      nowText: formatPlain(showEf ? fundNow : money.now),
+      pctText: showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`,
       incomeText: formatPlain(money.income),
       expensesText:
         expenses == null ? "\u2014" : expenses > 0 ? `\u2013${formatPlain(expenses)}` : formatPlain(expenses),
       expensesOut: expenses != null && expenses > 0,
       netText: formatSigned(net),
       netClass: copy.netClass,
-      foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(money.now)} \u00b7 ${pct == null ? "\u2014" : `${pct}%`}`,
+      foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(showEf ? fundNow : money.now)} \u00b7 ${showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`}`,
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,
@@ -410,6 +443,7 @@ export function buildLife(state) {
     cover: money.cover,
     save: money.save,
     months,
+    goals,
     stubs: [
       {
         id: "invest",
@@ -425,47 +459,6 @@ export function buildLife(state) {
               : `Was ${formatPlain(move.wasCover)} \u00b7 cover updated`
             : "",
         graph: "invest",
-      },
-      {
-        id: "goals",
-        n: "5",
-        title: "Goals",
-        real: goalReady,
-        date: goalReady ? goalDateText : place || `${year + 2}\u2013${year + 6}`,
-        gtitle: "Cash flow \u00b7 goal impact",
-        later: goalReady
-          ? ""
-          : money.goal == null
-            ? "Later pass \u00b7 Per-goal % \u00b7 Overall success"
-            : `Goal ${formatPlain(money.goal)} \u00b7 on track`,
-        funding: goalReady
-          ? {
-              name: money.goalName,
-              dateText: goalDateText,
-              funded,
-              fundedText: formatPlain(funded),
-              target: money.goal,
-              targetText: formatPlain(money.goal),
-              pct: goalPct ?? 0,
-            }
-          : null,
-        delta:
-          move?.key === "goalAmount" && money.goal !== move.wasGoal
-            ? move.wasGoal == null
-              ? "Was unset \u00b7 goal amount in"
-              : `Was ${formatPlain(move.wasGoal)} \u00b7 goal amount in`
-            : "",
-        graph: "goals",
-      },
-      {
-        id: "age",
-        n: "6",
-        title: "Age 70",
-        date: "open",
-        gtitle: "",
-        later: "",
-        open: "Add milestones as you plan.",
-        graph: "none",
       },
     ],
     detail: {

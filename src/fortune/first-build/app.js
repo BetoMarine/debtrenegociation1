@@ -182,7 +182,7 @@ function onClick(event) {
     apply(reduce(state, { type: act }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal") {
     apply(reduce(state, { type: act }));
     return;
   }

@@ -842,8 +842,28 @@ div.ft-ms-card {
   font-weight: 800;
 }
 
-.ft-goal-card {
+.ft-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-top: 8px;
+}
+
+.ft-doughnut {
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+
+.ft-dough-pct {
+  font-size: 13px;
+  font-weight: 800;
+  fill: #0f766e;
+}
+
+.ft-goal-card {
+  margin-top: 0;
+  flex: 1;
   border: 1.5px solid #99f6e4;
   background: #f0fdfa;
   border-radius: 14px;
