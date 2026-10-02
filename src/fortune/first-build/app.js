@@ -9,6 +9,21 @@ let state = freshState();
 let saveTimer = 0;
 let doorJoined = false;
 
+/** One writer at a time. A late save of the old plan cannot land after Erase. */
+export function createPersistGate() {
+  let chain = Promise.resolve();
+  return function exclusive(task) {
+    const run = chain.then(() => task(), () => task());
+    chain = run.then(
+      () => {},
+      () => {},
+    );
+    return run;
+  };
+}
+
+const exclusive = createPersistGate();
+
 function root() {
   return document.getElementById("app");
 }
@@ -44,10 +59,15 @@ function draw() {
   syncHash();
 }
 
+function storedSlice(current) {
+  const { rightDoorJoined: _door, lifeBaseline: _baseline, lifeDetail: _detail, privacyOpen: _privacy, ...stored } = current;
+  return stored;
+}
+
 async function persist() {
+  const snapshot = storedSlice(state);
   try {
-    const { rightDoorJoined: _door, lifeBaseline: _baseline, lifeDetail: _detail, ...stored } = state;
-    await saveFortuneSlice(stored);
+    await exclusive(() => saveFortuneSlice(snapshot));
   } catch {
     /* Session still runs if the on-device store is blocked. */
   }
@@ -90,13 +110,16 @@ function keepDoor(next) {
 async function apply(result) {
   clearTimeout(saveTimer);
   if (result.wipe) {
+    const next = { ...result.state, rightDoorJoined: doorJoined };
     try {
-      await wipeFortune();
+      await exclusive(async () => {
+        await wipeFortune();
+        state = next;
+        await saveFortuneSlice(storedSlice(state));
+      });
     } catch {
       return;
     }
-    keepDoor(result.state);
-    await persist();
     draw();
     return;
   }
@@ -144,8 +167,9 @@ function onClick(event) {
     apply(reduce(state, action));
     return;
   }
-  if (act === "info") {
-    apply(reduce(state, { type: "info" }));
+  if (act === "info" || act === "privacy-info") {
+    if (act === "privacy-info") commitDraft();
+    apply(reduce(state, { type: act === "privacy-info" ? "privacy-info" : "info" }));
     return;
   }
   if (act === "open-erase" || act === "cancel-erase" || act === "confirm-erase" || act === "erase-ok") {

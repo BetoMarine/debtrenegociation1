@@ -153,8 +153,16 @@ function sheet(view) {
     </div>`;
 }
 
+function privacyFoot(view) {
+  if (!view.privacy) return "";
+  const why = view.privacyOpen
+    ? `<p class="ft-privacy-why" id="ft-privacy-why">${escapeHtml(view.privacyInfo)}</p>`
+    : "";
+  return `<footer class="ft-privacy-foot"><p class="ft-privacy">${escapeHtml(view.privacyText)}<button class="ft-info ft-privacy-info" type="button" data-act="privacy-info" aria-label="About erase" aria-expanded="${view.privacyOpen ? "true" : "false"}" aria-controls="ft-privacy-why">i</button></p>${why}</footer>`;
+}
+
 function screenHtml(view) {
-  return `${topbar(view)}${content(view)}${actions(view)}`;
+  return `${topbar(view)}${content(view)}${actions(view)}${privacyFoot(view)}`;
 }
 
 function axis() {
@@ -351,7 +359,7 @@ function lifeBlock(life, focus) {
   }
   const pill = life.pill ? `<span class="ft-jpill is-${life.pill.tone}">${escapeHtml(life.pill.label)}</span>` : "";
   const note = focus === "rd" ? `<p class="ft-life-note">${escapeHtml(life.rd.note)}</p>` : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p>${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {

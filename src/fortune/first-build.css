@@ -291,6 +291,48 @@ input {
   padding: 0 24px 30px;
 }
 
+.ft-screen:has(.ft-privacy-foot) .ft-actions {
+  padding-bottom: 8px;
+}
+
+.ft-privacy-foot {
+  flex: none;
+  margin-top: auto;
+  padding: 4px 24px 18px;
+  text-align: center;
+}
+
+.ft-privacy {
+  margin: 0;
+  color: var(--ft-soft);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ft-privacy-info {
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  font-size: 12px;
+  border-width: 1.5px;
+}
+
+.ft-privacy-why {
+  margin: 8px 0 0;
+  color: var(--ft-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.ft-disclaimer {
+  margin: 2px 0 8px;
+  color: var(--ft-soft);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .ft-btn {
   display: flex;
   align-items: center;

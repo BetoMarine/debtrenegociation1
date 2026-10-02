@@ -191,9 +191,14 @@ export function freshState() {
     lifeBaseline: null,
     lifeMove: null,
     fromInput: false,
+    privacyOpen: false,
     rightDoorJoined: false,
   };
 }
+
+export const PRIVACY_STRIP = "Stays on this phone. Erase any time.";
+export const PRIVACY_INFO = "Erase clears Fortune Teller on this phone. Your other Plan Your Life apps keep their data.";
+export const LIFE_DISCLAIMER = "Not advice. Not a guarantee.";
 
 export function parseAmount(raw) {
   const s = String(raw ?? "")
@@ -546,6 +551,9 @@ function step(state, action) {
     case "info":
       if (!INFO_SCREENS.has(state.screen)) return state;
       return { ...state, infoOpen: !state.infoOpen };
+    case "privacy-info":
+      if (state.screen !== "w0" && state.screen !== "i0") return state;
+      return { ...state, privacyOpen: !state.privacyOpen };
     case "open-erase":
       if (state.screen !== "w0") return state;
       return { ...state, screen: "e0", eraseFrom: "w0" };
@@ -690,6 +698,7 @@ export function hydrate(raw) {
     fixHeldForRightDoor: raw.fixHeldForRightDoor === true,
     infoOpen: false,
     showRequired: false,
+    privacyOpen: false,
     eraseFrom: null,
     lifeFrom:
       typeof raw.lifeFrom === "string" &&
@@ -905,6 +914,11 @@ export function present(state) {
     showLifeLink: !["e0", "e1"].includes(id) && !id.startsWith("l") && !INPUT_SCREENS[id],
     showPlan: false,
     fromInput: false,
+    privacy: false,
+    privacyText: "",
+    privacyInfo: "",
+    privacyOpen: false,
+    disclaimer: "",
     life: null,
     lifeOverlay: null,
     lifeFocus: null,
@@ -921,6 +935,7 @@ export function present(state) {
       lifeFocus: LIFE_FOCUS[id],
       lifeDetail: state.lifeDetail === true && id === "l1",
       fromInput: state.fromInput === true && id === "l0",
+      disclaimer: LIFE_DISCLAIMER,
       frame: LIFE_FRAME[id],
     };
   }
@@ -937,6 +952,10 @@ export function present(state) {
         choice("ok", "Ready to plan what’s next"),
       ],
       quiet: "Erase",
+      privacy: true,
+      privacyText: PRIVACY_STRIP,
+      privacyInfo: PRIVACY_INFO,
+      privacyOpen: state.privacyOpen === true,
     };
   }
 
@@ -972,6 +991,10 @@ export function present(state) {
       requiredHint: copy.requiredHint,
       skip: false,
       primary: "Continue",
+      privacy: id === "i0",
+      privacyText: id === "i0" ? PRIVACY_STRIP : "",
+      privacyInfo: id === "i0" ? PRIVACY_INFO : "",
+      privacyOpen: id === "i0" && state.privacyOpen === true,
       input: {
         key,
         mode: copy.mode,

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { FORTUNE_DATA_KEYS, newPack } from "../../db.js";
 import {
   FRAME_IDS,
+  LIFE_DISCLAIMER,
+  PRIVACY_STRIP,
   canContinue,
   cushionReady,
   freshState,
@@ -700,5 +702,73 @@ describe("Slice C costs and deeper flows", () => {
     expect(renderFirstBuild(locked)).toMatch(/Cushion not ready/);
     expect(renderFirstBuild(locked)).toMatch(/Show my current plan/);
     expect(renderFirstBuild(locked)).not.toMatch(/behaviour score|behavior score/i);
+  });
+});
+
+describe("Slice D privacy, disclaimer, and wipe", () => {
+  it("shows the locked privacy strip on Where are you and monthly take-home", () => {
+    const home = renderFirstBuild(freshState());
+    expect(home).toMatch(/Stays on this phone\. Erase any time\./);
+    expect(home).toContain(PRIVACY_STRIP);
+    expect(home).not.toMatch(/Nothing leaves/i);
+    const opened = renderFirstBuild(go(freshState(), { type: "privacy-info" }));
+    expect(opened).toMatch(/Erase clears Fortune Teller on this phone/);
+    expect(opened).toMatch(/other Plan Your Life apps keep their data/);
+
+    const takeHome = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    const card = renderFirstBuild(takeHome);
+    expect(card).toMatch(/Monthly take-home/);
+    expect(card).toContain(PRIVACY_STRIP);
+    expect(card).toMatch(/Show my current plan/);
+    expect(renderFirstBuild({ ...freshState(), screen: "ic", entry: "stressed" })).not.toContain(PRIVACY_STRIP);
+  });
+
+  it("shows the locked disclaimer on Your life home and TODAY detail", () => {
+    const home = renderFirstBuild(go(freshState(), { type: "open-life" }));
+    expect(home).toContain(LIFE_DISCLAIMER);
+    expect(home).toMatch(/Not advice\. Not a guarantee\./);
+    const today = go(go(freshState(), { type: "open-life" }), { type: "open-milestone", id: "today" });
+    expect(today.screen).toBe("l1");
+    expect(renderFirstBuild(today)).toContain(LIFE_DISCLAIMER);
+    expect(renderFirstBuild(today)).not.toMatch(/Nothing leaves/i);
+  });
+
+  it("erase clears a stressed plan so a later stable life is empty", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = go(money(state, "takeHome", "18400"), { type: "continue" });
+    state = money(state, "monthlyCosts", "24900");
+    state = go(state, { type: "back" });
+    state = go(state, { type: "back" });
+    expect(state.screen).toBe("w0");
+    expect(buildLife(state).today.net).toBe(-6500);
+    expect(buildLife(state).today.graph).toBe("down-red");
+
+    state = go(state, { type: "open-erase" });
+    const wiped = reduce(state, { type: "confirm-erase" });
+    expect(wiped.wipe).toBe(true);
+    expect(wiped.state.entry).toBeNull();
+    expect(wiped.state.inputs.takeHome.amount).toBe("");
+    expect(wiped.state.inputs.monthlyCosts.amount).toBe("");
+    expect(wiped.state.lifeMove).toBeNull();
+    const clean = go(wiped.state, { type: "erase-ok" });
+    expect(clean).toEqual(freshState());
+    expect(renderFirstBuild(clean)).toContain(PRIVACY_STRIP);
+
+    const stable = go(clean, { type: "pick-entry", entry: "stable" });
+    const life = buildLife(go(stable, { type: "open-life" }));
+    expect(life.tone).toBe("steady");
+    expect(life.today.kicker).toBe("Steady so far");
+    expect(life.today.graph).toBe("up-teal");
+    expect(life.today.net).toBeNull();
+    expect(life.today.expenses).toBeNull();
+    expect(life.today.income).toBeNull();
+    const html = renderFirstBuild(go(stable, { type: "open-life" }));
+    expect(html).toMatch(/Steady so far/);
+    expect(html).toContain(LIFE_DISCLAIMER);
+    expect(html).not.toMatch(/If nothing changes/);
+    expect(html).not.toMatch(/6,500/);
+    expect(html).not.toMatch(/24,900/);
+    expect(html).not.toMatch(/18,400/);
+    expect(todayHtml(html)).not.toContain("#dc2626");
   });
 });
