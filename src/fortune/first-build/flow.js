@@ -1,9 +1,11 @@
 /**
- * Fortune Teller Slice A — one continuous flow.
- * Cold start and post-erase land on Where are you? (W0).
+ * Fortune Teller first build.
+ * Slice A: one continuous flow. Cold start and post-erase land on Where are you? (W0).
  * Invest stays locked until the cushion floor is real.
- * Fix ends before live Right Door; this slice does not open RD.
+ * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
+
+import { buildLife } from "./life.js";
 
 export const SCREEN_IDS = [
   "w0",
@@ -27,7 +29,43 @@ export const SCREEN_IDS = [
   "g3",
   "e0",
   "e1",
+  "l0",
+  "l1",
+  "l2",
+  "l3",
+  "l4",
+  "l5",
+  "l6",
 ];
+
+const LIFE_FRAME = {
+  l0: "L0-your-life-scroll",
+  l1: "L1-today",
+  l2: "L2-right-door-complete",
+  l3: "L3-emergency-fund",
+  l4: "L4-invest-stub",
+  l5: "L5-goals-stub",
+  l6: "L6-age-stub",
+};
+
+const LIFE_FOCUS = {
+  l0: "scroll",
+  l1: "today",
+  l2: "rd",
+  l3: "ef",
+  l4: "invest",
+  l5: "goals",
+  l6: "age",
+};
+
+const MILESTONE_SCREEN = {
+  today: "l1",
+  rd: "l2",
+  ef: "l3",
+  invest: "l4",
+  goals: "l5",
+  age: "l6",
+};
 
 export const FRAME_IDS = {
   w0: "W0-where-are-you",
@@ -108,6 +146,11 @@ export function freshState() {
     showRequired: false,
     fixHeldForRightDoor: false,
     eraseFrom: null,
+    lifeFrom: null,
+    lifeDetail: false,
+    lifeBaseline: null,
+    lifeMove: null,
+    rightDoorJoined: false,
   };
 }
 
@@ -249,14 +292,37 @@ function backTo(state) {
     case "g2":
     case "g3":
       return "g0";
+    case "l1":
+    case "l2":
+    case "l3":
+    case "l4":
+    case "l5":
+    case "l6":
+      return "l0";
+    case "l0": {
+      const from = state.lifeFrom;
+      if (from && SCREEN_IDS.includes(from) && !from.startsWith("l") && from !== "e0" && from !== "e1") return from;
+      return "w0";
+    }
     default:
       return null;
   }
 }
 
+function lifeSnap(state) {
+  const life = buildLife(state);
+  return {
+    net: life.today.net,
+    now: life.ef.now,
+    pct: life.ef.pct,
+    days: life.today.daysLate,
+  };
+}
+
 function withInput(state, action) {
   const key = action.key;
   if (!state.inputs[key]) return state;
+  const baseline = state.lifeBaseline?.key === key ? state.lifeBaseline : { key, ...lifeSnap(state) };
   const inputs = { ...state.inputs };
   if (key === "daysLate") {
     inputs.daysLate = {
@@ -269,7 +335,26 @@ function withInput(state, action) {
       note: cleanNote(action.note ?? inputs[key].note),
     };
   }
-  return { ...state, inputs, showRequired: false };
+  const next = { ...state, inputs, showRequired: false, lifeBaseline: baseline };
+  const after = lifeSnap(next);
+  const moved =
+    after.net !== baseline.net ||
+    after.now !== baseline.now ||
+    after.pct !== baseline.pct ||
+    after.days !== baseline.days;
+  if (!moved) {
+    return { ...next, lifeMove: state.lifeMove?.key === key ? null : state.lifeMove };
+  }
+  return {
+    ...next,
+    lifeMove: {
+      key,
+      wasNet: baseline.net,
+      wasNow: baseline.now,
+      wasPct: baseline.pct,
+      wasDays: baseline.days,
+    },
+  };
 }
 
 function step(state, action) {
@@ -305,9 +390,10 @@ function step(state, action) {
       if (!canContinue(state)) return { ...state, showRequired: true };
       return advance(state);
     case "back": {
+      if (state.lifeDetail) return { ...state, lifeDetail: false, showRequired: false, infoOpen: false };
       const screen = backTo(state);
       if (!screen) return state;
-      return { ...state, screen, showRequired: false, infoOpen: false };
+      return { ...state, screen, showRequired: false, infoOpen: false, lifeDetail: false };
     }
     case "info":
       if (state.screen !== "i0") return state;
@@ -321,6 +407,20 @@ function step(state, action) {
     case "erase-ok":
       if (state.screen !== "e1") return state;
       return freshState();
+    case "open-life":
+      if (["e0", "e1"].includes(state.screen) || state.screen.startsWith("l")) return state;
+      return { ...state, screen: "l0", lifeFrom: state.screen, lifeDetail: false, showRequired: false, infoOpen: false };
+    case "open-milestone": {
+      const screen = MILESTONE_SCREEN[action.id];
+      if (!screen || state.screen !== "l0") return state;
+      return { ...state, screen, lifeDetail: false };
+    }
+    case "open-net":
+      if (state.screen !== "l0" && state.screen !== "l1") return state;
+      return { ...state, screen: "l1", lifeDetail: true };
+    case "close-net":
+      if (!state.lifeDetail) return state;
+      return { ...state, lifeDetail: false };
     default:
       return state;
   }
@@ -333,11 +433,27 @@ export function reduce(state, action) {
     if (current.screen !== "e0") return { wipe: false, state: current };
     return { wipe: true, state: { ...freshState(), screen: "e1" } };
   }
-  return { wipe: false, state: step(current, action) };
+  const stepped = step(current, action);
+  const next = stepped.screen !== current.screen ? { ...stepped, lifeBaseline: null } : stepped;
+  return { wipe: false, state: next };
 }
 
 function oneOf(value, allowed) {
   return allowed.includes(value) ? value : null;
+}
+
+function cleanMove(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const keys = ["takeHome", "stillDue", "overdue", "daysLate", "cushionNow", "cushionTarget"];
+  if (!keys.includes(raw.key)) return null;
+  const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+  return {
+    key: raw.key,
+    wasNet: num(raw.wasNet),
+    wasNow: num(raw.wasNow),
+    wasPct: num(raw.wasPct),
+    wasDays: num(raw.wasDays),
+  };
 }
 
 export function hydrate(raw) {
@@ -383,6 +499,18 @@ export function hydrate(raw) {
     infoOpen: false,
     showRequired: false,
     eraseFrom: null,
+    lifeFrom:
+      typeof raw.lifeFrom === "string" &&
+      SCREEN_IDS.includes(raw.lifeFrom) &&
+      !raw.lifeFrom.startsWith("l") &&
+      raw.lifeFrom !== "e0" &&
+      raw.lifeFrom !== "e1"
+        ? raw.lifeFrom
+        : null,
+    lifeDetail: false,
+    lifeBaseline: null,
+    lifeMove: cleanMove(raw.lifeMove),
+    rightDoorJoined: false,
   };
 }
 
@@ -518,7 +646,25 @@ export function present(state) {
     requiredHint: "",
     lockedInvest: !ready,
     skip: false,
+    showLifeLink: !["e0", "e1"].includes(id) && !id.startsWith("l"),
+    life: null,
+    lifeOverlay: null,
+    lifeFocus: null,
+    lifeDetail: false,
   };
+
+  if (id.startsWith("l")) {
+    return {
+      ...base,
+      kind: "life",
+      chip: "Your life",
+      showLifeLink: false,
+      life: buildLife(state),
+      lifeFocus: LIFE_FOCUS[id],
+      lifeDetail: state.lifeDetail === true && id === "l1",
+      frame: LIFE_FRAME[id],
+    };
+  }
 
   if (id === "w0") {
     return {
@@ -553,18 +699,23 @@ export function present(state) {
     const copy = INPUT_COPY[id];
     const key = INPUT_SCREENS[id];
     const field = state.inputs[key];
+    const lifeOverlay = id === "i0" ? "scroll" : id === "i3" || id === "i3b" ? "ef" : null;
     return {
       ...base,
       kind: "input",
       title: copy.title,
       body: copy.body,
-      chip: copy.chip,
+      chip: lifeOverlay ? "Your life" : copy.chip,
+      showLifeLink: !lifeOverlay,
       info: copy.info || null,
       rdLater: copy.rdLater === true,
       showRequired: state.showRequired === true,
       requiredHint: copy.requiredHint,
       skip: false,
       primary: "Continue",
+      lifeOverlay,
+      life: lifeOverlay ? buildLife(state) : null,
+      lifeFocus: lifeOverlay === "ef" ? "ef" : lifeOverlay === "scroll" ? "scroll" : null,
       input: {
         key,
         mode: copy.mode,

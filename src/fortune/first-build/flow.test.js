@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FORTUNE_DATA_KEYS } from "../../db.js";
+import { FORTUNE_DATA_KEYS, newPack } from "../../db.js";
 import {
   FRAME_IDS,
   canContinue,
@@ -10,6 +10,7 @@ import {
   present,
   reduce,
 } from "./flow.js";
+import { buildLife, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
 function go(state, action) {
@@ -260,5 +261,172 @@ describe("Slice A first-build flow", () => {
     expect(parseAmount("0")).toBe(0);
     expect(parseAmount("-1")).toBeNull();
     expect(canContinue(money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "0"))).toBe(true);
+  });
+});
+
+function settled(state) {
+  return { ...state, lifeBaseline: null, lifeMove: null };
+}
+
+function todayHtml(html) {
+  return html.split('data-ms="today"')[1].split('data-ms="rd"')[0];
+}
+
+describe("Slice B Your life", () => {
+  it("keeps Where are you as the door and reaches Your life without a journey rewrite", () => {
+    const home = renderFirstBuild(freshState());
+    expect(home).toMatch(/Where are you/);
+    expect(home).toMatch(/Under money stress/);
+    expect(home).toMatch(/data-act="open-life"/);
+    const life = go(freshState(), { type: "open-life" });
+    expect(life.screen).toBe("l0");
+    expect(life.lifeFrom).toBe("w0");
+    expect(go(life, { type: "back" }).screen).toBe("w0");
+    expect(renderFirstBuild(life)).toMatch(/Today → age 70/);
+    expect(renderFirstBuild(life)).toMatch(/Invest &amp; insurance/);
+    expect(renderFirstBuild(life)).toMatch(/Later pass · Insurance · Invest boost/);
+    expect(renderFirstBuild(life)).toMatch(/Later pass · Per-goal % · Overall success/);
+    expect(renderFirstBuild(life)).toMatch(/Age 70/);
+    expect(renderFirstBuild(life)).toMatch(/Add milestones as you plan/);
+    expect(renderFirstBuild(life)).not.toMatch(/behaviour score|behavior score/i);
+  });
+
+  it("paints stressed TODAY red and stable or OK TODAY teal with Steady so far", () => {
+    const stressed = go(
+      money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "18400"),
+      { type: "open-life" },
+    );
+    const stressedHtml = renderFirstBuild(stressed);
+    const stressedToday = todayHtml(stressedHtml);
+    expect(stressedToday).toMatch(/If nothing changes/);
+    expect(stressedToday).toMatch(/Net \+18,400/);
+    expect(stressedToday).toContain("#dc2626");
+    expect(stressedToday).not.toContain("#0d9488");
+    expect(stressedToday).not.toContain("#5eead4");
+    expect(stressedToday).not.toMatch(/Steady so far/);
+    expect(stressedHtml).toMatch(/Get through this month/);
+
+    for (const entry of ["stable", "ok"]) {
+      const state = go(money(go(freshState(), { type: "pick-entry", entry }), "takeHome", "22000"), {
+        type: "open-life",
+      });
+      const today = todayHtml(renderFirstBuild(state));
+      expect(today).toMatch(/Steady so far/);
+      expect(today).toMatch(/Net \+22,000/);
+      expect(today).toContain("#0d9488");
+      expect(today).not.toContain("#dc2626");
+    }
+    expect(renderFirstBuild(go(money(go(freshState(), { type: "pick-entry", entry: "stable" }), "takeHome", "22000"), { type: "open-life" }))).toMatch(
+      /Build a cushion/,
+    );
+  });
+
+  it("moves TODAY net from take-home first, and from still due, overdue, and days late", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = money(state, "stillDue", "24900");
+    state = money(state, "takeHome", "22800");
+    state = settled(state);
+    state = money(state, "takeHome", "18400");
+    expect(buildLife(state).today.net).toBe(-6500);
+    const primary = renderFirstBuild(state);
+    expect(primary).toMatch(/Net –6,500/);
+    expect(primary).toMatch(/Was –2,100 · take-home updated/);
+    expect(primary).toMatch(/Income 18,400 · Expenses 24,900/);
+    expect(todayHtml(primary)).not.toContain("#0d9488");
+    expect(primary).toMatch(/Monthly take-home/);
+
+    state = settled(state);
+    state = money(state, "stillDue", "20000");
+    expect(buildLife(state).today.net).toBe(-1600);
+    expect(buildLife(state).today.delta).toMatch(/still due updated/);
+
+    state = settled(state);
+    state = money(state, "overdue", "1200");
+    expect(buildLife(state).today.expenses).toBe(21200);
+    expect(buildLife(state).today.net).toBe(-2800);
+
+    state = settled(state);
+    state = go(state, { type: "edit", key: "daysLate", days: "4" });
+    expect(buildLife(state).today.daysText).toBe("Days late 4");
+    state = settled(state);
+    state = go(state, { type: "edit", key: "daysLate", days: "9" });
+    expect(buildLife(state).today.daysText).toBe("Days late 9");
+    expect(buildLife(state).today.daysDelta).toMatch(/Was 4 · days late updated/);
+  });
+
+  it("moves the emergency-fund now, target, and percent from cushion inputs", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stable" });
+    state = money(state, "cushionTarget", "60000");
+    state = money(state, "cushionNow", "4000");
+    state = settled({ ...state, screen: "i3", cushionSituation: "small" });
+    state = money(state, "cushionNow", "12000");
+    const life = buildLife(state);
+    expect(life.ef.now).toBe(12000);
+    expect(life.ef.target).toBe(60000);
+    expect(life.ef.pct).toBe(20);
+    expect(life.ef.delta).toBe("Was 4,000 · 7% · cushion input");
+    const html = renderFirstBuild(state);
+    expect(html).toMatch(/Current savings/);
+    expect(html).toMatch(/Emergency fund/);
+    expect(html).toMatch(/Now 12,000 · 20%/);
+    expect(html).toMatch(/Was 4,000 · 7% · cushion input/);
+    expect(html).toContain("#5eead4");
+
+    state = settled(state);
+    state = { ...state, screen: "i3b" };
+    state = money(state, "cushionTarget", "30000");
+    expect(buildLife(state).ef.pct).toBe(40);
+    expect(buildLife(state).ef.foot).toMatch(/Target 30,000 · Now 12,000 · 40%/);
+  });
+
+  it("shows the Right Door cash-flow effect only after join, and keeps the live RD note", () => {
+    let state = money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "18000");
+    state = money(state, "stillDue", "24900");
+    state = money(state, "overdue", "1200");
+    state = go(settled(state), { type: "open-life" });
+    const waiting = renderFirstBuild(state);
+    expect(waiting).toMatch(/After Right Door completes/);
+    expect(waiting).not.toMatch(/Trend starts positive/);
+    expect(waiting.split('data-ms="rd"')[1].split('data-ms="ef"')[0]).not.toContain("#0d9488");
+
+    const joined = renderFirstBuild({ ...state, rightDoorJoined: true });
+    expect(joined).toMatch(/Trend starts positive · Net \+1,200/);
+    const focus = go(state, { type: "open-milestone", id: "rd" });
+    const focusHtml = renderFirstBuild({ ...focus, rightDoorJoined: true });
+    expect(focusHtml).toMatch(/Live Right Door as-is/);
+    expect(focusHtml).not.toMatch(/letter|import UI|HKID/i);
+  });
+
+  it("opens the TODAY net sheet and returns to an empty Where are you after erase", () => {
+    let state = money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "18400");
+    state = money(state, "stillDue", "24900");
+    state = go(go(settled(state), { type: "open-life" }), { type: "open-milestone", id: "today" });
+    expect(state.screen).toBe("l1");
+    state = go(state, { type: "open-net" });
+    const sheet = renderFirstBuild(state);
+    expect(sheet).toMatch(/TODAY · Net/);
+    expect(sheet).toMatch(/Why the cash flow is negative/);
+    expect(sheet).toMatch(/If nothing changes, the trend only worsens/);
+    expect(sheet).toMatch(/Got it/);
+    expect(go(state, { type: "close-net" }).lifeDetail).toBe(false);
+
+    const stable = go(money(go(freshState(), { type: "pick-entry", entry: "stable" }), "takeHome", "22000"), {
+      type: "open-life",
+    });
+    const stableSheet = renderFirstBuild(go(go(stable, { type: "open-milestone", id: "today" }), { type: "open-net" }));
+    expect(stableSheet).toMatch(/Why this month is steady/);
+    expect(stableSheet).toMatch(/Steady so far/);
+    expect(stableSheet).not.toMatch(/trend only worsens/);
+
+    const wiped = reduce(go(freshState(), { type: "open-erase" }), { type: "confirm-erase" });
+    const clean = go(wiped.state, { type: "erase-ok" });
+    expect(clean.screen).toBe("w0");
+    expect(clean.entry).toBeNull();
+    expect(buildLife(clean).today.net).toBeNull();
+    expect(present(clean).title).toBe("Where are you?");
+    expect(rightDoorJoined(newPack("en"), null)).toBe(false);
+    expect(rightDoorJoined({ fullName: "Ada", status: "draft" }, null)).toBe(true);
+    expect(rightDoorJoined(null, { source: "right-door" })).toBe(true);
+    expect(FORTUNE_DATA_KEYS).not.toContain("pack");
   });
 });
