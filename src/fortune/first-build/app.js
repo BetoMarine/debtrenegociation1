@@ -85,14 +85,18 @@ function readDraft() {
   if (!host) return null;
   const amount = host.querySelector("[data-field=amount]");
   const days = host.querySelector("[data-field=days]");
+  const text = host.querySelector("[data-field=text]");
+  const date = host.querySelector("[data-field=date]");
   const note = host.querySelector("[data-field=note]");
-  if (!amount && !days) return null;
-  const key = (amount || days).getAttribute("data-key");
+  const field = amount || days || text || date;
+  if (!field) return null;
   return {
     type: "edit",
-    key,
+    key: field.getAttribute("data-key"),
     amount: amount ? amount.value : undefined,
     days: days ? days.value : undefined,
+    text: text ? text.value : undefined,
+    date: date ? date.value : undefined,
     note: note ? note.value : "",
   };
 }
@@ -218,6 +222,7 @@ export async function boot() {
   }
   await loadDoor();
   state = { ...(saved || freshState()), rightDoorJoined: doorJoined };
+  if (state.screen === "l2" && !doorJoined) state = { ...state, screen: "l0" };
   const host = root();
   if (!host) return;
   host.addEventListener("click", onClick);

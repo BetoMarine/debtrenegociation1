@@ -48,24 +48,42 @@ function choices(view) {
     .join("");
 }
 
+function noteField(field) {
+  return `<label class="ft-label" for="ft-note">Note</label>
+    <div class="ft-input is-optional">
+      <input id="ft-note" name="note" data-field="note" data-key="${escapeHtml(field.key)}" autocomplete="off" maxlength="280" placeholder="Optional" value="${escapeHtml(field.note)}" aria-label="Note (optional)" />
+    </div>`;
+}
+
 function inputBlock(view) {
   const field = view.input;
+  const required = view.showRequired
+    ? `<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`
+    : "";
+  if (field.mode === "text" || field.mode === "date") {
+    const isDate = field.mode === "date";
+    const value = isDate ? field.date : field.text;
+    const placeholder = isDate ? "Pick a date" : "Tap to enter";
+    const dataField = isDate ? "date" : "text";
+    const empty = isDate && !value ? " is-empty" : "";
+    const type = isDate ? "date" : "text";
+    return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
+    <div class="ft-input${isDate ? " is-date" : ""}${empty}">
+      <input id="ft-amount" name="${dataField}" data-field="${dataField}" data-key="${escapeHtml(field.key)}" type="${type}" autocomplete="off" enterkeyhint="done" maxlength="${isDate ? "10" : "80"}" placeholder="${placeholder}" value="${escapeHtml(value)}" aria-label="${escapeHtml(field.label)}" />
+    </div>
+    ${required}
+    ${noteField(field)}`;
+  }
   const money = field.mode === "money";
   const prefix = money ? `<span class="ft-cur">HK$</span>` : "";
   const amountMode = money ? "decimal" : "numeric";
   const amountName = money ? "amount" : "days";
-  const required = view.showRequired
-    ? `<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`
-    : "";
   return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
     <div class="ft-input">
       ${prefix}<input id="ft-amount" name="${amountName}" data-field="${amountName}" data-key="${escapeHtml(field.key)}" inputmode="${amountMode}" autocomplete="off" enterkeyhint="done" maxlength="${money ? "16" : "5"}" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" />
     </div>
     ${required}
-    <label class="ft-label" for="ft-note">Note</label>
-    <div class="ft-input is-optional">
-      <input id="ft-note" name="note" data-field="note" data-key="${escapeHtml(field.key)}" autocomplete="off" maxlength="280" placeholder="Optional" value="${escapeHtml(field.note)}" aria-label="Note (optional)" />
-    </div>`;
+    ${noteField(field)}`;
 }
 
 function rowsBlock(view) {
@@ -173,21 +191,57 @@ function dots(points, color) {
   return points.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.5" fill="${color}"/>`).join("");
 }
 
-function efGraph(pct) {
+function efGraph(ef) {
+  const pct = ef?.pct;
+  const net = ef?.net;
   const p = pct == null ? 0 : Math.max(0, Math.min(100, pct));
-  const ys = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(74 - t * (8 + (36 * p) / 100)));
   const xs = [20, 70, 120, 180, 250];
-  const points = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
-  return `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,42 70,40 120,41 180,39 250,38"/>${dots(
-    [
-      [20, 42],
-      [70, 40],
-      [120, 41],
-      [180, 39],
-      [250, 38],
-    ],
+  const rise = (34 * p) / 100;
+  const saveYs = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(55 - t * rise));
+  const savePoints = xs.map((x, i) => `${x},${saveYs[i]}`).join(" ");
+  const cash =
+    net != null && net < 0
+      ? [
+          [20, 48],
+          [70, 58],
+          [120, 68],
+          [180, 78],
+          [250, 88],
+        ]
+      : net === 0
+        ? [
+            [20, 55],
+            [70, 55],
+            [120, 55],
+            [180, 55],
+            [250, 55],
+          ]
+        : [
+            [20, 48],
+            [70, 46],
+            [120, 44],
+            [180, 42],
+            [250, 38],
+          ];
+  const cashPoints = cash.map(([x, y]) => `${x},${y}`).join(" ");
+  return `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${cashPoints}"/>${dots(
+    cash,
     "#0d9488",
-  )}<polyline fill="none" stroke="#5eead4" stroke-width="2.2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" points="${points}"/>`;
+  )}<polyline fill="none" stroke="#5eead4" stroke-width="2.2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" points="${savePoints}"/>${dots(xs.map((x, i) => [x, saveYs[i]]), "#5eead4")}`;
+}
+
+function goalsGraph(funding) {
+  const real = Boolean(funding);
+  const pct = real ? Math.max(0, Math.min(100, funding.pct ?? 0)) : null;
+  const circ = 2 * Math.PI * 16;
+  const arc = pct == null ? 36 : (pct / 100) * circ;
+  const gap = pct == null ? 80 : circ - arc;
+  const label = pct == null ? "" : `<text x="248" y="49" text-anchor="middle" class="ft-pct">${pct}%</text>`;
+  const arcCircle =
+    pct == null || pct > 0
+      ? `<circle cx="248" cy="45" r="16" fill="none" stroke="#0d9488" stroke-width="5" stroke-dasharray="${arc} ${gap}" stroke-linecap="round" transform="rotate(-90 248 45)"/>`
+      : "";
+  return `<svg class="ft-graph${real ? "" : " is-stub"}" viewBox="0 0 280 90" aria-hidden="true"><line x1="8" y1="45" x2="200" y2="45" class="ft-gzero"/><polyline fill="none" stroke="#94a3b8" stroke-width="2" points="20,40 80,42 140,44 200,46"/><polyline fill="none" stroke="#0d9488" stroke-width="2.2" points="20,40 80,48 140,70 200,52"/><circle cx="248" cy="45" r="16" fill="none" stroke="#e2e8f0" stroke-width="5"/>${arcCircle}${label}</svg>`;
 }
 
 function graph(kind, pct) {
@@ -195,9 +249,7 @@ function graph(kind, pct) {
   if (kind === "invest") {
     return `<svg class="ft-graph is-stub" viewBox="0 0 280 90" aria-hidden="true"><line x1="8" y1="50" x2="272" y2="50" class="ft-gzero"/><polyline fill="none" stroke="#94a3b8" stroke-width="2" points="20,60 90,58 160,56 250,54"/><polyline fill="none" stroke="#0d9488" stroke-width="2.2" points="20,60 90,48 160,36 250,22"/></svg>`;
   }
-  if (kind === "goals") {
-    return `<svg class="ft-graph is-stub" viewBox="0 0 280 90" aria-hidden="true"><line x1="8" y1="45" x2="200" y2="45" class="ft-gzero"/><polyline fill="none" stroke="#94a3b8" stroke-width="2" points="20,40 80,42 140,44 200,46"/><polyline fill="none" stroke="#0d9488" stroke-width="2.2" points="20,40 80,48 140,70 200,52"/><circle cx="248" cy="45" r="16" fill="none" stroke="#e2e8f0" stroke-width="5"/><circle cx="248" cy="45" r="16" fill="none" stroke="#0d9488" stroke-width="5" stroke-dasharray="36 80" stroke-linecap="round"/></svg>`;
-  }
+  if (kind === "goals") return goalsGraph(pct);
   const lines = {
     "down-red": `<polyline fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,52 70,62 120,72 180,84 250,96"/>${dots(
       [
@@ -244,13 +296,29 @@ function graph(kind, pct) {
       "#dc2626",
     )}`,
     flat: `<polyline fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" points="20,55 250,55"/>`,
+    "flat-zero": `<polyline fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,55 70,55 120,55 180,55 250,55"/>${dots(
+      [
+        [20, 55],
+        [70, 55],
+        [120, 55],
+        [180, 55],
+        [250, 55],
+      ],
+      "#64748b",
+    )}`,
     ef: efGraph(pct),
   };
   return `<svg class="ft-graph" viewBox="0 0 280 110" aria-hidden="true">${axis()}${lines[kind] || ""}</svg>`;
 }
 
 function msRow({ n, tone, stub, testId, button, act, value, body }) {
-  const numClass = ["ft-ms-num", stub ? "is-stub" : "", tone === "strain" ? "is-red" : "", tone === "steady" ? "is-teal" : ""]
+  const numClass = [
+    "ft-ms-num",
+    stub ? "is-stub" : "",
+    tone === "strain" ? "is-red" : "",
+    tone === "steady" ? "is-teal" : "",
+    tone === "even" ? "is-slate" : "",
+  ]
     .filter(Boolean)
     .join(" ");
   const cardClass = `ft-ms-card${stub ? " is-stub" : ""}`;
@@ -258,7 +326,7 @@ function msRow({ n, tone, stub, testId, button, act, value, body }) {
   const card = button
     ? `<button class="${cardClass}" type="button" data-act="${act}"${value ? ` data-value="${escapeHtml(value)}"` : ""}>${inner}</button>`
     : `<div class="${cardClass}">${inner}</div>`;
-  return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div>${card}</div>`;
+  return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}" data-n="${escapeHtml(String(n))}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div>${card}</div>`;
 }
 
 function todayBody(today) {
@@ -287,30 +355,47 @@ function rdBody(rd) {
 function efBody(ef) {
   return `<div class="ft-ms-head"><b>Emergency fund</b><span class="ft-ms-date">${escapeHtml(ef.date)}</span></div>
     <div class="ft-ms-gtitle">Cash flow + emergency savings</div>
-    ${graph("ef", ef.pct)}
+    ${graph("ef", ef)}
     <div class="ft-ms-foot" data-ef-now="${ef.now ?? ""}" data-ef-pct="${ef.pct ?? ""}">
       <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>
       <span class="ft-muted is-thin${ef.moved ? " is-moved" : ""}">${escapeHtml(ef.foot)}</span>
       ${ef.saveText ? `<span class="ft-muted is-thin">${escapeHtml(ef.saveText)}</span>` : ""}
       ${ef.delta ? `<span class="ft-delta">${escapeHtml(ef.delta)}</span>` : ""}
+      <span class="ft-tap">Tap for detail ›</span>
     </div>`;
 }
 
 function stubBody(stub) {
+  const chart = stub.graph === "goals" ? graph("goals", stub.funding) : graph(stub.graph);
+  const funding = stub.funding
+    ? `<div class="ft-goal-card"><b>${escapeHtml(stub.funding.name)}</b><span>Date by ${escapeHtml(stub.funding.dateText)}</span><span class="ft-goal-fund">Funded ${escapeHtml(stub.funding.fundedText)} of ${escapeHtml(stub.funding.targetText)} · ${stub.funding.pct}%</span></div><span class="ft-muted is-thin">Impact on cash flow shown above</span>`
+    : stub.open
+      ? `<p class="ft-open-line">${escapeHtml(stub.open)}</p>`
+      : `<span class="ft-muted is-thin">${escapeHtml(stub.later)}</span>`;
   return `<div class="ft-ms-head"><b>${escapeHtml(stub.title)}</b><span class="ft-ms-date">${escapeHtml(stub.date)}</span></div>
     ${stub.gtitle ? `<div class="ft-ms-gtitle">${escapeHtml(stub.gtitle)}</div>` : ""}
-    ${graph(stub.graph)}
-    <div class="ft-ms-foot">${stub.open ? `<p class="ft-open-line">${escapeHtml(stub.open)}</p>` : `<span class="ft-muted is-thin">${escapeHtml(stub.later)}</span>`}${stub.delta ? `<span class="ft-delta">${escapeHtml(stub.delta)}</span>` : ""}</div>`;
+    ${chart}
+    <div class="ft-ms-foot">${funding}${stub.delta ? `<span class="ft-delta">${escapeHtml(stub.delta)}</span>` : ""}</div>`;
+}
+
+function railOrder(life, focus) {
+  const order = ["today"];
+  if (life.rd.joined || focus === "rd") order.push("rd");
+  order.push("ef", "invest", "goals", "age");
+  return order;
 }
 
 function lifeBlock(life, focus) {
   const solo = focus && focus !== "scroll";
+  const order = railOrder(life, focus);
+  const numberOf = (id) => String(order.indexOf(id) + 1);
+  const showRd = focus === "rd" || (!solo && life.rd.joined);
   const rows = [];
   if (!solo || focus === "today") {
     rows.push(
       msRow({
-        n: "1",
-        tone: life.today.tone,
+        n: numberOf("today"),
+        tone: life.today.mark,
         testId: "today",
         button: true,
         act: solo ? "open-net" : "open-milestone",
@@ -319,10 +404,10 @@ function lifeBlock(life, focus) {
       }),
     );
   }
-  if (!solo || focus === "rd") {
+  if (showRd) {
     rows.push(
       msRow({
-        n: "2",
+        n: numberOf("rd"),
         testId: "rd",
         button: !solo,
         act: "open-milestone",
@@ -334,7 +419,7 @@ function lifeBlock(life, focus) {
   if (!solo || focus === "ef") {
     rows.push(
       msRow({
-        n: "3",
+        n: numberOf("ef"),
         testId: "ef",
         button: !solo,
         act: "open-milestone",
@@ -347,8 +432,8 @@ function lifeBlock(life, focus) {
     if (solo && focus !== stub.id) continue;
     rows.push(
       msRow({
-        n: stub.n,
-        stub: true,
+        n: numberOf(stub.id),
+        stub: !stub.real,
         testId: stub.id,
         button: !solo,
         act: "open-milestone",
@@ -379,6 +464,30 @@ function inputSheet(view) {
     ${why}
     ${inputBlock(view)}
     <button class="ft-btn primary" type="button" data-act="continue">${escapeHtml(view.primary)}</button>
+  </div>`;
+}
+
+function efDetail(life) {
+  const ef = life.ef;
+  return `<div class="ft-ef-detail">
+    <h1>Emergency fund</h1>
+    <p class="ft-body">Cash flow and savings toward your cushion.</p>
+    <p class="ft-disclaimer">Not advice. Not a guarantee.</p>
+    ${graph("ef", ef)}
+    <div class="ft-ms-foot">
+      <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>
+    </div>
+    <div class="ft-stat-row">
+      <div class="ft-stat"><span>Target</span><b>${escapeHtml(ef.targetText)}</b></div>
+      <div class="ft-stat"><span>Now</span><b>${escapeHtml(ef.nowText)}</b></div>
+      <div class="ft-stat"><span>Funded</span><b>${escapeHtml(ef.pctText)}</b></div>
+    </div>
+    <div class="ft-net-rows">
+      <div class="ft-net-row"><span>Income</span><b>${escapeHtml(ef.incomeText)}</b></div>
+      <div class="ft-net-row"><span>Expenses</span><b class="${ef.expensesOut ? "is-neg" : ""}">${escapeHtml(ef.expensesText)}</b></div>
+      <div class="ft-net-row is-total is-${escapeHtml(ef.netClass)}"><span>Net this month</span><b class="is-${escapeHtml(ef.netClass)}">${escapeHtml(ef.netText)}</b></div>
+    </div>
+    <div class="ft-actions"><button class="ft-btn primary" type="button" data-act="back">Got it</button></div>
   </div>`;
 }
 
@@ -414,6 +523,9 @@ export function renderFirstBuild(state) {
       view,
       `${topbar(view)}<div class="ft-life-stage" inert>${lifeBlock(view.life, view.lifeFocus)}</div><div class="ft-scrim"></div>${inputSheet(view)}`,
     );
+  }
+  if (view.kind === "life" && view.lifeFocus === "ef") {
+    return screenShell(view, `${topbar(view)}<div class="ft-life-stage">${efDetail(view.life)}</div>`);
   }
   if (view.kind === "life") {
     const stage = view.lifeDetail

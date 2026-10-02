@@ -5,7 +5,7 @@
  * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
 
-import { buildLife, formatPlain } from "./life.js";
+import { buildLife, formatPlain, parseIsoDate } from "./life.js";
 
 export const SCREEN_IDS = [
   "w0",
@@ -33,6 +33,8 @@ export const SCREEN_IDS = [
   "g0",
   "g1",
   "g2",
+  "ig",
+  "ig2",
   "gd",
   "gd2",
   "g3",
@@ -110,6 +112,8 @@ export const SLICE_C_FRAMES = {
   sd3: "Sd3-cushion-ready-gate",
   gd: "Gd-goal-amount",
   gd2: "Gd2-insurance-cover",
+  ig: "Ig-goal-name",
+  ig2: "Ig2-goal-date-by",
 };
 
 function frameOf(id, ready) {
@@ -146,11 +150,13 @@ const INPUT_SCREENS = {
   sd: "monthlySave",
   gd: "goalAmount",
   gd2: "cover",
+  ig: "goalName",
+  ig2: "goalDate",
 };
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -178,6 +184,8 @@ export function freshState() {
       monthlyCosts: blankMoney(),
       monthlySave: blankMoney(),
       goalAmount: blankMoney(),
+      goalName: { text: "", note: "" },
+      goalDate: { date: "", note: "" },
       cover: blankMoney(),
     },
     infoOpen: false,
@@ -235,6 +243,17 @@ function cleanDays(raw) {
     .slice(0, 5);
 }
 
+function cleanText(raw) {
+  return String(raw ?? "")
+    .replace(/[\u0000-\u001f]/g, "")
+    .slice(0, 80);
+}
+
+function cleanDate(raw) {
+  const s = String(raw ?? "").trim();
+  return parseIsoDate(s) ? s : "";
+}
+
 export function canContinue(state) {
   switch (state.screen) {
     case "i0":
@@ -255,6 +274,10 @@ export function canContinue(state) {
       return parseAmount(state.inputs.monthlySave.amount) !== null;
     case "gd":
       return parseAmount(state.inputs.goalAmount.amount) !== null;
+    case "ig":
+      return cleanText(state.inputs.goalName.text).trim().length > 0;
+    case "ig2":
+      return parseIsoDate(state.inputs.goalDate.date) !== null;
     case "gd2":
       return parseAmount(state.inputs.cover.amount) !== null;
     case "f1":
@@ -337,6 +360,10 @@ function advance(state) {
     case "sd3":
       return { ...state, screen: "g0", planFrom: "sd3" };
     case "g1":
+      return { ...state, screen: "ig", showRequired: false, infoOpen: false };
+    case "ig":
+      return { ...state, screen: "ig2", showRequired: false, infoOpen: false };
+    case "ig2":
       return { ...state, screen: "gd", showRequired: false, infoOpen: false };
     case "g2":
       return { ...state, screen: "gd2", showRequired: false, infoOpen: false };
@@ -371,8 +398,12 @@ function backTo(state) {
       return "sd";
     case "sd3":
       return "sd2";
-    case "gd":
+    case "ig":
       return "g1";
+    case "ig2":
+      return "ig";
+    case "gd":
+      return "ig2";
     case "gd2":
       return "g2";
     case "i1":
@@ -449,6 +480,16 @@ function withInput(state, action) {
     inputs.daysLate = {
       days: cleanDays(action.days ?? inputs.daysLate.days),
       note: cleanNote(action.note ?? inputs.daysLate.note),
+    };
+  } else if (key === "goalName") {
+    inputs.goalName = {
+      text: cleanText(action.text ?? inputs.goalName.text),
+      note: cleanNote(action.note ?? inputs.goalName.note),
+    };
+  } else if (key === "goalDate") {
+    inputs.goalDate = {
+      date: cleanDate(action.date ?? inputs.goalDate.date),
+      note: cleanNote(action.note ?? inputs.goalDate.note),
     };
   } else {
     inputs[key] = {
@@ -658,6 +699,10 @@ export function hydrate(raw) {
     if (!src || typeof src !== "object") continue;
     if (key === "daysLate") {
       inputs.daysLate = { days: cleanDays(src.days), note: cleanNote(src.note) };
+    } else if (key === "goalName") {
+      inputs.goalName = { text: cleanText(src.text), note: cleanNote(src.note) };
+    } else if (key === "goalDate") {
+      inputs.goalDate = { date: cleanDate(src.date), note: cleanNote(src.note) };
     } else {
       inputs[key] = { amount: cleanAmount(src.amount), note: cleanNote(src.note) };
     }
@@ -677,7 +722,7 @@ export function hydrate(raw) {
   if (screen === "ic" && !entry) screen = "w0";
   if (["fd", "fd2", "fd3"].includes(screen) && entry !== "stressed") screen = entry ? "i0" : "w0";
   if (["sd", "sd2", "sd3"].includes(screen) && entry !== "stable") screen = entry ? "i0" : "w0";
-  if (["gd", "gd2"].includes(screen) && !entry) screen = "w0";
+  if (["gd", "gd2", "ig", "ig2"].includes(screen) && !entry) screen = "w0";
   if (["f0", "i1", "f1", "f2", "f3", "i2", "i2b"].includes(screen) && entry !== "stressed") {
     screen = entry ? "i0" : "w0";
   }
@@ -792,6 +837,26 @@ const INPUT_COPY = {
     mode: "money",
     info: "What you can put toward the cushion each month.",
     requiredHint: "Enter an amount to continue.",
+  },
+  ig: {
+    title: "Goal name",
+    body: "What are you saving toward?",
+    chip: "Plan",
+    label: "Name",
+    prefix: "",
+    mode: "text",
+    info: "One name for this goal.",
+    requiredHint: "Enter a name to continue.",
+  },
+  ig2: {
+    title: "Date by",
+    body: "When do you want this ready?",
+    chip: "Plan",
+    label: "Target date",
+    prefix: "",
+    mode: "date",
+    info: "The day you want this ready.",
+    requiredHint: "Pick a date to continue.",
   },
   gd: {
     title: "Goal amount",
@@ -1000,7 +1065,9 @@ export function present(state) {
         mode: copy.mode,
         label: copy.label,
         prefix: copy.prefix,
-        amount: copy.mode === "days" ? field.days : field.amount,
+        amount: copy.mode === "days" ? field.days : copy.mode === "money" ? field.amount : "",
+        text: copy.mode === "text" ? field.text : "",
+        date: copy.mode === "date" ? field.date : "",
         note: field.note,
       },
     };

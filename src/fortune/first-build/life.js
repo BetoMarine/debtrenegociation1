@@ -1,6 +1,7 @@
 /**
- * Your life numbers for Slice B.
- * Stressed TODAY stays red. Stable / OK uses “Steady so far”.
+ * Your life numbers.
+ * TODAY follows the net: red only when net is negative, flat slate at zero, teal when positive.
+ * With no numbers yet, the entry tone still sets the empty chart.
  * Right Door contributes a cash-flow effect only after join — no RD UI here.
  */
 
@@ -44,6 +45,18 @@ export function formatSigned(n) {
 
 function formatDate(date) {
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/** A real calendar day, or null. yyyy-mm-dd only. */
+export function parseIsoDate(raw) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw ?? "").trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
 }
 
 function addMonths(date, count) {
@@ -107,6 +120,8 @@ function moneyInputs(state) {
     costs: amount(inputs.monthlyCosts?.amount),
     save: amount(inputs.monthlySave?.amount),
     goal: amount(inputs.goalAmount?.amount),
+    goalName: String(inputs.goalName?.text ?? "").trim(),
+    goalDate: parseIsoDate(inputs.goalDate?.date),
     cover: amount(inputs.cover?.amount),
   };
 }
@@ -153,29 +168,48 @@ function pillOf(entry) {
   return null;
 }
 
+function strainCopy(net) {
+  return {
+    kicker: "If nothing changes",
+    netClass: "neg",
+    graph: "down-red",
+    mark: "strain",
+    ask: net != null && net >= 0 ? "Why this month stays under strain." : "Why the cash flow is negative.",
+    quiet: "If nothing changes, the trend only worsens.",
+  };
+}
+
+function steadyCopy() {
+  return {
+    kicker: "Steady so far",
+    netClass: "pos",
+    graph: "up-teal",
+    mark: "steady",
+    ask: "Why this month is steady.",
+    quiet: "Steady so far.",
+  };
+}
+
 function todayCopy(tone, net) {
-  if (tone === "strain") {
+  if (net != null && net < 0) return strainCopy(net);
+  if (net === 0) {
     return {
-      kicker: "If nothing changes",
-      netClass: "neg",
-      graph: "down-red",
-      ask: net != null && net >= 0 ? "Why this month stays under strain." : "Why the cash flow is negative.",
-      quiet: "If nothing changes, the trend only worsens.",
+      kicker: "Even this month",
+      netClass: "zero",
+      graph: "flat-zero",
+      mark: "even",
+      ask: "Why this month is even.",
+      quiet: "Even this month.",
     };
   }
-  if (tone === "steady") {
-    return {
-      kicker: "Steady so far",
-      netClass: "pos",
-      graph: "up-teal",
-      ask: "Why this month is steady.",
-      quiet: "Steady so far.",
-    };
-  }
+  if (net != null && net > 0) return steadyCopy();
+  if (tone === "strain") return strainCopy(net);
+  if (tone === "steady") return steadyCopy();
   return {
     kicker: "Add your take-home",
     netClass: "muted",
     graph: "flat",
+    mark: "open",
     ask: "Where this month\u2019s cash flow stands.",
     quiet: "",
   };
@@ -236,6 +270,10 @@ export function buildLife(state) {
   }
 
   const year = asOf.getFullYear();
+  const funded = 0;
+  const goalPct = money.goal != null && money.goal > 0 ? Math.round((funded / money.goal) * 100) : null;
+  const goalReady = Boolean(money.goalName && money.goalDate && money.goal != null);
+  const goalDateText = money.goalDate ? formatDate(money.goalDate) : "";
   return {
     tone,
     pill: pillOf(state?.entry),
@@ -245,6 +283,7 @@ export function buildLife(state) {
       kicker: copy.kicker,
       netClass: copy.netClass,
       graph: copy.graph,
+      mark: copy.mark,
       net,
       netText: `Net ${formatSigned(net)}`,
       meta: `Income ${formatPlain(money.income)} \u00b7 Expenses ${formatPlain(expenses)}`,
@@ -280,6 +319,16 @@ export function buildLife(state) {
       now: money.now,
       target: money.target,
       pct,
+      net,
+      targetText: formatPlain(money.target),
+      nowText: formatPlain(money.now),
+      pctText: pct == null ? "\u2014" : `${pct}%`,
+      incomeText: formatPlain(money.income),
+      expensesText:
+        expenses == null ? "\u2014" : expenses > 0 ? `\u2013${formatPlain(expenses)}` : formatPlain(expenses),
+      expensesOut: expenses != null && expenses > 0,
+      netText: formatSigned(net),
+      netClass: copy.netClass,
       foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(money.now)} \u00b7 ${pct == null ? "\u2014" : `${pct}%`}`,
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
@@ -309,12 +358,25 @@ export function buildLife(state) {
         id: "goals",
         n: "5",
         title: "Goals",
-        date: `${year + 2}\u2013${year + 6}`,
-        gtitle: money.goal == null ? "Cash flow \u00b7 goal impact" : "Goal funding impact",
-        later:
-          money.goal == null
+        real: goalReady,
+        date: goalReady ? goalDateText : `${year + 2}\u2013${year + 6}`,
+        gtitle: "Cash flow \u00b7 goal impact",
+        later: goalReady
+          ? ""
+          : money.goal == null
             ? "Later pass \u00b7 Per-goal % \u00b7 Overall success"
             : `Goal ${formatPlain(money.goal)} \u00b7 on track`,
+        funding: goalReady
+          ? {
+              name: money.goalName,
+              dateText: goalDateText,
+              funded,
+              fundedText: formatPlain(funded),
+              target: money.goal,
+              targetText: formatPlain(money.goal),
+              pct: goalPct ?? 0,
+            }
+          : null,
         delta:
           move?.key === "goalAmount" && money.goal !== move.wasGoal
             ? move.wasGoal == null

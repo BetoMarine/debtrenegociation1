@@ -320,7 +320,20 @@ function settled(state) {
 }
 
 function todayHtml(html) {
-  return html.split('data-ms="today"')[1].split('data-ms="rd"')[0];
+  const rest = html.split('data-ms="today"')[1] || "";
+  const end = rest.search(/data-ms="(?:rd|ef)"/);
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
+function milestoneIds(html) {
+  return [...html.matchAll(/data-ms="(today|rd|ef|invest|goals|age)"/g)].map((match) => match[1]);
+}
+
+function saveLineYs(html) {
+  const chunk = html.includes('data-ms="ef"') ? html.split('data-ms="ef"')[1] : html;
+  const match = chunk.match(/stroke="#5eead4"[^>]*points="([^"]+)"/);
+  if (!match) return [];
+  return match[1].split(" ").map((pair) => Number(pair.split(",")[1]));
 }
 
 describe("Slice B Your life", () => {
@@ -343,15 +356,19 @@ describe("Slice B Your life", () => {
     expect(renderFirstBuild(life)).not.toMatch(/behaviour score|behavior score/i);
   });
 
-  it("paints stressed TODAY red and stable or OK TODAY teal with Steady so far", () => {
+  it("paints a negative net red and a positive net teal with Steady so far", () => {
     const stressed = go(
-      money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "18400"),
+      money(
+        money(go(freshState(), { type: "pick-entry", entry: "stressed" }), "takeHome", "18400"),
+        "monthlyCosts",
+        "24900",
+      ),
       { type: "open-life" },
     );
     const stressedHtml = renderFirstBuild(stressed);
     const stressedToday = todayHtml(stressedHtml);
     expect(stressedToday).toMatch(/If nothing changes/);
-    expect(stressedToday).toMatch(/Net \+18,400/);
+    expect(stressedToday).toMatch(/Net –6,500/);
     expect(stressedToday).toContain("#dc2626");
     expect(stressedToday).not.toContain("#0d9488");
     expect(stressedToday).not.toContain("#5eead4");
@@ -453,14 +470,19 @@ describe("Slice B Your life", () => {
     state = money(state, "overdue", "1200");
     state = go(settled(state), { type: "open-life" });
     const waiting = renderFirstBuild(state);
-    expect(waiting).toMatch(/After Right Door completes/);
+    expect(waiting).not.toMatch(/Right Door complete/);
+    expect(waiting).not.toMatch(/After Right Door completes/);
+    expect(waiting).not.toMatch(/data-ms="rd"/);
     expect(waiting).not.toMatch(/Trend starts positive/);
-    expect(waiting.split('data-ms="rd"')[1].split('data-ms="ef"')[0]).not.toContain("#0d9488");
+    expect(waiting).not.toContain('points="20,78 70,76 120,74 180,72 250,70"');
+    expect(milestoneIds(waiting)).toEqual(["today", "ef", "invest", "goals", "age"]);
 
     const joined = renderFirstBuild({ ...state, rightDoorJoined: true });
+    expect(joined).toMatch(/Right Door complete/);
     expect(joined).toMatch(/Trend starts positive · Net \+1,200/);
-    const focus = go(state, { type: "open-milestone", id: "rd" });
-    const focusHtml = renderFirstBuild({ ...focus, rightDoorJoined: true });
+    expect(milestoneIds(joined)).toEqual(["today", "rd", "ef", "invest", "goals", "age"]);
+    const focus = go({ ...state, rightDoorJoined: true }, { type: "open-milestone", id: "rd" });
+    const focusHtml = renderFirstBuild(focus);
     expect(focusHtml).toMatch(/Live Right Door as-is/);
     expect(focusHtml).not.toMatch(/letter|import UI|HKID/i);
   });
@@ -510,6 +532,8 @@ describe("Slice B Your life", () => {
       sd: { entry: "stable", cushionSituation: "small" },
       gd: { entry: "ok" },
       gd2: { entry: "ok" },
+      ig: { entry: "ok" },
+      ig2: { entry: "ok" },
     };
     for (const id of Object.keys(setup)) {
       const state = { ...freshState(), screen: id, ...setup[id] };
@@ -577,8 +601,8 @@ describe("Slice C costs and deeper flows", () => {
       "30000",
     );
     expect(buildLife(stable).today.net).toBe(-8000);
-    expect(buildLife(stable).today.graph).toBe("up-teal");
-    expect(buildLife(stable).today.kicker).toBe("Steady so far");
+    expect(buildLife(stable).today.graph).toBe("down-red");
+    expect(buildLife(stable).today.kicker).toBe("If nothing changes");
   });
 
   it("shows the month picture, confirms a cost cut, and keeps Talk to lenders on Fortune", () => {
@@ -675,16 +699,33 @@ describe("Slice C costs and deeper flows", () => {
     let state = doorAfterCosts("ok", "10000");
     state = go(state, { type: "pick-grow", pick: "goals" });
     state = go(state, { type: "continue" });
+    expect(state.screen).toBe("ig");
+    expect(present(state).title).toBe("Goal name");
+    expect(go(state, { type: "continue" }).screen).toBe("ig");
+    state = go(state, { type: "edit", key: "goalName", text: "New flat deposit" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("ig2");
+    expect(go(state, { type: "continue" }).screen).toBe("ig2");
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-06-15" });
+    state = go(state, { type: "continue" });
     expect(state.screen).toBe("gd");
     expect(present(state).title).toBe("Goal amount");
     expect(go(state, { type: "continue" }).screen).toBe("gd");
-    state = money(state, "goalAmount", "80000");
+    state = money(state, "goalAmount", "50000");
     const goals = buildLife(state).stubs.find((stub) => stub.id === "goals");
-    expect(goals.later).toBe("Goal 80,000 · on track");
+    expect(goals.funding.name).toBe("New flat deposit");
+    expect(goals.funding.dateText).toBe("15 Jun 2028");
+    expect(goals.funding.fundedText).toBe("0");
+    expect(goals.funding.targetText).toBe("50,000");
+    expect(goals.funding.pct).toBe(0);
+    expect(goals.later).toBe("");
     expect(goals.delta).toBe("Was unset \u00b7 goal amount in");
     const html = renderFirstBuild(go(state, { type: "show-plan" }));
-    expect(html).toMatch(/Goal 80,000 · on track/);
+    expect(html).toMatch(/New flat deposit/);
+    expect(html).toMatch(/Date by 15 Jun 2028/);
+    expect(html).toMatch(/Funded 0 of 50,000 · 0%/);
     expect(html).toMatch(/Was unset · goal amount in/);
+    expect(html).not.toMatch(/Later pass · Per-goal/);
     expect(html).not.toMatch(/Success/);
     expect(html).toMatch(/Back to input/);
     expect(go(go(state, { type: "show-plan" }), { type: "back" }).screen).toBe("gd");
@@ -770,5 +811,136 @@ describe("Slice D privacy, disclaimer, and wipe", () => {
     expect(html).not.toMatch(/24,900/);
     expect(html).not.toMatch(/18,400/);
     expect(todayHtml(html)).not.toContain("#dc2626");
+  });
+});
+
+describe("Slice E dig-in fixes", () => {
+  it("draws TODAY flat on zero when income equals expenses", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = money(state, "takeHome", "30000");
+    state = money(state, "monthlyCosts", "30000");
+    state = go(state, { type: "open-life" });
+    const life = buildLife(state);
+    expect(life.today.net).toBe(0);
+    expect(life.today.graph).toBe("flat-zero");
+    expect(life.today.kicker).toBe("Even this month");
+    expect(life.today.netText).toBe("Net 0");
+    const html = renderFirstBuild(state);
+    const today = todayHtml(html);
+    expect(today).toMatch(/Even this month/);
+    expect(today).toMatch(/Net 0/);
+    expect(today).toMatch(/Income 30,000 · Expenses 30,000/);
+    expect(today).toContain('points="20,55 70,55 120,55 180,55 250,55"');
+    expect(today).toContain("is-zero");
+    expect(today).toContain("is-slate");
+    expect(today).not.toContain("#dc2626");
+    expect(today).not.toContain("#0d9488");
+    expect(today).not.toContain("#5eead4");
+    expect(html).toMatch(/Get through this month/);
+    expect(html).toContain(LIFE_DISCLAIMER);
+
+    const negative = buildLife(money(state, "monthlyCosts", "31000"));
+    expect(negative.today.net).toBe(-1000);
+    expect(negative.today.graph).toBe("down-red");
+    expect(negative.today.kicker).toBe("If nothing changes");
+  });
+
+  it("requires a goal name and a real date before the amount", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "ok" });
+    state = go(money(state, "takeHome", "30000"), { type: "continue" });
+    state = go(money(state, "monthlyCosts", "20000"), { type: "continue" });
+    state = go(state, { type: "pick-grow", pick: "goals" });
+    state = go(state, { type: "continue" });
+    expect(present(state).title).toBe("Goal name");
+    expect(renderFirstBuild(state)).toMatch(/Tap to enter/);
+    expect(renderFirstBuild(state)).toMatch(/Show my current plan/);
+    expect(renderFirstBuild(state)).not.toMatch(/New flat deposit/);
+    expect(go(state, { type: "continue" }).showRequired).toBe(true);
+    expect(go(state, { type: "edit", key: "goalName", text: "   " }).screen).toBe("ig");
+    expect(canContinue(go(state, { type: "edit", key: "goalName", text: "   " }))).toBe(false);
+
+    state = go(state, { type: "edit", key: "goalName", text: "New flat deposit" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("ig2");
+    expect(present(state).title).toBe("Date by");
+    expect(present(state).body).toBe("When do you want this ready?");
+    const dateCard = renderFirstBuild(state);
+    expect(dateCard).toMatch(/Pick a date/);
+    expect(dateCard).toMatch(/type="date"/);
+    expect(dateCard).toMatch(/Show my current plan/);
+    expect(go(state, { type: "continue" }).showRequired).toBe(true);
+    expect(canContinue(go(state, { type: "edit", key: "goalDate", date: "2028-02-31" }))).toBe(false);
+    expect(go(state, { type: "back" }).screen).toBe("ig");
+
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-06-15" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("gd");
+    expect(go(state, { type: "back" }).screen).toBe("ig2");
+    const plan = go(state, { type: "show-plan" });
+    expect(plan.screen).toBe("l0");
+    expect(go(plan, { type: "back-to-input" }).screen).toBe("gd");
+  });
+
+  it("hides Right Door on a stable plan and keeps the TODAY to emergency-fund rail continuous", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stable" });
+    state = money(state, "takeHome", "30000");
+    state = money(state, "monthlyCosts", "25000");
+    state = go(state, { type: "open-life" });
+    const hidden = renderFirstBuild(state);
+    expect(hidden).not.toMatch(/Right Door complete/);
+    expect(hidden).not.toMatch(/data-ms="rd"/);
+    expect(hidden).not.toContain('points="20,78 70,76 120,74 180,72 250,70"');
+    expect(milestoneIds(hidden)).toEqual(["today", "ef", "invest", "goals", "age"]);
+    expect([...hidden.matchAll(/data-n="(\d+)"/g)].map((match) => match[1])).toEqual(["1", "2", "3", "4", "5"]);
+    expect(hidden).toMatch(/Steady so far/);
+    expect(hidden).toContain(LIFE_DISCLAIMER);
+
+    const joined = renderFirstBuild({ ...state, rightDoorJoined: true });
+    expect(joined).toMatch(/Right Door complete/);
+    expect(joined).toMatch(/Trend starts positive/);
+    expect(milestoneIds(joined)).toEqual(["today", "rd", "ef", "invest", "goals", "age"]);
+    expect([...joined.matchAll(/data-n="(\d+)"/g)].map((match) => match[1])).toEqual(["1", "2", "3", "4", "5", "6"]);
+  });
+
+  it("opens the emergency-fund detail with savings on or above zero", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stable" });
+    state = money(state, "takeHome", "30000");
+    state = money(state, "monthlyCosts", "25000");
+    state = money(state, "cushionNow", "0");
+    state = money(state, "cushionTarget", "50000");
+    state = go(state, { type: "open-life" });
+    const card = renderFirstBuild(state);
+    expect(card).toMatch(/Tap for detail/);
+    expect(card).toMatch(/data-act="open-milestone"[^>]*data-value="ef"|data-value="ef"/);
+    const ys = saveLineYs(card);
+    expect(ys.length).toBeGreaterThan(0);
+    expect(ys.every((y) => y === 55)).toBe(true);
+
+    const detail = go(state, { type: "open-milestone", id: "ef" });
+    expect(detail.screen).toBe("l3");
+    const html = renderFirstBuild(detail);
+    expect(html).toMatch(/Emergency fund/);
+    expect(html).toMatch(/Cash flow and savings toward your cushion/);
+    expect(html).toMatch(/Target/);
+    expect(html).toMatch(/50,000/);
+    expect(html).toMatch(/Now/);
+    expect(html).toMatch(/Funded/);
+    expect(html).toMatch(/0%/);
+    expect(html).toMatch(/Income/);
+    expect(html).toMatch(/30,000/);
+    expect(html).toMatch(/Expenses/);
+    expect(html).toMatch(/–25,000/);
+    expect(html).toMatch(/Net this month/);
+    expect(html).toMatch(/\+5,000/);
+    expect(html).toMatch(/Got it/);
+    expect(html).toContain(LIFE_DISCLAIMER);
+    const detailYs = saveLineYs(html);
+    expect(detailYs.every((y) => y <= 55)).toBe(true);
+    expect(go(detail, { type: "back" }).screen).toBe("l0");
+
+    const saved = money(state, "cushionNow", "20000");
+    const risen = saveLineYs(renderFirstBuild(go(saved, { type: "open-milestone", id: "ef" })));
+    expect(Math.max(...risen)).toBe(55);
+    expect(Math.min(...risen)).toBeLessThan(55);
   });
 });

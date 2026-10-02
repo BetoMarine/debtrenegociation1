@@ -273,6 +273,24 @@ input {
   font-weight: 500;
 }
 
+.ft-input.is-date {
+  position: relative;
+}
+
+.ft-input.is-date.is-empty input[type="date"] {
+  color: transparent;
+}
+
+.ft-input.is-date.is-empty::after {
+  content: "Pick a date";
+  position: absolute;
+  left: 16px;
+  color: var(--ft-ph);
+  font-size: 20px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
 .ft-cur {
   color: var(--ft-warn);
   margin-right: 6px;
@@ -607,6 +625,10 @@ input {
   background: #0d9488;
 }
 
+.ft-ms-num.is-slate {
+  background: #64748b;
+}
+
 .ft-ms-num.is-stub {
   background: #cbd5e1;
   color: #64748b;
@@ -693,6 +715,11 @@ div.ft-ms-card {
   color: #0d9488;
 }
 
+.ft-net.is-zero,
+.ft-net-row b.is-zero {
+  color: #475569;
+}
+
 .ft-net.is-muted {
   color: var(--ft-soft);
   font-size: 14px;
@@ -733,6 +760,80 @@ div.ft-ms-card {
   border-top-style: dashed;
   border-top-color: #5eead4;
   width: 16px;
+}
+
+.ft-tap {
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.ft-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+
+.ft-stat {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+  background: #fff;
+}
+
+.ft-stat span {
+  display: block;
+  color: var(--ft-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ft-stat b {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.ft-goal-card {
+  margin-top: 8px;
+  border: 1.5px solid #99f6e4;
+  background: #f0fdfa;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ft-goal-card b {
+  font-size: 16px;
+}
+
+.ft-goal-fund {
+  color: #0f766e;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.ft-ef-detail h1 {
+  font-size: 28px;
+  line-height: 1.15;
+  margin: 8px 0 6px;
+}
+
+.ft-ef-detail .ft-disclaimer {
+  margin: 0 0 8px;
+}
+
+.ft-pct {
+  font-size: 11px;
+  font-weight: 800;
+  fill: #0f766e;
+  font-family: inherit;
 }
 
 .ft-ms-chev {
@@ -825,6 +926,10 @@ div.ft-ms-card {
 
 .ft-net-row.is-total.is-pos {
   background: #f0fdfa;
+}
+
+.ft-net-row.is-total.is-zero {
+  background: #f8fafc;
 }
 
 .ft-net-row.is-total span {
