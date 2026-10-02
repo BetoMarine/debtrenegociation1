@@ -120,7 +120,7 @@ function onClick(event) {
     exitApp();
     return;
   }
-  if (act === "continue" || act === "back" || act === "open-erase" || act === "open-life") commitDraft();
+  if (act === "continue" || act === "back" || act === "open-erase" || act === "open-life" || act === "show-plan") commitDraft();
   if (act === "continue") {
     apply(reduce(state, { type: "continue" }));
     return;
@@ -150,7 +150,7 @@ function onClick(event) {
     apply(reduce(state, { type: act }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input") {
     apply(reduce(state, { type: act }));
     return;
   }
@@ -163,7 +163,6 @@ function onInput(event) {
   const field = event.target.closest("[data-field]");
   if (!field || !root()?.contains(field)) return;
   commitDraft();
-  if (state.screen === "i0" || state.screen === "i3" || state.screen === "i3b") draw();
   schedulePersist();
 }
 

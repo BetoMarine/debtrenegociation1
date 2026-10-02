@@ -288,6 +288,7 @@ describe("Slice B Your life", () => {
     expect(renderFirstBuild(life)).toMatch(/Later pass · Per-goal % · Overall success/);
     expect(renderFirstBuild(life)).toMatch(/Age 70/);
     expect(renderFirstBuild(life)).toMatch(/Add milestones as you plan/);
+    expect(renderFirstBuild(life)).not.toMatch(/Back to input/);
     expect(renderFirstBuild(life)).not.toMatch(/behaviour score|behavior score/i);
   });
 
@@ -328,12 +329,22 @@ describe("Slice B Your life", () => {
     state = settled(state);
     state = money(state, "takeHome", "18400");
     expect(buildLife(state).today.net).toBe(-6500);
-    const primary = renderFirstBuild(state);
+    const card = renderFirstBuild(state);
+    expect(card).toMatch(/Monthly take-home/);
+    expect(card).toMatch(/Show my current plan/);
+    expect(card).not.toMatch(/data-ms="today"/);
+    const plan = go(state, { type: "show-plan" });
+    expect(plan.lifeFrom).toBe("i0");
+    const primary = renderFirstBuild(plan);
     expect(primary).toMatch(/Net –6,500/);
     expect(primary).toMatch(/Was –2,100 · take-home updated/);
     expect(primary).toMatch(/Income 18,400 · Expenses 24,900/);
+    expect(primary).toMatch(/Back to input/);
+    expect(primary).not.toMatch(/Monthly take-home/);
     expect(todayHtml(primary)).not.toContain("#0d9488");
-    expect(primary).toMatch(/Monthly take-home/);
+    const returned = go(plan, { type: "back-to-input" });
+    expect(returned.screen).toBe("i0");
+    expect(returned.inputs.takeHome.amount).toBe("18400");
 
     state = settled(state);
     state = money(state, "stillDue", "20000");
@@ -365,12 +376,18 @@ describe("Slice B Your life", () => {
     expect(life.ef.target).toBe(60000);
     expect(life.ef.pct).toBe(20);
     expect(life.ef.delta).toBe("Was 4,000 · 7% · cushion input");
-    const html = renderFirstBuild(state);
-    expect(html).toMatch(/Current savings/);
+    const card = renderFirstBuild(state);
+    expect(card).toMatch(/Current savings/);
+    expect(card).toMatch(/Show my current plan/);
+    expect(card).not.toMatch(/data-ms="ef"/);
+    const opened = go(state, { type: "show-plan" });
+    const html = renderFirstBuild(opened);
     expect(html).toMatch(/Emergency fund/);
     expect(html).toMatch(/Now 12,000 · 20%/);
     expect(html).toMatch(/Was 4,000 · 7% · cushion input/);
+    expect(html).toMatch(/Back to input/);
     expect(html).toContain("#5eead4");
+    expect(go(opened, { type: "back-to-input" }).screen).toBe("i3");
 
     state = settled(state);
     state = { ...state, screen: "i3b" };
@@ -428,5 +445,35 @@ describe("Slice B Your life", () => {
     expect(rightDoorJoined({ fullName: "Ada", status: "draft" }, null)).toBe(true);
     expect(rightDoorJoined(null, { source: "right-door" })).toBe(true);
     expect(FORTUNE_DATA_KEYS).not.toContain("pack");
+  });
+
+  it("shows the full plan from every input card and returns to that same card", () => {
+    const setup = {
+      i0: { entry: "stressed" },
+      i1: { entry: "stressed", fixSituation: "missed" },
+      i2: { entry: "stressed", fixSituation: "missed" },
+      i2b: { entry: "stressed", fixSituation: "missed" },
+      i3: { entry: "stable", cushionSituation: "small" },
+      i3b: { entry: "stable", cushionSituation: "small" },
+    };
+    for (const id of Object.keys(setup)) {
+      const state = { ...freshState(), screen: id, ...setup[id] };
+      const card = renderFirstBuild(state);
+      expect(card).toMatch(/data-act="continue"/);
+      expect(card).toMatch(/Show my current plan/);
+      expect(card).not.toMatch(/ft-sheet/);
+      expect(present(state).chip).not.toBe("Your life");
+      const plan = go(state, { type: "show-plan" });
+      expect(plan.screen).toBe("l0");
+      expect(plan.fromInput).toBe(true);
+      const opened = renderFirstBuild(plan);
+      expect(opened).toMatch(/Today → age 70/);
+      expect(opened).toMatch(/data-ms="today"/);
+      expect(opened).toMatch(/Invest &amp; insurance/);
+      expect(opened).toMatch(/Back to input/);
+      expect(opened).not.toMatch(/ft-sheet/);
+      expect(go(plan, { type: "back-to-input" }).screen).toBe(id);
+      expect(go(plan, { type: "back" }).screen).toBe(id);
+    }
   });
 });

@@ -112,6 +112,11 @@ function actions(view) {
       `<button class="ft-btn quiet" type="button" data-act="back">${escapeHtml(view.quiet)}</button>`,
     );
   }
+  if (view.showPlan) {
+    parts.push(
+      `<button class="ft-btn quiet" type="button" data-act="show-plan">Show my current plan</button>`,
+    );
+  }
   if (!parts.length) return `<div class="ft-actions"></div>`;
   return `<div class="ft-actions">${parts.join("")}</div>`;
 }
@@ -382,7 +387,10 @@ export function renderFirstBuild(state) {
     const stage = view.lifeDetail
       ? `<div class="ft-life-stage" inert>${lifeBlock(view.life, "scroll")}</div>${netSheet(view.life)}`
       : `<div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus)}</div>`;
-    return screenShell(view, `${topbar(view)}${stage}`);
+    const planBack = view.fromInput
+      ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button></div>`
+      : "";
+    return screenShell(view, `${topbar(view)}${stage}${planBack}`);
   }
   return screenShell(view, screenHtml(view));
 }

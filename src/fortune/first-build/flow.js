@@ -150,6 +150,7 @@ export function freshState() {
     lifeDetail: false,
     lifeBaseline: null,
     lifeMove: null,
+    fromInput: false,
     rightDoorJoined: false,
   };
 }
@@ -309,6 +310,12 @@ function backTo(state) {
   }
 }
 
+function returnToInput(state) {
+  const screen = state.lifeFrom;
+  if (!state.fromInput || !INPUT_SCREENS[screen]) return null;
+  return { ...state, screen, fromInput: false, lifeDetail: false, showRequired: false, infoOpen: false };
+}
+
 function lifeSnap(state) {
   const life = buildLife(state);
   return {
@@ -391,6 +398,10 @@ function step(state, action) {
       return advance(state);
     case "back": {
       if (state.lifeDetail) return { ...state, lifeDetail: false, showRequired: false, infoOpen: false };
+      if (state.screen === "l0") {
+        const backInput = returnToInput(state);
+        if (backInput) return backInput;
+      }
       const screen = backTo(state);
       if (!screen) return state;
       return { ...state, screen, showRequired: false, infoOpen: false, lifeDetail: false };
@@ -409,7 +420,28 @@ function step(state, action) {
       return freshState();
     case "open-life":
       if (["e0", "e1"].includes(state.screen) || state.screen.startsWith("l")) return state;
-      return { ...state, screen: "l0", lifeFrom: state.screen, lifeDetail: false, showRequired: false, infoOpen: false };
+      return {
+        ...state,
+        screen: "l0",
+        lifeFrom: state.screen,
+        fromInput: false,
+        lifeDetail: false,
+        showRequired: false,
+        infoOpen: false,
+      };
+    case "show-plan":
+      if (!INPUT_SCREENS[state.screen]) return state;
+      return {
+        ...state,
+        screen: "l0",
+        lifeFrom: state.screen,
+        fromInput: true,
+        lifeDetail: false,
+        showRequired: false,
+        infoOpen: false,
+      };
+    case "back-to-input":
+      return returnToInput(state) || state;
     case "open-milestone": {
       const screen = MILESTONE_SCREEN[action.id];
       if (!screen || state.screen !== "l0") return state;
@@ -510,6 +542,7 @@ export function hydrate(raw) {
     lifeDetail: false,
     lifeBaseline: null,
     lifeMove: cleanMove(raw.lifeMove),
+    fromInput: raw.fromInput === true && INPUT_SCREENS[raw.lifeFrom] && String(raw.screen || "").startsWith("l"),
     rightDoorJoined: false,
   };
 }
@@ -646,7 +679,9 @@ export function present(state) {
     requiredHint: "",
     lockedInvest: !ready,
     skip: false,
-    showLifeLink: !["e0", "e1"].includes(id) && !id.startsWith("l"),
+    showLifeLink: !["e0", "e1"].includes(id) && !id.startsWith("l") && !INPUT_SCREENS[id],
+    showPlan: false,
+    fromInput: false,
     life: null,
     lifeOverlay: null,
     lifeFocus: null,
@@ -662,6 +697,7 @@ export function present(state) {
       life: buildLife(state),
       lifeFocus: LIFE_FOCUS[id],
       lifeDetail: state.lifeDetail === true && id === "l1",
+      fromInput: state.fromInput === true && id === "l0",
       frame: LIFE_FRAME[id],
     };
   }
@@ -699,23 +735,20 @@ export function present(state) {
     const copy = INPUT_COPY[id];
     const key = INPUT_SCREENS[id];
     const field = state.inputs[key];
-    const lifeOverlay = id === "i0" ? "scroll" : id === "i3" || id === "i3b" ? "ef" : null;
     return {
       ...base,
       kind: "input",
       title: copy.title,
       body: copy.body,
-      chip: lifeOverlay ? "Your life" : copy.chip,
-      showLifeLink: !lifeOverlay,
+      chip: copy.chip,
+      showLifeLink: false,
+      showPlan: true,
       info: copy.info || null,
       rdLater: copy.rdLater === true,
       showRequired: state.showRequired === true,
       requiredHint: copy.requiredHint,
       skip: false,
       primary: "Continue",
-      lifeOverlay,
-      life: lifeOverlay ? buildLife(state) : null,
-      lifeFocus: lifeOverlay === "ef" ? "ef" : lifeOverlay === "scroll" ? "scroll" : null,
       input: {
         key,
         mode: copy.mode,
