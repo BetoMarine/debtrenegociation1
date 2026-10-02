@@ -320,7 +320,7 @@ function settled(state) {
 
 function todayHtml(html) {
   const rest = html.split('data-ms="today"')[1] || "";
-  const end = rest.search(/data-ms="(?:rd|ef)"/);
+  const end = rest.search(/data-ms="(?:expect|rd|ef)"/);
   return end === -1 ? rest : rest.slice(0, end);
 }
 
@@ -960,12 +960,23 @@ describe("Slice F action and project", () => {
     expect(state.inputs.monthlyCosts.amount).toBe("29000");
     const life = buildLife(state);
     expect(life.today.net).toBe(1000);
-    expect(life.today.graph).toBe("turn-up");
+    expect(life.today.graph).toBe("impact");
     expect(life.today.kicker).toBe("Positive from today");
+    expect(life.today.netText).toBe("Net +1,000");
     expect(life.scope).toBe("full");
     const html = renderFirstBuild(state);
-    expect(html).toMatch(/Positive from today/);
-    expect(html).toContain('points="20,55 70,46 120,40 180,34 250,28"');
+    const today = todayHtml(html);
+    expect(today).toMatch(/Positive from today/);
+    expect(today).toMatch(/Net \+1,000/);
+    expect(today).toContain('data-graph="impact"');
+    expect(today).toContain('points="20,55 70,55 120,55"');
+    expect(today).toContain('stroke="#94a3b8"');
+    expect(today).toContain('data-impact="day"');
+    expect(today).toContain(">Impact<");
+    expect(today).toContain('points="120,55 180,40 250,26"');
+    expect(today).toContain('stroke="#0d9488"');
+    expect(today.match(/<svg class="ft-graph/g)).toHaveLength(1);
+    expect(today).not.toContain('points="20,55 70,46 120,40 180,34 250,28"');
     expect(html).toMatch(/data-act="project-next"/);
     expect(html).not.toMatch(/data-screen="l3"/);
     expect(milestoneIds(html)).toEqual(["today", "ef", "invest", "goals", "age"]);
@@ -1001,14 +1012,33 @@ describe("Slice F action and project", () => {
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("l0");
     expect(state.action).toBe("lenders");
+    const life = buildLife(state);
+    expect(life.today.net).toBe(0);
+    expect(life.today.graph).toBe("rise");
+    expect(life.today.netText).toBe("Positive from today");
     const html = renderFirstBuild(state);
-    expect(html).toMatch(/Expected result/);
-    expect(html).toMatch(/If you talk to lenders/);
-    expect(html).toMatch(/Debt 20,000/);
-    expect(html).toMatch(/Contract 80,000/);
-    expect(html).toMatch(/Premium 1,500/);
-    expect(html).toMatch(/24 months/);
-    expect(html).toMatch(/Positive from today/);
+    const today = todayHtml(html);
+    expect(today).toMatch(/Cash flow turns up/);
+    expect(today).toMatch(/Positive from today/);
+    expect(today).not.toMatch(/Even this month/);
+    expect(today).not.toMatch(/Net 0/);
+    expect(today).not.toContain('points="20,55 70,55 120,55 180,55 250,55"');
+    expect(today).toContain('data-graph="rise"');
+    expect(today).toContain('points="20,48 70,38 120,28 180,20 250,12"');
+    expect(today).toContain('stroke="#0d9488"');
+    expect(today.match(/<svg class="ft-graph/g)).toHaveLength(1);
+    const expected = html.split('data-ms="expect"')[1].split('data-ms="ef"')[0];
+    expect(expected).toMatch(/Expected result/);
+    expect(expected).toMatch(/If you talk to lenders/);
+    expect(expected).toMatch(/Debt 20,000/);
+    expect(expected).toMatch(/Contract 80,000/);
+    expect(expected).toMatch(/Premium 1,500/);
+    expect(expected).toMatch(/24 months/);
+    expect(expected).toMatch(/Positive from today/);
+    expect(expected).toContain('data-graph="rise"');
+    expect(expected).toContain('points="20,48 70,38 120,28 180,20 250,12"');
+    expect(expected.match(/<svg class="ft-graph/g)).toHaveLength(1);
+    expect(expected).not.toContain('points="20,55 70,55 120,55 180,55 250,55"');
     expect(html).not.toMatch(/Right Door letter|import|docs/i);
     expect(html).not.toMatch(/Right Door complete/);
     expect(milestoneIds(html)[1]).toBe("expect");

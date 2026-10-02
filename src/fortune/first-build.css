@@ -927,6 +927,10 @@ div.ft-ms-card {
   stroke-width: 1;
 }
 
+.ft-impact {
+  stroke: #334155;
+}
+
 .ft-net-rows {
   border: 1.5px solid var(--ft-line);
   border-radius: 14px;

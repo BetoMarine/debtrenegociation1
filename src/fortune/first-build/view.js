@@ -245,6 +245,25 @@ function goalsGraph(funding) {
   return `<svg class="ft-graph${real ? "" : " is-stub"}" viewBox="0 0 280 90" aria-hidden="true"><line x1="8" y1="45" x2="200" y2="45" class="ft-gzero"/><polyline fill="none" stroke="#94a3b8" stroke-width="2" points="20,40 80,42 140,44 200,46"/><polyline fill="none" stroke="#0d9488" stroke-width="2.2" points="20,40 80,48 140,70 200,52"/><circle cx="248" cy="45" r="16" fill="none" stroke="#e2e8f0" stroke-width="5"/>${arcCircle}${label}</svg>`;
 }
 
+function impactGraph() {
+  const before = [
+    [20, 55],
+    [70, 55],
+  ];
+  const after = [
+    [120, 55],
+    [180, 40],
+    [250, 26],
+  ];
+  return `<polyline fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,55 70,55 120,55"/>${dots(
+    before,
+    "#94a3b8",
+  )}<line class="ft-impact" data-impact="day" x1="120" y1="18" x2="120" y2="96" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 2"/><text x="128" y="30" class="ft-glab">Impact</text><polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="120,55 180,40 250,26"/>${dots(
+    after,
+    "#0d9488",
+  )}<circle cx="120" cy="55" r="5" fill="#fff" stroke="#0f172a" stroke-width="2"/>`;
+}
+
 function graph(kind, pct) {
   if (kind === "none") return "";
   if (kind === "invest") {
@@ -269,6 +288,17 @@ function graph(kind, pct) {
         [120, 40],
         [180, 34],
         [250, 28],
+      ],
+      "#0d9488",
+    )}`,
+    impact: impactGraph(),
+    rise: `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,48 70,38 120,28 180,20 250,12"/>${dots(
+      [
+        [20, 48],
+        [70, 38],
+        [120, 28],
+        [180, 20],
+        [250, 12],
       ],
       "#0d9488",
     )}`,
@@ -319,7 +349,7 @@ function graph(kind, pct) {
     )}`,
     ef: efGraph(pct),
   };
-  return `<svg class="ft-graph" viewBox="0 0 280 110" aria-hidden="true">${axis()}${lines[kind] || ""}</svg>`;
+  return `<svg class="ft-graph" data-graph="${escapeHtml(kind)}" viewBox="0 0 280 110" aria-hidden="true">${axis()}${lines[kind] || ""}</svg>`;
 }
 
 function msRow({ n, tone, stub, testId, button, act, value, body }) {

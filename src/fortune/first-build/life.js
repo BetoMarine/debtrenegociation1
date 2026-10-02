@@ -256,13 +256,25 @@ export function buildLife(state) {
   const months = monthsOf(money.now, money.target, money.save);
   const tone = toneOf(state?.entry);
   const acted = state?.action === "reduce" || state?.action === "lenders";
+  const lendersDone = state?.action === "lenders";
+  const reduced = state?.action === "reduce" && net != null && net > 0;
   let copy = todayCopy(tone, net);
-  if (acted && net != null && net > 0) {
+  if (reduced) {
     copy = {
       ...copy,
       kicker: "Positive from today",
       netClass: "pos",
-      graph: "turn-up",
+      graph: "impact",
+      mark: "steady",
+      ask: "Why the trend turns up.",
+      quiet: "Positive from today.",
+    };
+  } else if (lendersDone) {
+    copy = {
+      ...copy,
+      kicker: "Cash flow turns up",
+      netClass: "pos",
+      graph: "rise",
       mark: "steady",
       ask: "Why the trend turns up.",
       quiet: "Positive from today.",
@@ -309,7 +321,8 @@ export function buildLife(state) {
 
   const year = asOf.getFullYear();
   const scope = state?.entry === "stressed" && !acted ? "today" : "full";
-  const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
+  const turnsGreen = net != null && (net > 0 || lendersDone);
+  const place = net == null ? null : turnsGreen ? formatDate(asOf) : "When it turns up";
   const cushionReadyNow =
     money.now != null && money.target != null && money.target > 0 && money.now >= money.target;
   const lendersReady =
@@ -335,7 +348,7 @@ export function buildLife(state) {
       graph: copy.graph,
       mark: copy.mark,
       net,
-      netText: `Net ${formatSigned(net)}`,
+      netText: lendersDone && !(net > 0) ? "Positive from today" : `Net ${formatSigned(net)}`,
       meta: `Income ${formatPlain(money.income)} \u00b7 Expenses ${formatPlain(expenses)}`,
       delta: netMoved ? deltaLine(move, net, move.wasNet) : "",
       moved: netMoved,
@@ -371,7 +384,7 @@ export function buildLife(state) {
       contract: formatPlain(money.contract),
       premium: formatPlain(money.premium),
       duration: money.duration == null ? "\u2014" : String(money.duration),
-      graph: "turn-up",
+      graph: "rise",
     },
     ef: {
       date: place || formatDate(addMonths(asOf, 12)),
