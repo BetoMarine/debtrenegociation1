@@ -1167,6 +1167,7 @@ describe("Unlock sequence", () => {
     expect(state.inputs.cushionNow.amount).toBe("0");
     expect(state.inputs.cushionTarget.amount).toBe("90000");
     expect(state.inputs.cushionTarget.note).toBe("Emergency fund");
+    expect(go(state, { type: "back" }).screen).toBe("w0");
     html = renderFirstBuild({ ...state, asOf: new Date(2026, 9, 3) });
     expect(milestoneIds(html)).toEqual(["today", "ef"]);
     expect(html).toMatch(/Target 90,000 · Now 0 · 0%/);

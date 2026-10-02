@@ -671,7 +671,7 @@ function commitFund(state) {
     screen: "l0",
     projectNext: true,
     fromInput: false,
-    lifeFrom: "sf",
+    lifeFrom: null,
     showRequired: false,
     infoOpen: false,
     lifeDetail: false,
