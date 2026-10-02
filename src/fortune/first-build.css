@@ -560,6 +560,50 @@ input {
   background: #fff7ed;
 }
 
+.ft-spine {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ft-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ft-spine li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ft-spine li span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ft-spine li.is-now {
+  color: var(--ft-ink);
+}
+
+.ft-spine li.is-now span {
+  background: #0f766e;
+  color: #fff;
+}
+
+.ft-spine li.is-done span {
+  background: #99f6e4;
+  color: #0f766e;
+}
+
 .ft-jpill.is-ok {
   color: #0f766e;
   border-color: #5eead4;

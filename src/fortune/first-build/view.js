@@ -75,9 +75,10 @@ function inputBlock(view) {
     ${noteField(field)}`;
   }
   const money = field.mode === "money";
+  const months = field.mode === "months";
   const prefix = money ? `<span class="ft-cur">HK$</span>` : "";
   const amountMode = money ? "decimal" : "numeric";
-  const amountName = money ? "amount" : "days";
+  const amountName = money ? "amount" : months ? "months" : "days";
   return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
     <div class="ft-input">
       ${prefix}<input id="ft-amount" name="${amountName}" data-field="${amountName}" data-key="${escapeHtml(field.key)}" inputmode="${amountMode}" autocomplete="off" enterkeyhint="done" maxlength="${money ? "16" : "5"}" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" />
@@ -261,6 +262,16 @@ function graph(kind, pct) {
       ],
       "#dc2626",
     )}`,
+    "turn-up": `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,55 70,46 120,40 180,34 250,28"/>${dots(
+      [
+        [20, 55],
+        [70, 46],
+        [120, 40],
+        [180, 34],
+        [250, 28],
+      ],
+      "#0d9488",
+    )}`,
     "up-teal": `<polyline fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20,48 70,46 120,44 180,42 250,38"/>${dots(
       [
         [20, 48],
@@ -380,16 +391,38 @@ function stubBody(stub) {
 
 function railOrder(life, focus) {
   const order = ["today"];
+  if (life.expected?.show || focus === "expect") order.push("expect");
   if (life.rd.joined || focus === "rd") order.push("rd");
-  order.push("ef", "invest", "goals", "age");
+  if (life.scope !== "today") order.push("ef", "invest", "goals", "age");
   return order;
+}
+
+function expectedBody(card) {
+  return `<div class="ft-ms-head"><b>Expected result</b><span class="ft-ms-date">${escapeHtml(card.date)}</span></div>
+    <div class="ft-ms-gtitle">If you talk to lenders</div>
+    ${graph(card.graph)}
+    <div class="ft-ms-foot">
+      <span class="ft-muted is-thin">Debt ${escapeHtml(card.debt)} · Contract ${escapeHtml(card.contract)}</span>
+      <span class="ft-muted is-thin">Premium ${escapeHtml(card.premium)} · ${escapeHtml(card.duration)} months</span>
+      <b class="ft-net is-pos">Positive from today</b>
+    </div>`;
+}
+
+function spine(life) {
+  const steps = life.phase?.steps || [];
+  if (!steps.length) return "";
+  return `<ol class="ft-spine" data-phase="${escapeHtml(life.phase.current)}">${steps
+    .map((step) => `<li class="${escapeHtml(step.state)}"><span>${escapeHtml(step.n)}</span> ${escapeHtml(step.label)}</li>`)
+    .join("")}</ol>`;
 }
 
 function lifeBlock(life, focus) {
   const solo = focus && focus !== "scroll";
+  const later = life.scope !== "today";
   const order = railOrder(life, focus);
   const numberOf = (id) => String(order.indexOf(id) + 1);
   const showRd = focus === "rd" || (!solo && life.rd.joined);
+  const showExpected = life.expected?.show && (!solo || focus === "expect");
   const rows = [];
   if (!solo || focus === "today") {
     rows.push(
@@ -401,6 +434,17 @@ function lifeBlock(life, focus) {
         act: solo ? "open-net" : "open-milestone",
         value: solo ? "" : "today",
         body: todayBody(life.today),
+      }),
+    );
+  }
+  if (showExpected) {
+    rows.push(
+      msRow({
+        n: numberOf("expect"),
+        tone: "steady",
+        testId: "expect",
+        button: false,
+        body: expectedBody(life.expected),
       }),
     );
   }
@@ -416,7 +460,7 @@ function lifeBlock(life, focus) {
       }),
     );
   }
-  if (!solo || focus === "ef") {
+  if (later && (!solo || focus === "ef")) {
     rows.push(
       msRow({
         n: numberOf("ef"),
@@ -429,6 +473,7 @@ function lifeBlock(life, focus) {
     );
   }
   for (const stub of life.stubs) {
+    if (!later) continue;
     if (solo && focus !== stub.id) continue;
     rows.push(
       msRow({
@@ -444,7 +489,7 @@ function lifeBlock(life, focus) {
   }
   const pill = life.pill ? `<span class="ft-jpill is-${life.pill.tone}">${escapeHtml(life.pill.label)}</span>` : "";
   const note = focus === "rd" ? `<p class="ft-life-note">${escapeHtml(life.rd.note)}</p>` : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {
@@ -533,7 +578,9 @@ export function renderFirstBuild(state) {
       : `<div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus)}</div>`;
     const planBack = view.fromInput
       ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button></div>`
-      : "";
+      : view.projectNext
+        ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="project-next">Continue</button></div>`
+        : "";
     return screenShell(view, `${topbar(view)}${stage}${planBack}`);
   }
   return screenShell(view, screenHtml(view));

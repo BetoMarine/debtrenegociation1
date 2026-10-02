@@ -89,11 +89,10 @@ describe("Slice A first-build flow", () => {
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("fd2");
     const lenders = go(state, { type: "pick-next", pick: "lenders" });
-    expect(lenders.screen).toBe("fd2");
-    expect(lenders.fixHeldForRightDoor).toBe(true);
-    expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune|sunday|Right Door letter/i);
-    expect(renderFirstBuild(lenders)).toMatch(/Live Right Door handoff comes later/);
-    expect(renderFirstBuild(lenders)).toMatch(/Opens live Right Door later/);
+    expect(lenders.screen).toBe("tl");
+    expect(present(lenders).title).toBe("Debt amount");
+    expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune|sunday|Right Door letter|import|docs/i);
+    expect(renderFirstBuild(lenders)).not.toMatch(/Prioritise|Remove|Skip|not pay/i);
 
     state = go(freshState(), { type: "pick-entry", entry: "stressed" });
     state = go(money(state, "takeHome", "15000"), { type: "continue" });
@@ -326,7 +325,7 @@ function todayHtml(html) {
 }
 
 function milestoneIds(html) {
-  return [...html.matchAll(/data-ms="(today|rd|ef|invest|goals|age)"/g)].map((match) => match[1]);
+  return [...html.matchAll(/data-ms="(today|expect|rd|ef|invest|goals|age)"/g)].map((match) => match[1]);
 }
 
 function saveLineYs(html) {
@@ -475,12 +474,12 @@ describe("Slice B Your life", () => {
     expect(waiting).not.toMatch(/data-ms="rd"/);
     expect(waiting).not.toMatch(/Trend starts positive/);
     expect(waiting).not.toContain('points="20,78 70,76 120,74 180,72 250,70"');
-    expect(milestoneIds(waiting)).toEqual(["today", "ef", "invest", "goals", "age"]);
+    expect(milestoneIds(waiting)).toEqual(["today"]);
 
     const joined = renderFirstBuild({ ...state, rightDoorJoined: true });
     expect(joined).toMatch(/Right Door complete/);
     expect(joined).toMatch(/Trend starts positive · Net \+1,200/);
-    expect(milestoneIds(joined)).toEqual(["today", "rd", "ef", "invest", "goals", "age"]);
+    expect(milestoneIds(joined)).toEqual(["today", "rd"]);
     const focus = go({ ...state, rightDoorJoined: true }, { type: "open-milestone", id: "rd" });
     const focusHtml = renderFirstBuild(focus);
     expect(focusHtml).toMatch(/Live Right Door as-is/);
@@ -548,7 +547,12 @@ describe("Slice B Your life", () => {
       const opened = renderFirstBuild(plan);
       expect(opened).toMatch(/Today → age 70/);
       expect(opened).toMatch(/data-ms="today"/);
-      expect(opened).toMatch(/Invest &amp; insurance/);
+      if (setup[id].entry === "stressed") {
+        expect(opened).not.toMatch(/data-ms="ef"/);
+        expect(opened).not.toMatch(/Invest &amp; insurance/);
+      } else {
+        expect(opened).toMatch(/Invest &amp; insurance/);
+      }
       expect(opened).toMatch(/Back to input/);
       expect(opened).not.toMatch(/ft-sheet/);
       expect(go(plan, { type: "back-to-input" }).screen).toBe(id);
@@ -628,39 +632,20 @@ describe("Slice C costs and deeper flows", () => {
 
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("fd2");
-    expect(present(state).choices.map((c) => c.label)).toEqual([
-      "Cut costs this month",
-      "Prioritise payments",
-      "Talk to lenders",
-    ]);
+    expect(present(state).choices.map((c) => c.label)).toEqual(["Reduce cost", "Talk to lenders"]);
+    expect(renderFirstBuild(state)).not.toMatch(/Prioritise|Remove|Skip|not pay/i);
     expect(renderFirstBuild(state)).not.toMatch(/Show my current plan/);
-    const life = go(state, { type: "pick-next", pick: "prioritise" });
-    expect(life.screen).toBe("l0");
-    expect(life.fromInput).toBe(false);
-    expect(go(life, { type: "back" }).screen).toBe("fd2");
 
     const lenders = go(state, { type: "pick-next", pick: "lenders" });
-    expect(lenders.screen).toBe("fd2");
-    expect(renderFirstBuild(lenders)).toMatch(/Live Right Door handoff comes later/);
+    expect(lenders.screen).toBe("tl");
     expect(renderFirstBuild(lenders)).not.toMatch(/letter|docs|import/i);
 
-    state = go(state, { type: "pick-next", pick: "cut" });
-    expect(state.screen).toBe("ic");
-    expect(state.inputs.monthlyCosts.amount).toBe("24900");
-    state = go(money(state, "monthlyCosts", "21000"), { type: "continue" });
-    expect(state.screen).toBe("fd3");
-    const confirm = renderFirstBuild(state);
-    expect(confirm).toMatch(/Costs updated/);
-    expect(confirm).toMatch(/Monthly costs now 21,000/);
-    expect(confirm).not.toMatch(/Tap to enter/);
-    expect(confirm).toMatch(/Show my current plan/);
-    expect(present(state).kind).toBe("confirm");
-    const opened = go(state, { type: "show-plan" });
-    expect(opened.fromInput).toBe(false);
-    expect(renderFirstBuild(opened)).not.toMatch(/Back to input/);
-    expect(buildLife(opened).today.expenses).toBe(21000);
-    expect(buildLife(opened).today.net).toBe(-2600);
-    expect(go(opened, { type: "back" }).screen).toBe("fd3");
+    state = go(state, { type: "pick-next", pick: "reduce" });
+    expect(state.screen).toBe("l0");
+    expect(state.screen).not.toBe("l3");
+    expect(state.inputs.monthlyCosts.amount).toBe("23900");
+    expect(buildLife(state).today.net).toBe(-5500);
+    expect(go(state, { type: "back" }).screen).toBe("fd2");
   });
 
   it("plans the cushion from monthly save and opens Invest only at the gate", () => {
@@ -838,6 +823,10 @@ describe("Slice E dig-in fixes", () => {
     expect(today).not.toContain("#5eead4");
     expect(html).toMatch(/Get through this month/);
     expect(html).toContain(LIFE_DISCLAIMER);
+    expect(milestoneIds(html)).toEqual(["today"]);
+    expect(html).not.toMatch(/data-ms="ef"/);
+    expect(html).not.toMatch(/Invest &amp; insurance/);
+    expect(html).not.toMatch(/data-ms="goals"/);
 
     const negative = buildLife(money(state, "monthlyCosts", "31000"));
     expect(negative.today.net).toBe(-1000);
@@ -942,5 +931,119 @@ describe("Slice E dig-in fixes", () => {
     const risen = saveLineYs(renderFirstBuild(go(saved, { type: "open-milestone", id: "ef" })));
     expect(Math.max(...risen)).toBe(55);
     expect(Math.min(...risen)).toBeLessThan(55);
+  });
+});
+
+describe("Slice F action and project", () => {
+  function stressedMonth(income, costs) {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = go(money(state, "takeHome", income), { type: "continue" });
+    state = go(money(state, "monthlyCosts", costs), { type: "continue" });
+    return state;
+  }
+
+  it("projects a cost reduction on Your life before the cushion phase", () => {
+    let state = stressedMonth("30000", "30000");
+    state = go(state, { type: "pick-fix", situation: "worry" });
+    state = go(money(state, "stillDue", "0"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("fd2");
+    const choices = renderFirstBuild(state);
+    expect(choices).toMatch(/Reduce cost/);
+    expect(choices).toMatch(/Talk to lenders/);
+    expect(choices).not.toMatch(/Prioritise|Remove|Skip|not pay/i);
+
+    state = go(state, { type: "pick-next", pick: "reduce" });
+    expect(state.screen).toBe("l0");
+    expect(state.action).toBe("reduce");
+    expect(state.inputs.monthlyCosts.amount).toBe("29000");
+    const life = buildLife(state);
+    expect(life.today.net).toBe(1000);
+    expect(life.today.graph).toBe("turn-up");
+    expect(life.today.kicker).toBe("Positive from today");
+    expect(life.scope).toBe("full");
+    const html = renderFirstBuild(state);
+    expect(html).toMatch(/Positive from today/);
+    expect(html).toContain('points="20,55 70,46 120,40 180,34 250,28"');
+    expect(html).toMatch(/data-act="project-next"/);
+    expect(html).not.toMatch(/data-screen="l3"/);
+    expect(milestoneIds(html)).toEqual(["today", "ef", "invest", "goals", "age"]);
+    expect(life.ef.date).toBe(life.today.date);
+    expect(life.phase.current).toBe("cushion");
+    expect(html).toMatch(/data-phase="cushion"/);
+    expect(html).not.toMatch(/behaviour score|behavior score/i);
+
+    state = go(state, { type: "project-next" });
+    expect(state.screen).toBe("s0");
+    expect(present(state).title).toBe("Build a cushion");
+    expect(go(state, { type: "back" }).screen).toBe("l0");
+  });
+
+  it("turns lender answers into an expected result on Your life", () => {
+    let state = stressedMonth("30000", "30000");
+    state = go(state, { type: "pick-fix", situation: "soon" });
+    state = go(money(state, "stillDue", "1000"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "pick-next", pick: "lenders" });
+    expect(go(state, { type: "continue" }).screen).toBe("tl");
+    state = go(money(state, "lenderDebt", "20000"), { type: "continue" });
+    expect(state.screen).toBe("tl2");
+    expect(present(state).title).toBe("Total contract");
+    state = go(money(state, "lenderContract", "80000"), { type: "continue" });
+    expect(state.screen).toBe("tl3");
+    state = go(money(state, "lenderPremium", "1500"), { type: "continue" });
+    expect(state.screen).toBe("tl4");
+    expect(present(state).title).toBe("Duration");
+    expect(go(state, { type: "continue" }).showRequired).toBe(true);
+    state = go(state, { type: "edit", key: "lenderDuration", months: "24" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("l0");
+    expect(state.action).toBe("lenders");
+    const html = renderFirstBuild(state);
+    expect(html).toMatch(/Expected result/);
+    expect(html).toMatch(/If you talk to lenders/);
+    expect(html).toMatch(/Debt 20,000/);
+    expect(html).toMatch(/Contract 80,000/);
+    expect(html).toMatch(/Premium 1,500/);
+    expect(html).toMatch(/24 months/);
+    expect(html).toMatch(/Positive from today/);
+    expect(html).not.toMatch(/Right Door letter|import|docs/i);
+    expect(html).not.toMatch(/Right Door complete/);
+    expect(milestoneIds(html)[1]).toBe("expect");
+    expect(go(state, { type: "project-next" }).screen).toBe("s0");
+  });
+
+  it("saves a goal date and opens that goal from Your life", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "ok" });
+    state = go(money(state, "takeHome", "30000"), { type: "continue" });
+    state = go(money(state, "monthlyCosts", "20000"), { type: "continue" });
+    state = go(state, { type: "pick-grow", pick: "goals" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "edit", key: "goalName", text: "New flat deposit" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-06-15" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "goalAmount", "50000"), { type: "continue" });
+    state = go(state, { type: "open-life" });
+    expect(buildLife(state).stubs.find((stub) => stub.id === "goals").funding.dateText).toBe("15 Jun 2028");
+
+    state = go(state, { type: "open-milestone", id: "goals" });
+    expect(state.screen).toBe("ig");
+    expect(state.goalEdit).toBe(true);
+    expect(state.inputs.goalName.text).toBe("New flat deposit");
+    expect(state.inputs.goalDate.date).toBe("2028-06-15");
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("ig2");
+    state = go(state, { type: "edit", key: "goalDate", date: "2029-01-02" });
+    state = go(state, { type: "continue" });
+    expect(state.inputs.goalDate.date).toBe("2029-01-02");
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("l0");
+    const goals = buildLife(state).stubs.find((stub) => stub.id === "goals");
+    expect(goals.funding.dateText).toBe("2 Jan 2029");
+    expect(renderFirstBuild(state)).toMatch(/Date by 2 Jan 2029/);
+    expect(renderFirstBuild(state)).toMatch(/data-phase="goals"/);
   });
 });

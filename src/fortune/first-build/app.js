@@ -87,8 +87,9 @@ function readDraft() {
   const days = host.querySelector("[data-field=days]");
   const text = host.querySelector("[data-field=text]");
   const date = host.querySelector("[data-field=date]");
+  const months = host.querySelector("[data-field=months]");
   const note = host.querySelector("[data-field=note]");
-  const field = amount || days || text || date;
+  const field = amount || days || text || date || months;
   if (!field) return null;
   return {
     type: "edit",
@@ -97,6 +98,7 @@ function readDraft() {
     days: days ? days.value : undefined,
     text: text ? text.value : undefined,
     date: date ? date.value : undefined,
+    months: months ? months.value : undefined,
     note: note ? note.value : "",
   };
 }
@@ -180,7 +182,7 @@ function onClick(event) {
     apply(reduce(state, { type: act }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next") {
     apply(reduce(state, { type: act }));
     return;
   }
@@ -227,6 +229,7 @@ export async function boot() {
   if (!host) return;
   host.addEventListener("click", onClick);
   host.addEventListener("input", onInput);
+  host.addEventListener("change", onInput);
   host.addEventListener("keydown", onKeydown);
   draw();
   await persist();

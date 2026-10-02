@@ -21,6 +21,10 @@ export const SCREEN_IDS = [
   "fd",
   "fd2",
   "fd3",
+  "tl",
+  "tl2",
+  "tl3",
+  "tl4",
   "s0",
   "s1",
   "s2",
@@ -114,6 +118,10 @@ export const SLICE_C_FRAMES = {
   gd2: "Gd2-insurance-cover",
   ig: "Ig-goal-name",
   ig2: "Ig2-goal-date-by",
+  tl: "Tl-debt-amount",
+  tl2: "Tl2-total-contract",
+  tl3: "Tl3-monthly-premium",
+  tl4: "Tl4-duration",
 };
 
 function frameOf(id, ready) {
@@ -152,6 +160,10 @@ const INPUT_SCREENS = {
   gd2: "cover",
   ig: "goalName",
   ig2: "goalDate",
+  tl: "lenderDebt",
+  tl2: "lenderContract",
+  tl3: "lenderPremium",
+  tl4: "lenderDuration",
 };
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
@@ -187,7 +199,15 @@ export function freshState() {
       goalName: { text: "", note: "" },
       goalDate: { date: "", note: "" },
       cover: blankMoney(),
+      lenderDebt: blankMoney(),
+      lenderContract: blankMoney(),
+      lenderPremium: blankMoney(),
+      lenderDuration: { months: "", note: "" },
     },
+    action: null,
+    projectNext: false,
+    goalEdit: false,
+    cushionFrom: null,
     infoOpen: false,
     showRequired: false,
     fixHeldForRightDoor: false,
@@ -278,6 +298,14 @@ export function canContinue(state) {
       return cleanText(state.inputs.goalName.text).trim().length > 0;
     case "ig2":
       return parseIsoDate(state.inputs.goalDate.date) !== null;
+    case "tl":
+      return parseAmount(state.inputs.lenderDebt.amount) !== null;
+    case "tl2":
+      return parseAmount(state.inputs.lenderContract.amount) !== null;
+    case "tl3":
+      return parseAmount(state.inputs.lenderPremium.amount) !== null;
+    case "tl4":
+      return parseDays(state.inputs.lenderDuration.months) !== null;
     case "gd2":
       return parseAmount(state.inputs.cover.amount) !== null;
     case "f1":
@@ -368,8 +396,20 @@ function advance(state) {
     case "g2":
       return { ...state, screen: "gd2", showRequired: false, infoOpen: false };
     case "gd":
+      if (state.goalEdit) {
+        return { ...state, screen: "l0", goalEdit: false, showRequired: false, infoOpen: false, projectNext: false };
+      }
+      return { ...state, screen: "g0", showRequired: false, infoOpen: false };
     case "gd2":
       return { ...state, screen: "g0", showRequired: false, infoOpen: false };
+    case "tl":
+      return { ...state, screen: "tl2", showRequired: false, infoOpen: false };
+    case "tl2":
+      return { ...state, screen: "tl3", showRequired: false, infoOpen: false };
+    case "tl3":
+      return { ...state, screen: "tl4", showRequired: false, infoOpen: false };
+    case "tl4":
+      return projectLife(state, "lenders");
     case "g3":
       return { ...state, screen: "g0" };
     default:
@@ -384,7 +424,6 @@ function backTo(state) {
     case "ic":
       return state.costsReturn === "fd3" ? "fd2" : "i0";
     case "f0":
-    case "s0":
       return "ic";
     case "fd":
       return ["f2", "f3", "i2b"].includes(state.fixFrom) ? state.fixFrom : "f0";
@@ -399,11 +438,22 @@ function backTo(state) {
     case "sd3":
       return "sd2";
     case "ig":
-      return "g1";
+      return state.goalEdit ? "l0" : "g1";
     case "ig2":
       return "ig";
     case "gd":
       return "ig2";
+    case "tl":
+      return "fd2";
+    case "tl2":
+      return "tl";
+    case "tl3":
+      return "tl2";
+    case "tl4":
+      return "tl3";
+    case "s0":
+      if (state.cushionFrom === "project") return "l0";
+      return "ic";
     case "gd2":
       return "g2";
     case "i1":
@@ -491,6 +541,11 @@ function withInput(state, action) {
       date: cleanDate(action.date ?? inputs.goalDate.date),
       note: cleanNote(action.note ?? inputs.goalDate.note),
     };
+  } else if (key === "lenderDuration") {
+    inputs.lenderDuration = {
+      months: cleanDays(action.months ?? inputs.lenderDuration.months),
+      note: cleanNote(action.note ?? inputs.lenderDuration.note),
+    };
   } else {
     inputs[key] = {
       amount: cleanAmount(action.amount ?? inputs[key].amount),
@@ -529,6 +584,45 @@ function withInput(state, action) {
   };
 }
 
+function projectLife(state, actionName) {
+  return {
+    ...state,
+    action: actionName,
+    screen: "l0",
+    lifeFrom: actionName === "lenders" ? "tl4" : "fd2",
+    fromInput: false,
+    lifeDetail: false,
+    projectNext: true,
+    goalEdit: false,
+    showRequired: false,
+    infoOpen: false,
+  };
+}
+
+function applyReduce(state) {
+  const before = lifeSnap(state);
+  const current = parseAmount(state.inputs.monthlyCosts.amount) ?? 0;
+  const inputs = {
+    ...state.inputs,
+    monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(Math.max(0, current - 1000)) },
+  };
+  return {
+    ...projectLife({ ...state, inputs }, "reduce"),
+    lifeMove: {
+      key: "monthlyCosts",
+      wasNet: before.net,
+      wasNow: before.now,
+      wasPct: before.pct,
+      wasDays: before.days,
+      wasExpenses: before.expenses,
+      wasGoal: before.goal,
+      wasCover: before.cover,
+      wasSave: before.save,
+      wasBurden: before.burden,
+    },
+  };
+}
+
 function step(state, action) {
   switch (action.type) {
     case "pick-entry":
@@ -558,22 +652,22 @@ function step(state, action) {
       return state;
     case "pick-next":
       if (state.screen !== "fd2") return state;
-      if (action.pick === "cut") {
-        return { ...state, screen: "ic", costsReturn: "fd3", showRequired: false, infoOpen: false };
+      if (action.pick === "reduce") return applyReduce(state);
+      if (action.pick === "lenders") {
+        return { ...state, screen: "tl", showRequired: false, infoOpen: false };
       }
-      if (action.pick === "prioritise") {
-        return {
-          ...state,
-          screen: "l0",
-          lifeFrom: "fd2",
-          fromInput: false,
-          lifeDetail: false,
-          showRequired: false,
-          infoOpen: false,
-        };
-      }
-      if (action.pick === "lenders") return { ...state, fixHeldForRightDoor: true };
       return state;
+    case "project-next":
+      if (state.screen !== "l0" || !state.projectNext) return state;
+      return {
+        ...state,
+        screen: "s0",
+        projectNext: false,
+        cushionFrom: "project",
+        showRequired: false,
+        infoOpen: false,
+        lifeDetail: false,
+      };
     case "edit":
       return withInput(state, action);
     case "continue":
@@ -629,8 +723,12 @@ function step(state, action) {
     case "back-to-input":
       return returnToInput(state) || state;
     case "open-milestone": {
+      if (state.screen !== "l0") return state;
+      if (action.id === "goals") {
+        return { ...state, screen: "ig", goalEdit: true, showRequired: false, infoOpen: false, lifeDetail: false };
+      }
       const screen = MILESTONE_SCREEN[action.id];
-      if (!screen || state.screen !== "l0") return state;
+      if (!screen) return state;
       return { ...state, screen, lifeDetail: false };
     }
     case "open-net":
@@ -703,6 +801,8 @@ export function hydrate(raw) {
       inputs.goalName = { text: cleanText(src.text), note: cleanNote(src.note) };
     } else if (key === "goalDate") {
       inputs.goalDate = { date: cleanDate(src.date), note: cleanNote(src.note) };
+    } else if (key === "lenderDuration") {
+      inputs.lenderDuration = { months: cleanDays(src.months), note: cleanNote(src.note) };
     } else {
       inputs[key] = { amount: cleanAmount(src.amount), note: cleanNote(src.note) };
     }
@@ -720,7 +820,7 @@ export function hydrate(raw) {
   if (screen === "s3" && cushionSituation !== "ok") screen = "s0";
   if (["i3", "i3b"].includes(screen) && !cushionSituation) screen = "s0";
   if (screen === "ic" && !entry) screen = "w0";
-  if (["fd", "fd2", "fd3"].includes(screen) && entry !== "stressed") screen = entry ? "i0" : "w0";
+  if (["fd", "fd2", "fd3", "tl", "tl2", "tl3", "tl4"].includes(screen) && entry !== "stressed") screen = entry ? "i0" : "w0";
   if (["sd", "sd2", "sd3"].includes(screen) && entry !== "stable") screen = entry ? "i0" : "w0";
   if (["gd", "gd2", "ig", "ig2"].includes(screen) && !entry) screen = "w0";
   if (["f0", "i1", "f1", "f2", "f3", "i2", "i2b"].includes(screen) && entry !== "stressed") {
@@ -740,6 +840,10 @@ export function hydrate(raw) {
     inputs,
     costsReturn: raw.costsReturn === "fd3" ? "fd3" : null,
     fixFrom: ["f2", "f3", "i2b"].includes(raw.fixFrom) ? raw.fixFrom : null,
+    action: raw.action === "reduce" || raw.action === "lenders" ? raw.action : null,
+    projectNext: false,
+    goalEdit: false,
+    cushionFrom: raw.cushionFrom === "project" ? "project" : null,
     fixHeldForRightDoor: raw.fixHeldForRightDoor === true,
     infoOpen: false,
     showRequired: false,
@@ -867,6 +971,43 @@ const INPUT_COPY = {
     mode: "money",
     info: "The amount this goal needs.",
     requiredHint: "Enter an amount to continue.",
+  },
+  tl: {
+    title: "Debt amount",
+    body: "What you would take to the lenders.",
+    chip: "This month",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "The debt you want to talk about. This stays in Fortune.",
+    requiredHint: "Enter an amount to continue.",
+  },
+  tl2: {
+    title: "Total contract",
+    body: "The full amount of the contract.",
+    chip: "This month",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    requiredHint: "Enter an amount to continue.",
+  },
+  tl3: {
+    title: "Monthly premium",
+    body: "What you would pay each month.",
+    chip: "This month",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    requiredHint: "Enter an amount to continue.",
+  },
+  tl4: {
+    title: "Duration",
+    body: "How many months.",
+    chip: "This month",
+    label: "Months",
+    prefix: "",
+    mode: "months",
+    requiredHint: "Enter the number of months to continue.",
   },
   gd2: {
     title: "Monthly cover",
@@ -1000,6 +1141,7 @@ export function present(state) {
       lifeFocus: LIFE_FOCUS[id],
       lifeDetail: state.lifeDetail === true && id === "l1",
       fromInput: state.fromInput === true && id === "l0",
+      projectNext: state.projectNext === true && id === "l0",
       disclaimer: LIFE_DISCLAIMER,
       frame: LIFE_FRAME[id],
     };
@@ -1065,7 +1207,14 @@ export function present(state) {
         mode: copy.mode,
         label: copy.label,
         prefix: copy.prefix,
-        amount: copy.mode === "days" ? field.days : copy.mode === "money" ? field.amount : "",
+        amount:
+          copy.mode === "days"
+            ? field.days
+            : copy.mode === "months"
+              ? field.months
+              : copy.mode === "money"
+                ? field.amount
+                : "",
         text: copy.mode === "text" ? field.text : "",
         date: copy.mode === "date" ? field.date : "",
         note: field.note,
@@ -1163,9 +1312,8 @@ export function present(state) {
       chip: "This month",
       rdLater: state.fixHeldForRightDoor === true,
       choices: [
-        choice("cut", "Cut costs this month"),
-        choice("prioritise", "Prioritise payments"),
-        choice("lenders", "Talk to lenders", { sub: "Opens live Right Door later" }),
+        choice("reduce", "Reduce cost", { sub: "\u22121,000 this month" }),
+        choice("lenders", "Talk to lenders"),
       ],
     };
   }

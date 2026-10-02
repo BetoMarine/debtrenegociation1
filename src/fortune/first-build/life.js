@@ -123,6 +123,32 @@ function moneyInputs(state) {
     goalName: String(inputs.goalName?.text ?? "").trim(),
     goalDate: parseIsoDate(inputs.goalDate?.date),
     cover: amount(inputs.cover?.amount),
+    debt: amount(inputs.lenderDebt?.amount),
+    contract: amount(inputs.lenderContract?.amount),
+    premium: amount(inputs.lenderPremium?.amount),
+    duration: days(inputs.lenderDuration?.months),
+  };
+}
+
+function phaseOf(state, ready) {
+  const acted = state?.action === "reduce" || state?.action === "lenders";
+  let current = "fix";
+  if (state?.entry === "ok") current = "goals";
+  else if (state?.entry === "stable" || acted) current = ready ? "goals" : "cushion";
+  const order = [
+    ["fix", "Fix"],
+    ["cushion", "Cushion"],
+    ["goals", "Goals"],
+  ];
+  const at = order.findIndex(([id]) => id === current);
+  return {
+    current,
+    steps: order.map(([id, label], index) => ({
+      id,
+      n: String(index + 1),
+      label,
+      state: index < at ? "is-done" : index === at ? "is-now" : "is-wait",
+    })),
   };
 }
 
@@ -229,7 +255,19 @@ export function buildLife(state) {
   const pct = pctOf(money.now, money.target);
   const months = monthsOf(money.now, money.target, money.save);
   const tone = toneOf(state?.entry);
-  const copy = todayCopy(tone, net);
+  const acted = state?.action === "reduce" || state?.action === "lenders";
+  let copy = todayCopy(tone, net);
+  if (acted && net != null && net > 0) {
+    copy = {
+      ...copy,
+      kicker: "Positive from today",
+      netClass: "pos",
+      graph: "turn-up",
+      mark: "steady",
+      ask: "Why the trend turns up.",
+      quiet: "Positive from today.",
+    };
+  }
   const move = state?.lifeMove || null;
   const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
   const joined = state?.rightDoorJoined === true;
@@ -270,12 +308,24 @@ export function buildLife(state) {
   }
 
   const year = asOf.getFullYear();
+  const scope = state?.entry === "stressed" && !acted ? "today" : "full";
+  const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
+  const cushionReadyNow =
+    money.now != null && money.target != null && money.target > 0 && money.now >= money.target;
+  const lendersReady =
+    state?.action === "lenders" &&
+    money.debt != null &&
+    money.contract != null &&
+    money.premium != null &&
+    money.duration != null;
   const funded = 0;
   const goalPct = money.goal != null && money.goal > 0 ? Math.round((funded / money.goal) * 100) : null;
   const goalReady = Boolean(money.goalName && money.goalDate && money.goal != null);
   const goalDateText = money.goalDate ? formatDate(money.goalDate) : "";
   return {
     tone,
+    scope,
+    phase: phaseOf(state, cushionReadyNow),
     pill: pillOf(state?.entry),
     today: {
       date: formatDate(asOf),
@@ -314,8 +364,17 @@ export function buildLife(state) {
       effect,
       note: "Live Right Door as-is \u2014 this frame shows Your life effect only.",
     },
+    expected: {
+      show: lendersReady,
+      date: formatDate(asOf),
+      debt: formatPlain(money.debt),
+      contract: formatPlain(money.contract),
+      premium: formatPlain(money.premium),
+      duration: money.duration == null ? "\u2014" : String(money.duration),
+      graph: "turn-up",
+    },
     ef: {
-      date: formatDate(addMonths(asOf, 12)),
+      date: place || formatDate(addMonths(asOf, 12)),
       now: money.now,
       target: money.target,
       pct,
@@ -343,7 +402,7 @@ export function buildLife(state) {
         id: "invest",
         n: "4",
         title: "Invest & insurance",
-        date: formatDate(addMonths(asOf, 18)),
+        date: place || formatDate(addMonths(asOf, 18)),
         gtitle: "Cash only vs with invest",
         later: money.cover == null ? "Later pass \u00b7 Insurance \u00b7 Invest boost" : `Cover ${formatPlain(money.cover)} \u00b7 a month`,
         delta:
@@ -359,7 +418,7 @@ export function buildLife(state) {
         n: "5",
         title: "Goals",
         real: goalReady,
-        date: goalReady ? goalDateText : `${year + 2}\u2013${year + 6}`,
+        date: goalReady ? goalDateText : place || `${year + 2}\u2013${year + 6}`,
         gtitle: "Cash flow \u00b7 goal impact",
         later: goalReady
           ? ""
