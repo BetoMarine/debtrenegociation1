@@ -121,13 +121,30 @@ export async function saveFortuneUi(state) {
   return state;
 }
 
+/** Fortune Teller keys only. Right Door (`pack`) and Sunday Pack stay put. */
+export const FORTUNE_DATA_KEYS = [
+  "fortunePlan",
+  "fortuneForecast",
+  "fortuneUi",
+  "fortuneFireHandoff",
+  "fortuneSliceA",
+];
+
+export async function getFortuneSlice() {
+  return getKv("fortuneSliceA");
+}
+
+export async function saveFortuneSlice(state) {
+  await setKv("fortuneSliceA", state);
+  return state;
+}
+
 /** Clears Fortune Teller only. Right Door and Sunday Pack stay put. */
 export async function wipeFortune() {
   const db = await openDb();
   const tx = db.transaction("kv", "readwrite");
-  tx.objectStore("kv").delete("fortunePlan");
-  tx.objectStore("kv").delete("fortuneForecast");
-  tx.objectStore("kv").delete("fortuneUi");
+  const store = tx.objectStore("kv");
+  for (const key of FORTUNE_DATA_KEYS) store.delete(key);
   await txDone(tx);
 }
 
