@@ -1,9 +1,63 @@
-const DB_NAME = "right-door";
+/** Live site database. Preview pages must not open this name. */
+export const LIVE_DB_NAME = "right-door";
 const DB_VERSION = 1;
 
-function openDb() {
+function currentPath() {
+  try {
+    if (typeof location !== "undefined" && location && typeof location.pathname === "string") {
+      return location.pathname;
+    }
+  } catch {
+    /* Node tests have no location. */
+  }
+  return "/";
+}
+
+function envNamespace() {
+  const raw = import.meta.env?.VITE_STORAGE_NS;
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  const globalNs = globalThis.__PYL_STORAGE_NS__;
+  if (typeof globalNs === "string" && globalNs.trim()) return globalNs.trim();
+  return "";
+}
+
+export function isPreviewPath(pathname) {
+  return /\/preview\/pr-\d+(?:\/|$)/.test(String(pathname || ""));
+}
+
+/** Path-only name. Live URLs stay on the live database. */
+export function storageDbNameFromPath(pathname) {
+  const match = String(pathname || "").match(/\/preview\/pr-(\d+)(?:\/|$)/);
+  if (match) return `pyl-preview-pr${match[1]}`;
+  return LIVE_DB_NAME;
+}
+
+/**
+ * Database for this page.
+ * `VITE_STORAGE_NS` / `__PYL_STORAGE_NS__` wins (preview builds).
+ * Otherwise `/preview/pr-N/` maps to `pyl-preview-prN`.
+ */
+export function storageDbName(pathname = currentPath()) {
+  const fromEnv = envNamespace();
+  if (fromEnv) return fromEnv;
+  return storageDbNameFromPath(pathname);
+}
+
+/** Preview erase must refuse the live database even if name resolution regresses. */
+export function assertWipeDatabase(name, pathname) {
+  if (isPreviewPath(pathname) && name === LIVE_DB_NAME) {
+    throw new Error("preview erase refused on the live database");
+  }
+  return name;
+}
+
+export function databaseForFortuneWipe(pathname = currentPath()) {
+  return assertWipeDatabase(storageDbName(pathname), pathname);
+}
+
+function openNamedDb(name) {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(name, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
@@ -13,6 +67,10 @@ function openDb() {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
+
+function openDb() {
+  return openNamedDb(storageDbName());
 }
 
 function txDone(tx) {
@@ -139,9 +197,13 @@ export async function saveFortuneSlice(state) {
   return state;
 }
 
-/** Clears Fortune Teller only. Right Door and Sunday Pack stay put. */
+/**
+ * Clears Fortune Teller keys in this page's database only.
+ * A preview page opens `pyl-preview-prN` (or `VITE_STORAGE_NS`) and never deletes live `right-door` keys.
+ * Right Door (`pack`) and Sunday Pack stay put inside whichever database is open.
+ */
 export async function wipeFortune() {
-  const db = await openDb();
+  const db = await openNamedDb(databaseForFortuneWipe());
   const tx = db.transaction("kv", "readwrite");
   const store = tx.objectStore("kv");
   for (const key of FORTUNE_DATA_KEYS) store.delete(key);
