@@ -129,7 +129,7 @@ function onClick(event) {
     apply(reduce(state, { type: "back" }));
     return;
   }
-  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow") {
+  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next") {
     const value = btn.getAttribute("data-value");
     const action =
       act === "pick-entry"
@@ -138,7 +138,9 @@ function onClick(event) {
           ? { type: "pick-fix", situation: value }
           : act === "pick-cushion"
             ? { type: "pick-cushion", situation: value }
-            : { type: "pick-grow", pick: value };
+            : act === "pick-next"
+              ? { type: "pick-next", pick: value }
+              : { type: "pick-grow", pick: value };
     apply(reduce(state, action));
     return;
   }

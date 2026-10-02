@@ -40,7 +40,9 @@ function choices(view) {
             ? "pick-fix"
             : view.id === "s0"
               ? "pick-cushion"
-              : "pick-grow";
+              : view.id === "fd2"
+                ? "pick-next"
+                : "pick-grow";
       return `<button class="ft-choice${locked}" type="button" data-act="${act}" data-value="${escapeHtml(item.id)}"><span class="ft-choice-label">${escapeHtml(item.label)}${sub}</span>${tail}</button>`;
     })
     .join("");
@@ -66,6 +68,23 @@ function inputBlock(view) {
     </div>`;
 }
 
+function rowsBlock(view) {
+  if (!view.rows?.length) return "";
+  return `<div class="ft-net-rows">${view.rows
+    .map((row) => {
+      const tone = row.tone ? ` is-${row.tone}` : "";
+      const valueClass = [row.neg ? "is-neg" : "", row.pos ? "is-pos" : ""].filter(Boolean).join(" ");
+      return `<div class="ft-net-row${tone}"><span>${escapeHtml(row.label)}</span><b class="${valueClass}">${escapeHtml(row.value)}</b></div>`;
+    })
+    .join("")}</div>`;
+}
+
+function calloutBlock(view) {
+  if (!view.callout) return "";
+  const callout = view.callout;
+  return `<div class="ft-callout is-${escapeHtml(callout.tone)}">${LOCK_ICON}<div><b>${escapeHtml(callout.title)}</b><span>${escapeHtml(callout.body)}</span></div></div>`;
+}
+
 function content(view) {
   const infoBtn = view.info
     ? `<button class="ft-info" type="button" data-act="info" aria-label="Why?" aria-expanded="${view.infoOpen ? "true" : "false"}" aria-controls="ft-why">i</button>`
@@ -79,6 +98,8 @@ function content(view) {
   let main = "";
   if (view.kind === "choices") main = `<div class="ft-choices">${choices(view)}</div>`;
   if (view.kind === "input") main = inputBlock(view);
+  if (view.kind === "picture") main = rowsBlock(view);
+  if (view.kind === "confirm") main = calloutBlock(view);
   if (view.kind === "locked" && view.lockTitle) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
@@ -243,6 +264,8 @@ function todayBody(today) {
       <span class="ft-muted is-thin">${escapeHtml(today.meta)}</span>
       ${today.daysText ? `<span class="ft-muted is-thin" data-days="${today.daysLate}">${escapeHtml(today.daysText)}</span>` : ""}
       ${today.daysDelta ? `<span class="ft-delta">${escapeHtml(today.daysDelta)}</span>` : ""}
+      ${today.burdenText ? `<span class="ft-muted is-thin">${escapeHtml(today.burdenText)}</span>` : ""}
+      ${today.burdenDelta ? `<span class="ft-delta">${escapeHtml(today.burdenDelta)}</span>` : ""}
     </div>`;
 }
 
@@ -260,6 +283,7 @@ function efBody(ef) {
     <div class="ft-ms-foot" data-ef-now="${ef.now ?? ""}" data-ef-pct="${ef.pct ?? ""}">
       <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>
       <span class="ft-muted is-thin${ef.moved ? " is-moved" : ""}">${escapeHtml(ef.foot)}</span>
+      ${ef.saveText ? `<span class="ft-muted is-thin">${escapeHtml(ef.saveText)}</span>` : ""}
       ${ef.delta ? `<span class="ft-delta">${escapeHtml(ef.delta)}</span>` : ""}
     </div>`;
 }
@@ -268,7 +292,7 @@ function stubBody(stub) {
   return `<div class="ft-ms-head"><b>${escapeHtml(stub.title)}</b><span class="ft-ms-date">${escapeHtml(stub.date)}</span></div>
     ${stub.gtitle ? `<div class="ft-ms-gtitle">${escapeHtml(stub.gtitle)}</div>` : ""}
     ${graph(stub.graph)}
-    <div class="ft-ms-foot">${stub.open ? `<p class="ft-open-line">${escapeHtml(stub.open)}</p>` : `<span class="ft-muted is-thin">${escapeHtml(stub.later)}</span>`}</div>`;
+    <div class="ft-ms-foot">${stub.open ? `<p class="ft-open-line">${escapeHtml(stub.open)}</p>` : `<span class="ft-muted is-thin">${escapeHtml(stub.later)}</span>`}${stub.delta ? `<span class="ft-delta">${escapeHtml(stub.delta)}</span>` : ""}</div>`;
 }
 
 function lifeBlock(life, focus) {

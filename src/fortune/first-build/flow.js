@@ -5,11 +5,12 @@
  * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
 
-import { buildLife } from "./life.js";
+import { buildLife, formatPlain } from "./life.js";
 
 export const SCREEN_IDS = [
   "w0",
   "i0",
+  "ic",
   "f0",
   "i1",
   "f1",
@@ -17,15 +18,23 @@ export const SCREEN_IDS = [
   "f3",
   "i2",
   "i2b",
+  "fd",
+  "fd2",
+  "fd3",
   "s0",
   "s1",
   "s2",
   "s3",
   "i3",
   "i3b",
+  "sd",
+  "sd2",
+  "sd3",
   "g0",
   "g1",
   "g2",
+  "gd",
+  "gd2",
   "g3",
   "e0",
   "e1",
@@ -91,6 +100,23 @@ export const FRAME_IDS = {
   e1: "E1-erase-done",
 };
 
+export const SLICE_C_FRAMES = {
+  ic: "Ic-monthly-costs",
+  fd: "Fd-this-month-picture",
+  fd2: "Fd2-what-you-can-do",
+  fd3: "Fd3-costs-updated",
+  sd: "Sd-save-each-month",
+  sd2: "Sd2-cushion-plan",
+  sd3: "Sd3-cushion-ready-gate",
+  gd: "Gd-goal-amount",
+  gd2: "Gd2-insurance-cover",
+};
+
+function frameOf(id, ready) {
+  if (id === "g3") return ready ? "Gd4-invest-unlocked" : "Gd3-invest-still-locked";
+  return SLICE_C_FRAMES[id] || FRAME_IDS[id] || "";
+}
+
 const ENTRY_SCREEN = {
   stressed: "f0",
   stable: "s0",
@@ -111,12 +137,20 @@ const CUSHION_DETAIL = {
 
 const INPUT_SCREENS = {
   i0: "takeHome",
+  ic: "monthlyCosts",
   i1: "stillDue",
   i2: "overdue",
   i2b: "daysLate",
   i3: "cushionNow",
   i3b: "cushionTarget",
+  sd: "monthlySave",
+  gd: "goalAmount",
+  gd2: "cover",
 };
+
+const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
+
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -141,10 +175,16 @@ export function freshState() {
       daysLate: blankDays(),
       cushionNow: blankMoney(),
       cushionTarget: blankMoney(),
+      monthlyCosts: blankMoney(),
+      monthlySave: blankMoney(),
+      goalAmount: blankMoney(),
+      cover: blankMoney(),
     },
     infoOpen: false,
     showRequired: false,
     fixHeldForRightDoor: false,
+    costsReturn: null,
+    fixFrom: null,
     eraseFrom: null,
     lifeFrom: null,
     lifeDetail: false,
@@ -194,6 +234,8 @@ export function canContinue(state) {
   switch (state.screen) {
     case "i0":
       return parseAmount(state.inputs.takeHome.amount) !== null;
+    case "ic":
+      return parseAmount(state.inputs.monthlyCosts.amount) !== null;
     case "i1":
       return parseAmount(state.inputs.stillDue.amount) !== null;
     case "i2":
@@ -204,18 +246,37 @@ export function canContinue(state) {
       return parseAmount(state.inputs.cushionNow.amount) !== null;
     case "i3b":
       return parseAmount(state.inputs.cushionTarget.amount) !== null;
+    case "sd":
+      return parseAmount(state.inputs.monthlySave.amount) !== null;
+    case "gd":
+      return parseAmount(state.inputs.goalAmount.amount) !== null;
+    case "gd2":
+      return parseAmount(state.inputs.cover.amount) !== null;
     case "f1":
     case "f2":
     case "f3":
+    case "fd":
+    case "fd3":
     case "s1":
     case "s2":
     case "s3":
+    case "sd2":
+    case "sd3":
     case "g1":
     case "g2":
+    case "g3":
       return true;
     default:
       return false;
   }
+}
+
+/** Whole months from the entered save. Costs stay on TODAY; they do not replace this amount. */
+export function monthsToCushion(now, target, save) {
+  if (now == null || target == null || save == null || save <= 0) return null;
+  const gap = target - now;
+  if (gap <= 0) return 0;
+  return Math.ceil(gap / save);
 }
 
 /** Floor is real only from actual amounts, not from tapping Plan. */
@@ -228,10 +289,15 @@ export function cushionReady(state) {
 
 function advance(state) {
   switch (state.screen) {
-    case "i0": {
+    case "i0":
+      return { ...state, screen: "ic", showRequired: false, infoOpen: false };
+    case "ic": {
+      if (state.costsReturn === "fd3") {
+        return { ...state, screen: "fd3", costsReturn: null, showRequired: false, infoOpen: false };
+      }
       const dest = ENTRY_SCREEN[state.entry];
       if (!dest) return state;
-      return { ...state, screen: dest, planFrom: "i0", showRequired: false, infoOpen: false };
+      return { ...state, screen: dest, planFrom: "ic", showRequired: false, infoOpen: false };
     }
     case "i1": {
       const dest = FIX_DETAIL[state.fixSituation];
@@ -243,7 +309,11 @@ function advance(state) {
     case "f2":
     case "f3":
     case "i2b":
-      return { ...state, fixHeldForRightDoor: true };
+      return { ...state, screen: "fd", fixFrom: state.screen, showRequired: false, infoOpen: false };
+    case "fd":
+      return { ...state, screen: "fd2" };
+    case "fd3":
+      return { ...state, screen: "fd2" };
     case "i2":
       return { ...state, screen: "i2b", showRequired: false };
     case "s1":
@@ -253,9 +323,22 @@ function advance(state) {
     case "i3":
       return { ...state, screen: "i3b", showRequired: false };
     case "i3b":
-      return { ...state, screen: "g0", planFrom: "i3b", showRequired: false };
+      return { ...state, screen: "sd", planFrom: "i3b", showRequired: false, infoOpen: false };
+    case "sd":
+      return { ...state, screen: "sd2", showRequired: false, infoOpen: false };
+    case "sd2":
+      if (cushionReady(state)) return { ...state, screen: "sd3" };
+      return { ...state, screen: "g0", planFrom: "sd2" };
+    case "sd3":
+      return { ...state, screen: "g0", planFrom: "sd3" };
     case "g1":
+      return { ...state, screen: "gd", showRequired: false, infoOpen: false };
     case "g2":
+      return { ...state, screen: "gd2", showRequired: false, infoOpen: false };
+    case "gd":
+    case "gd2":
+      return { ...state, screen: "g0", showRequired: false, infoOpen: false };
+    case "g3":
       return { ...state, screen: "g0" };
     default:
       return state;
@@ -266,9 +349,27 @@ function backTo(state) {
   switch (state.screen) {
     case "i0":
       return "w0";
+    case "ic":
+      return state.costsReturn === "fd3" ? "fd2" : "i0";
     case "f0":
     case "s0":
-      return "i0";
+      return "ic";
+    case "fd":
+      return ["f2", "f3", "i2b"].includes(state.fixFrom) ? state.fixFrom : "f0";
+    case "fd2":
+      return "fd";
+    case "fd3":
+      return "fd2";
+    case "sd":
+      return "i3b";
+    case "sd2":
+      return "sd";
+    case "sd3":
+      return "sd2";
+    case "gd":
+      return "g1";
+    case "gd2":
+      return "g2";
     case "i1":
       return "f0";
     case "f1":
@@ -288,7 +389,10 @@ function backTo(state) {
     case "i3b":
       return "i3";
     case "g0":
-      return state.planFrom === "i3b" ? "i3b" : "i0";
+      if (state.planFrom === "sd3") return "sd3";
+      if (state.planFrom === "sd2") return "sd2";
+      if (state.planFrom === "i3b") return "i3b";
+      return "ic";
     case "g1":
     case "g2":
     case "g3":
@@ -320,9 +424,14 @@ function lifeSnap(state) {
   const life = buildLife(state);
   return {
     net: life.today.net,
+    expenses: life.today.expenses,
     now: life.ef.now,
     pct: life.ef.pct,
     days: life.today.daysLate,
+    goal: life.goal,
+    cover: life.cover,
+    save: life.save,
+    burden: life.today.burden,
   };
 }
 
@@ -346,9 +455,14 @@ function withInput(state, action) {
   const after = lifeSnap(next);
   const moved =
     after.net !== baseline.net ||
+    after.expenses !== baseline.expenses ||
     after.now !== baseline.now ||
     after.pct !== baseline.pct ||
-    after.days !== baseline.days;
+    after.days !== baseline.days ||
+    after.goal !== baseline.goal ||
+    after.cover !== baseline.cover ||
+    after.save !== baseline.save ||
+    after.burden !== baseline.burden;
   if (!moved) {
     return { ...next, lifeMove: state.lifeMove?.key === key ? null : state.lifeMove };
   }
@@ -360,6 +474,11 @@ function withInput(state, action) {
       wasNow: baseline.now,
       wasPct: baseline.pct,
       wasDays: baseline.days,
+      wasExpenses: baseline.expenses,
+      wasGoal: baseline.goal,
+      wasCover: baseline.cover,
+      wasSave: baseline.save,
+      wasBurden: baseline.burden,
     },
   };
 }
@@ -391,6 +510,24 @@ function step(state, action) {
       if (action.pick === "insurance") return { ...state, screen: "g2" };
       if (action.pick === "invest") return { ...state, screen: "g3" };
       return state;
+    case "pick-next":
+      if (state.screen !== "fd2") return state;
+      if (action.pick === "cut") {
+        return { ...state, screen: "ic", costsReturn: "fd3", showRequired: false, infoOpen: false };
+      }
+      if (action.pick === "prioritise") {
+        return {
+          ...state,
+          screen: "l0",
+          lifeFrom: "fd2",
+          fromInput: false,
+          lifeDetail: false,
+          showRequired: false,
+          infoOpen: false,
+        };
+      }
+      if (action.pick === "lenders") return { ...state, fixHeldForRightDoor: true };
+      return state;
     case "edit":
       return withInput(state, action);
     case "continue":
@@ -407,7 +544,7 @@ function step(state, action) {
       return { ...state, screen, showRequired: false, infoOpen: false, lifeDetail: false };
     }
     case "info":
-      if (state.screen !== "i0") return state;
+      if (!INFO_SCREENS.has(state.screen)) return state;
       return { ...state, infoOpen: !state.infoOpen };
     case "open-erase":
       if (state.screen !== "w0") return state;
@@ -430,12 +567,12 @@ function step(state, action) {
         infoOpen: false,
       };
     case "show-plan":
-      if (!INPUT_SCREENS[state.screen]) return state;
+      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen)) return state;
       return {
         ...state,
         screen: "l0",
         lifeFrom: state.screen,
-        fromInput: true,
+        fromInput: Boolean(INPUT_SCREENS[state.screen]),
         lifeDetail: false,
         showRequired: false,
         infoOpen: false,
@@ -476,7 +613,18 @@ function oneOf(value, allowed) {
 
 function cleanMove(raw) {
   if (!raw || typeof raw !== "object") return null;
-  const keys = ["takeHome", "stillDue", "overdue", "daysLate", "cushionNow", "cushionTarget"];
+  const keys = [
+    "takeHome",
+    "stillDue",
+    "overdue",
+    "daysLate",
+    "cushionNow",
+    "cushionTarget",
+    "monthlyCosts",
+    "monthlySave",
+    "goalAmount",
+    "cover",
+  ];
   if (!keys.includes(raw.key)) return null;
   const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
   return {
@@ -485,6 +633,11 @@ function cleanMove(raw) {
     wasNow: num(raw.wasNow),
     wasPct: num(raw.wasPct),
     wasDays: num(raw.wasDays),
+    wasExpenses: num(raw.wasExpenses),
+    wasGoal: num(raw.wasGoal),
+    wasCover: num(raw.wasCover),
+    wasSave: num(raw.wasSave),
+    wasBurden: num(raw.wasBurden),
   };
 }
 
@@ -513,20 +666,27 @@ export function hydrate(raw) {
   if (screen === "s2" && cushionSituation !== "small") screen = "s0";
   if (screen === "s3" && cushionSituation !== "ok") screen = "s0";
   if (["i3", "i3b"].includes(screen) && !cushionSituation) screen = "s0";
+  if (screen === "ic" && !entry) screen = "w0";
+  if (["fd", "fd2", "fd3"].includes(screen) && entry !== "stressed") screen = entry ? "i0" : "w0";
+  if (["sd", "sd2", "sd3"].includes(screen) && entry !== "stable") screen = entry ? "i0" : "w0";
+  if (["gd", "gd2"].includes(screen) && !entry) screen = "w0";
   if (["f0", "i1", "f1", "f2", "f3", "i2", "i2b"].includes(screen) && entry !== "stressed") {
     screen = entry ? "i0" : "w0";
   }
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
     if (entry !== "stable") screen = entry ? "i0" : "w0";
   }
+  const planFrom = ["i3b", "sd2", "sd3", "ic"].includes(raw.planFrom) ? raw.planFrom : "i0";
   return {
     ...base,
     screen,
     entry,
     fixSituation,
     cushionSituation,
-    planFrom: raw.planFrom === "i3b" ? "i3b" : "i0",
+    planFrom,
     inputs,
+    costsReturn: raw.costsReturn === "fd3" ? "fd3" : null,
+    fixFrom: ["f2", "f3", "i2b"].includes(raw.fixFrom) ? raw.fixFrom : null,
     fixHeldForRightDoor: raw.fixHeldForRightDoor === true,
     infoOpen: false,
     showRequired: false,
@@ -556,6 +716,16 @@ const INPUT_COPY = {
     prefix: "HK$",
     mode: "money",
     info: "One actual number, after tax. Not a range.",
+    requiredHint: "Enter an amount to continue.",
+  },
+  ic: {
+    title: "Monthly costs",
+    body: "What you usually spend in a month.",
+    chip: "Start",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "Usual monthly spend. This sets expenses on Your life.",
     requiredHint: "Enter an amount to continue.",
   },
   i1: {
@@ -602,6 +772,36 @@ const INPUT_COPY = {
     label: "Amount",
     prefix: "HK$",
     mode: "money",
+    requiredHint: "Enter an amount to continue.",
+  },
+  sd: {
+    title: "Save each month",
+    body: "Toward your cushion target.",
+    chip: "Cushion",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "What you can put toward the cushion each month.",
+    requiredHint: "Enter an amount to continue.",
+  },
+  gd: {
+    title: "Goal amount",
+    body: "What this goal needs.",
+    chip: "Plan",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "The amount this goal needs.",
+    requiredHint: "Enter an amount to continue.",
+  },
+  gd2: {
+    title: "Monthly cover",
+    body: "Premium you plan to pay.",
+    chip: "Plan",
+    label: "Amount",
+    prefix: "HK$",
+    mode: "money",
+    info: "The premium you plan to pay each month.",
     requiredHint: "Enter an amount to continue.",
   },
 };
@@ -655,12 +855,35 @@ function choice(id, label, extra = {}) {
   return { id, label, locked: false, ...extra };
 }
 
+function outflow(n) {
+  if (n == null || !Number.isFinite(n)) return "\u2014";
+  if (n === 0) return "0";
+  return `\u2013${formatPlain(n)}`;
+}
+
+function signedAmount(n) {
+  if (n == null || !Number.isFinite(n)) return "\u2014";
+  const rounded = Math.round(n);
+  if (rounded < 0) return `\u2013${formatPlain(Math.abs(rounded))}`;
+  return formatPlain(rounded);
+}
+
+function monthPicture(state) {
+  const income = parseAmount(state.inputs.takeHome.amount);
+  const costs = parseAmount(state.inputs.monthlyCosts.amount);
+  const still = parseAmount(state.inputs.stillDue.amount);
+  const overdue = parseAmount(state.inputs.overdue.amount);
+  const burden = still == null && overdue == null ? null : (still || 0) + (overdue || 0);
+  const left = income == null || costs == null ? null : income - costs - (burden || 0);
+  return { income, costs, burden, left };
+}
+
 export function present(state) {
   const id = state.screen;
   const ready = cushionReady(state);
   const base = {
     id,
-    frame: FRAME_IDS[id],
+    frame: frameOf(id, ready),
     brand: id === "w0" || id === "e0" || id === "e1",
     showBack: !["w0", "e0", "e1"].includes(id),
     chip: null,
@@ -822,28 +1045,130 @@ export function present(state) {
     };
   }
 
+  if (id === "fd") {
+    const pic = monthPicture(state);
+    return {
+      ...base,
+      kind: "picture",
+      title: "This month",
+      body: "Your picture from what you entered.",
+      chip: "This month",
+      showPlan: true,
+      primary: "Continue",
+      rows: [
+        { label: "Take-home", value: formatPlain(pic.income) },
+        { label: "Monthly costs", value: outflow(pic.costs), neg: pic.costs > 0 },
+        { label: "Still due / overdue", value: outflow(pic.burden), neg: pic.burden > 0 },
+        { label: "Left this month", value: signedAmount(pic.left), neg: pic.left < 0, tone: pic.left < 0 ? "warm" : "" },
+      ],
+    };
+  }
+
+  if (id === "fd2") {
+    return {
+      ...base,
+      kind: "choices",
+      title: "What you can do",
+      body: "Pick one to work on.",
+      chip: "This month",
+      rdLater: state.fixHeldForRightDoor === true,
+      choices: [
+        choice("cut", "Cut costs this month"),
+        choice("prioritise", "Prioritise payments"),
+        choice("lenders", "Talk to lenders", { sub: "Opens live Right Door later" }),
+      ],
+    };
+  }
+
+  if (id === "fd3") {
+    const costs = parseAmount(state.inputs.monthlyCosts.amount);
+    return {
+      ...base,
+      kind: "confirm",
+      title: "Costs updated",
+      body: "TODAY moved with your new spend.",
+      chip: "This month",
+      showPlan: true,
+      primary: "Continue",
+      callout: {
+        tone: "ok",
+        title: `Monthly costs now ${formatPlain(costs)}`,
+        body: "Expenses and net on Your life updated.",
+      },
+    };
+  }
+
+  if (id === "sd2") {
+    const now = parseAmount(state.inputs.cushionNow.amount);
+    const target = parseAmount(state.inputs.cushionTarget.amount);
+    const save = parseAmount(state.inputs.monthlySave.amount);
+    const months = monthsToCushion(now, target, save);
+    return {
+      ...base,
+      kind: "picture",
+      title: "Cushion plan",
+      body: "How long to your target.",
+      chip: "Cushion",
+      showPlan: true,
+      primary: "Continue",
+      rows: [
+        { label: "Now", value: formatPlain(now) },
+        { label: "Target", value: formatPlain(target) },
+        { label: "Save each month", value: formatPlain(save) },
+        { label: "Months to cushion", value: months == null ? "\u2014" : String(months), pos: months != null, tone: "em" },
+      ],
+    };
+  }
+
+  if (id === "sd3") {
+    return {
+      ...base,
+      kind: "confirm",
+      title: "Cushion ready",
+      body: "Your emergency floor is in place.",
+      chip: "Cushion",
+      showPlan: true,
+      primary: "Continue to Plan what\u2019s next",
+      callout: {
+        tone: "ok",
+        title: "Invest can open",
+        body: "Grow \u00b7 Invest unlocks on Plan what\u2019s next. You can keep building or plan ahead.",
+      },
+    };
+  }
+
   if (id === "g3") {
     if (ready) {
       return {
         ...base,
-        kind: "locked",
+        kind: "confirm",
         title: "Invest",
-        body: "Your cushion is ready.",
+        body: "Your cushion is ready \u2014 this can open.",
         chip: "Plan",
-        quiet: "Back to plan",
+        showPlan: true,
+        primary: "Continue",
         lockedInvest: false,
+        callout: {
+          tone: "ok",
+          title: "Unlocked",
+          body: "Cushion gate met. You can plan how Help it grow fits your life.",
+        },
       };
     }
     return {
       ...base,
-      kind: "locked",
+      kind: "confirm",
       title: "Invest",
-      body: "Opens when your cushion is ready.",
+      body: "Still locked until your cushion is ready.",
       chip: "Plan",
-      quiet: "Back to plan",
-      lockTitle: "Still locked",
-      lockBody: "Build your emergency floor first. Then Help it grow can open.",
+      showPlan: true,
+      primary: "Continue",
       lockedInvest: true,
+      callout: {
+        tone: "lock",
+        title: "Cushion not ready",
+        body: "Build your emergency floor first (Stabilize). Then Invest can open on Plan what\u2019s next.",
+      },
     };
   }
 

@@ -89,6 +89,10 @@ const MOVE_LABEL = {
   daysLate: "days late updated",
   cushionNow: "cushion input",
   cushionTarget: "cushion input",
+  monthlyCosts: "costs updated",
+  monthlySave: "monthly save",
+  goalAmount: "goal amount in",
+  cover: "cover updated",
 };
 
 function moneyInputs(state) {
@@ -100,12 +104,29 @@ function moneyInputs(state) {
     daysLate: days(inputs.daysLate?.days),
     now: amount(inputs.cushionNow?.amount),
     target: amount(inputs.cushionTarget?.amount),
+    costs: amount(inputs.monthlyCosts?.amount),
+    save: amount(inputs.monthlySave?.amount),
+    goal: amount(inputs.goalAmount?.amount),
+    cover: amount(inputs.cover?.amount),
   };
 }
 
 function expensesOf(money) {
+  if (money.costs != null) return money.costs;
   if (money.stillDue == null && money.overdue == null) return null;
   return (money.stillDue || 0) + (money.overdue || 0);
+}
+
+function burdenOf(money) {
+  if (money.stillDue == null && money.overdue == null) return null;
+  return (money.stillDue || 0) + (money.overdue || 0);
+}
+
+function monthsOf(now, target, save) {
+  if (now == null || target == null || save == null || save <= 0) return null;
+  const gap = target - now;
+  if (gap <= 0) return 0;
+  return Math.ceil(gap / save);
 }
 
 function netOf(money, expenses) {
@@ -169,8 +190,10 @@ function deltaLine(move, current, was) {
 export function buildLife(state) {
   const money = moneyInputs(state);
   const expenses = expensesOf(money);
+  const burden = burdenOf(money);
   const net = netOf(money, expenses);
   const pct = pctOf(money.now, money.target);
+  const months = monthsOf(money.now, money.target, money.save);
   const tone = toneOf(state?.entry);
   const copy = todayCopy(tone, net);
   const move = state?.lifeMove || null;
@@ -185,7 +208,17 @@ export function buildLife(state) {
     : null;
 
   const netMoved = Boolean(
-    move && ["takeHome", "stillDue", "overdue"].includes(move.key) && move.wasNet != null && move.wasNet !== net,
+    move &&
+      ["takeHome", "stillDue", "overdue", "monthlyCosts"].includes(move.key) &&
+      move.wasNet != null &&
+      move.wasNet !== net,
+  );
+  const burdenMoved = Boolean(
+    move &&
+      money.costs != null &&
+      (move.key === "stillDue" || move.key === "overdue") &&
+      move.wasBurden != null &&
+      move.wasBurden !== burden,
   );
   const daysMoved = Boolean(move && move.key === "daysLate" && move.wasDays != null && move.wasDays !== money.daysLate);
   const efMoved = Boolean(
@@ -225,6 +258,10 @@ export function buildLife(state) {
       expenses,
       stillDue: money.stillDue,
       overdue: money.overdue,
+      burden: money.costs != null ? burden : null,
+      burdenText:
+        money.costs != null && burden != null ? `Still due / overdue ${formatPlain(burden)}` : "",
+      burdenDelta: burdenMoved ? `Was ${formatPlain(move.wasBurden)} \u00b7 ${MOVE_LABEL[move.key]}` : "",
     },
     rd: {
       date: formatDate(addMonths(asOf, 6)),
@@ -244,9 +281,14 @@ export function buildLife(state) {
       target: money.target,
       pct,
       foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(money.now)} \u00b7 ${pct == null ? "\u2014" : `${pct}%`}`,
+      saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,
     },
+    goal: money.goal,
+    cover: money.cover,
+    save: money.save,
+    months,
     stubs: [
       {
         id: "invest",
@@ -254,7 +296,13 @@ export function buildLife(state) {
         title: "Invest & insurance",
         date: formatDate(addMonths(asOf, 18)),
         gtitle: "Cash only vs with invest",
-        later: "Later pass \u00b7 Insurance \u00b7 Invest boost",
+        later: money.cover == null ? "Later pass \u00b7 Insurance \u00b7 Invest boost" : `Cover ${formatPlain(money.cover)} \u00b7 a month`,
+        delta:
+          move?.key === "cover" && money.cover !== move.wasCover
+            ? move.wasCover == null
+              ? "Was unset \u00b7 cover updated"
+              : `Was ${formatPlain(move.wasCover)} \u00b7 cover updated`
+            : "",
         graph: "invest",
       },
       {
@@ -262,8 +310,17 @@ export function buildLife(state) {
         n: "5",
         title: "Goals",
         date: `${year + 2}\u2013${year + 6}`,
-        gtitle: "Cash flow \u00b7 goal impact",
-        later: "Later pass \u00b7 Per-goal % \u00b7 Overall success",
+        gtitle: money.goal == null ? "Cash flow \u00b7 goal impact" : "Goal funding impact",
+        later:
+          money.goal == null
+            ? "Later pass \u00b7 Per-goal % \u00b7 Overall success"
+            : `Goal ${formatPlain(money.goal)} \u00b7 on track`,
+        delta:
+          move?.key === "goalAmount" && money.goal !== move.wasGoal
+            ? move.wasGoal == null
+              ? "Was unset \u00b7 goal amount in"
+              : `Was ${formatPlain(move.wasGoal)} \u00b7 goal amount in`
+            : "",
         graph: "goals",
       },
       {

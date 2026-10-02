@@ -364,6 +364,51 @@ input {
   line-height: 1.35;
 }
 
+.ft-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 18px 16px;
+  margin-top: 8px;
+}
+
+.ft-callout svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.ft-callout.is-ok {
+  background: #ecfdf5;
+  border: 1.5px solid #99f6e4;
+}
+
+.ft-callout.is-ok svg {
+  color: #0f766e;
+}
+
+.ft-callout.is-lock {
+  border: 2px dashed #94a3b8;
+}
+
+.ft-callout.is-lock svg {
+  color: var(--ft-soft);
+}
+
+.ft-callout b {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.ft-callout span {
+  display: block;
+  font-size: 16px;
+  color: var(--ft-muted);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 .ft-under {
   flex: 1;
   min-height: 0;
@@ -721,6 +766,14 @@ div.ft-ms-card {
 
 .ft-net-row b {
   font-weight: 800;
+}
+
+.ft-net-row.is-warm {
+  background: #fff7ed;
+}
+
+.ft-net-row.is-em {
+  background: #f0fdfa;
 }
 
 .ft-net-row.is-total.is-neg {
