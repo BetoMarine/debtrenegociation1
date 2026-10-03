@@ -386,6 +386,29 @@ export function cushionReady(state) {
   return now >= target;
 }
 
+function monthNet(state) {
+  const income = parseAmount(state.inputs.takeHome.amount);
+  const costs = parseAmount(state.inputs.monthlyCosts.amount);
+  if (income == null || costs == null) return null;
+  const still = parseAmount(state.inputs.stillDue.amount) || 0;
+  const overdue = parseAmount(state.inputs.overdue.amount) || 0;
+  return income - costs - still - overdue;
+}
+
+/** Stable and plan stay only when take-home is real and the month is ahead after what is still due. */
+function placeDoor(state) {
+  const income = parseAmount(state.inputs.takeHome.amount);
+  const net = monthNet(state);
+  const ahead = income != null && income > 0 && net != null && net > 0;
+  if (!ahead) {
+    return { ...state, entry: "stressed", screen: "f0", showRequired: false, infoOpen: false };
+  }
+  if (state.entry === "ok") {
+    return { ...state, screen: "i3", showRequired: false, infoOpen: false };
+  }
+  return { ...state, screen: "s0", planFrom: "i1", showRequired: false, infoOpen: false };
+}
+
 function advance(state) {
   switch (state.screen) {
     case "i0":
@@ -394,12 +417,16 @@ function advance(state) {
       if (state.costsReturn === "fd3") {
         return { ...state, screen: "fd3", costsReturn: null, showRequired: false, infoOpen: false };
       }
+      if (state.entry === "stable" || state.entry === "ok") {
+        return { ...state, screen: "i1", showRequired: false, infoOpen: false };
+      }
       const dest = ENTRY_SCREEN[state.entry];
       if (!dest) return state;
       return { ...state, screen: dest, planFrom: "ic", showRequired: false, infoOpen: false };
     }
     case "i1": {
       const dest = FIX_DETAIL[state.fixSituation];
+      if ((state.entry === "stable" || state.entry === "ok") && !dest) return placeDoor(state);
       if (!dest) return { ...state, screen: "f0", showRequired: false };
       return { ...state, screen: dest, showRequired: false };
     }
@@ -422,6 +449,9 @@ function advance(state) {
     case "i3":
       return { ...state, screen: "i3b", showRequired: false };
     case "i3b":
+      if (state.entry === "ok") {
+        return { ...state, screen: "g0", planFrom: "i3b", showRequired: false, infoOpen: false };
+      }
       return { ...state, screen: "sd", planFrom: "i3b", showRequired: false, infoOpen: false };
     case "sd":
       return { ...state, screen: "sd2", showRequired: false, infoOpen: false };
@@ -507,10 +537,12 @@ function backTo(state) {
       return "tl3";
     case "s0":
       if (state.cushionFrom === "project") return "l0";
+      if (state.planFrom === "i1") return "i1";
       return "ic";
     case "gd2":
       return "g2";
     case "i1":
+      if ((state.entry === "stable" || state.entry === "ok") && !state.fixSituation) return "ic";
       return "f0";
     case "f1":
     case "f2":
@@ -525,6 +557,7 @@ function backTo(state) {
     case "s3":
       return "s0";
     case "i3":
+      if (state.entry === "ok") return "i1";
       return CUSHION_DETAIL[state.cushionSituation] || "s0";
     case "i3b":
       return "i3";
@@ -996,22 +1029,22 @@ export function hydrate(raw) {
   if (["f1", "i2", "i2b"].includes(screen) && fixSituation !== "missed") screen = "f0";
   if (screen === "f2" && fixSituation !== "soon") screen = "f0";
   if (screen === "f3" && fixSituation !== "worry") screen = "f0";
-  if (screen === "i1" && !fixSituation) screen = "f0";
+  if (screen === "i1" && !fixSituation && entry !== "stable" && entry !== "ok") screen = "f0";
   if (screen === "s1" && cushionSituation !== "none") screen = "s0";
   if (screen === "s2" && cushionSituation !== "small") screen = "s0";
   if (screen === "s3" && cushionSituation !== "ok") screen = "s0";
-  if (["i3", "i3b"].includes(screen) && !cushionSituation) screen = "s0";
+  if (["i3", "i3b"].includes(screen) && !cushionSituation && entry !== "ok") screen = "s0";
   if (screen === "ic" && !entry) screen = "w0";
   if (["fd", "fd2", "fd3", "tl", "tl2", "tl3", "tl4"].includes(screen) && entry !== "stressed") screen = entry ? "i0" : "w0";
   if (["sd", "sd2", "sd3"].includes(screen) && entry !== "stable") screen = entry ? "i0" : "w0";
   if (["gd", "gd2", "ig", "ig2"].includes(screen) && !entry) screen = "w0";
   if (["f0", "i1", "f1", "f2", "f3", "i2", "i2b"].includes(screen) && entry !== "stressed") {
-    screen = entry ? "i0" : "w0";
+    if (!(screen === "i1" && (entry === "stable" || entry === "ok"))) screen = entry ? "i0" : "w0";
   }
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
-    if (entry !== "stable") screen = entry ? "i0" : "w0";
+    if (!(entry === "ok" && (screen === "i3" || screen === "i3b"))) screen = entry ? "i0" : "w0";
   }
-  const planFrom = ["i3b", "sd2", "sd3", "ic"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic"].includes(raw.planFrom) ? raw.planFrom : "i0";
   return {
     ...base,
     screen,
