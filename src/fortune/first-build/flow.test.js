@@ -148,20 +148,17 @@ describe("Slice A first-build flow", () => {
     state = go(money(state, "monthlyCosts", "20000"), { type: "continue" });
     expect(state.screen).toBe("g0");
     expect(cushionReady(state)).toBe(false);
-    const plan = present(state);
-    expect(plan.choices.map((c) => c.id)).toEqual(["goals"]);
-    expect(plan.choices.find((c) => c.id === "invest")).toBeUndefined();
-    expect(plan.choices.find((c) => c.id === "insurance")).toBeUndefined();
-    const html = renderFirstBuild(state);
-    expect(html).toMatch(/Plan future goals/);
-    expect(html).not.toMatch(/Add insurance/);
-    expect(html).not.toMatch(/Invest/);
-    expect(html).not.toMatch(/is-locked/);
-    const stayed = go(state, { type: "pick-grow", pick: "invest" });
-    expect(stayed.screen).toBe("g0");
-    expect(go(state, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
-    expect(stayed.screen).not.toBe("sf");
-    expect(stayed.screen).not.toBe("f0");
+    expect(present(state).choices.map((c) => c.id)).toEqual(["goals", "insurance", "invest"]);
+    expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(true);
+    const locked = go(state, { type: "pick-grow", pick: "invest" });
+    expect(locked.screen).toBe("g3");
+    expect(present(locked).callout.title).toBe("Cushion not ready");
+    expect(present(locked).primary).toBe("Continue");
+    expect(present(locked).showPlan).toBe(true);
+    expect(present(locked).body).toBe("Still locked until your cushion is ready.");
+    expect(go(locked, { type: "continue" }).screen).toBe("g0");
+    expect(go(locked, { type: "back" }).screen).toBe("g0");
+    expect(go(state, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
   });
 
   it("unlocks Invest only when current savings cover a real target", () => {
@@ -724,26 +721,22 @@ describe("Slice C costs and deeper flows", () => {
     expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0"]);
     expect(goals.funding.available).toBe(100800);
 
-    const returned = go(state, { type: "back" });
-    expect(returned.screen).toBe("g0");
-    expect(present(returned).choices.map((choice) => choice.id)).toEqual(["goals"]);
-    expect(renderFirstBuild(returned)).not.toMatch(/Add insurance/);
-    expect(renderFirstBuild(returned)).not.toMatch(/Invest/);
-    expect(renderFirstBuild(returned)).not.toMatch(/Opens when your cushion is ready/);
-    expect(go(returned, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
-    expect(go(returned, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
-    expect(returned.screen).not.toBe("sf");
-    expect(returned.screen).not.toBe("f0");
+    const home = go(state, { type: "back" });
+    expect(home.screen).toBe("w0");
+    expect(present(home).title).toBe("Where are you?");
+    const menu = { ...state, screen: "g0" };
+    expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
+    expect(go(menu, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
+    expect(go(menu, { type: "pick-grow", pick: "invest" }).screen).toBe("g3");
 
-    const coverState = { ...state, entry: "stable", screen: "g0" };
-    state = go(coverState, { type: "pick-grow", pick: "insurance" });
+    state = go(menu, { type: "pick-grow", pick: "insurance" });
     state = go(state, { type: "continue" });
     expect(present(state).title).toBe("Monthly cover");
     state = go(money(state, "cover", "900"), { type: "continue" });
     expect(state.screen).toBe("g0");
     expect(buildLife(state).stubs.find((stub) => stub.id === "invest").later).toBe("Cover 900 · a month");
 
-    const locked = go({ ...coverState, screen: "g0" }, { type: "pick-grow", pick: "invest" });
+    const locked = go(menu, { type: "pick-grow", pick: "invest" });
     expect(present(locked).frame).toBe("Gd3-invest-still-locked");
     expect(renderFirstBuild(locked)).toMatch(/Cushion not ready/);
     expect(renderFirstBuild(locked)).toMatch(/Show my current plan/);
@@ -894,13 +887,9 @@ describe("Slice E dig-in fixes", () => {
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("l0");
     expect(milestoneIds(renderFirstBuild(state))).toEqual(["today", "goal-0"]);
-    const menu = go(state, { type: "back" });
-    expect(menu.screen).toBe("g0");
-    expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals"]);
-    expect(renderFirstBuild(menu)).not.toMatch(/Add insurance/);
-    expect(renderFirstBuild(menu)).not.toMatch(/Invest/);
-    expect(menu.screen).not.toBe("sf");
-    expect(menu.screen).not.toBe("f0");
+    expect(go(state, { type: "back" }).screen).toBe("w0");
+    const menu = { ...state, screen: "g0" };
+    expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
   });
 
   it("hides Right Door on a stable plan and keeps the TODAY to emergency-fund rail continuous", () => {
@@ -1324,15 +1313,11 @@ describe("Unlock sequence", () => {
     planning = go(money(planning, "monthlyCosts", "19000"), { type: "continue" });
     expect(planning.screen).toBe("g0");
     expect(go(planning, { type: "back" }).screen).toBe("ic");
-    expect(present(planning).choices.map((choice) => choice.id)).toEqual(["goals"]);
+    expect(present(planning).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
     expect(present(planning).choices.find((choice) => choice.id === "goals").locked).toBe(false);
-    const planHtml = renderFirstBuild(planning);
-    expect(planHtml).toMatch(/Plan future goals/);
-    expect(planHtml).not.toMatch(/Add insurance/);
-    expect(planHtml).not.toMatch(/Invest/);
-    expect(planHtml).not.toMatch(/is-locked/);
-    expect(go(planning, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
-    expect(go(planning, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
+    expect(present(planning).choices.find((choice) => choice.id === "insurance").locked).not.toBe(true);
+    expect(go(planning, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
+    expect(go(planning, { type: "pick-grow", pick: "invest" }).screen).toBe("g3");
     const goalsOpen = go(planning, { type: "pick-grow", pick: "goals" });
     expect(goalsOpen.screen).toBe("g1");
     expect(goalsOpen.screen).not.toBe("sf");
@@ -1351,17 +1336,18 @@ describe("Unlock sequence", () => {
     expect(planning.screen).not.toBe("sf");
     expect(planning.screen).not.toBe("f0");
     const afterGoal = go(planning, { type: "back" });
-    expect(afterGoal.screen).toBe("g0");
-    expect(present(afterGoal).title).toBe("Plan what’s next");
-    expect(present(afterGoal).choices.map((choice) => choice.id)).toEqual(["goals"]);
-    const afterHtml = renderFirstBuild(afterGoal);
-    expect(afterHtml).toMatch(/Plan future goals/);
-    expect(afterHtml).not.toMatch(/Add insurance/);
-    expect(afterHtml).not.toMatch(/Invest/);
-    expect(afterHtml).not.toMatch(/Opens when your cushion is ready/);
-    expect(afterHtml).not.toMatch(/is-locked/);
-    expect(go(afterGoal, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
-    expect(go(afterGoal, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
-    expect(milestoneIds(renderFirstBuild(go(afterGoal, { type: "open-life" })))).toEqual(["today", "goal-0"]);
+    expect(afterGoal.screen).toBe("w0");
+    expect(present(afterGoal).title).toBe("Where are you?");
+    expect(renderFirstBuild(afterGoal)).toContain(PRIVACY_STRIP);
+    const again = { ...planning, screen: "g0" };
+    expect(present(again).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
+    expect(milestoneIds(renderFirstBuild(go(again, { type: "open-life" })))).toEqual(["today", "goal-0"]);
+    const wiped = reduce(go(afterGoal, { type: "open-erase" }), { type: "confirm-erase" });
+    const clean = go(wiped.state, { type: "erase-ok" });
+    expect(clean).toEqual(freshState());
+    const other = go(go(money(go(clean, { type: "pick-entry", entry: "stressed" }), "takeHome", "22000"), { type: "continue" }), {
+      type: "continue",
+    });
+    expect(go(money(other, "monthlyCosts", "22000"), { type: "continue" }).screen).toBe("f0");
   });
 });

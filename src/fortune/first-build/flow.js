@@ -694,7 +694,6 @@ function commitGoal(state) {
     goalIndex: null,
     projectNext: false,
     fromInput: false,
-    lifeFrom: state.entry === "ok" ? "g0" : state.lifeFrom,
     screen: "l0",
     showRequired: false,
     infoOpen: false,
@@ -736,9 +735,6 @@ function step(state, action) {
         if (state.entry === "stressed" && (state.action === "reduce" || state.action === "lenders")) {
           return { ...state, screen: "sf", showRequired: false, infoOpen: false };
         }
-        return state;
-      }
-      if ((action.pick === "insurance" || action.pick === "invest") && state.entry === "ok") {
         return state;
       }
       if (action.pick === "insurance") return { ...state, screen: "g2" };
@@ -1468,15 +1464,11 @@ export function present(state) {
           locked: state.entry !== "ok" && !fundEntered(state),
           sub: state.entry === "ok" || fundEntered(state) ? "" : "Opens after your emergency fund",
         }),
-        ...(state.entry === "ok"
-          ? []
-          : [
-              choice("insurance", "Add insurance"),
-              choice("invest", "Invest", {
-                locked: !ready,
-                sub: ready ? "" : "Opens when your cushion is ready",
-              }),
-            ]),
+        choice("insurance", "Add insurance"),
+        choice("invest", "Invest", {
+          locked: !ready,
+          sub: ready ? "" : "Opens when your cushion is ready",
+        }),
       ],
     };
   }
