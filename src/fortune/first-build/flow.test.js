@@ -666,7 +666,7 @@ describe("Slice C costs and deeper flows", () => {
     expect(state.screen).toBe("l0");
     expect(state.screen).not.toBe("l3");
     expect(state.inputs.monthlyCosts.amount).toBe("23900");
-    expect(buildLife(state).today.net).toBe(-5500);
+    expect(buildLife(state).today.net).toBe(-8700);
     expect(go(state, { type: "back" }).screen).toBe("fd2");
   });
 
@@ -864,6 +864,64 @@ describe("Slice E dig-in fixes", () => {
     expect(negative.today.net).toBe(-1000);
     expect(negative.today.graph).toBe("down-red");
     expect(negative.today.kicker).toBe("If nothing changes");
+  });
+
+  it("puts still due into the Today net so a short month is not even", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = go(money(state, "takeHome", "30000"), { type: "continue" });
+    state = go(money(state, "monthlyCosts", "30000"), { type: "continue" });
+    state = go(state, { type: "pick-fix", situation: "missed" });
+    state = go(money(state, "stillDue", "6000"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "overdue", "0"), { type: "continue" });
+    state = go(state, { type: "edit", key: "daysLate", days: "45" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("fd");
+    const month = renderFirstBuild(state);
+    expect(month).toMatch(/Left this month/);
+    expect(month).toMatch(/–6,000/);
+    state = go(state, { type: "open-life" });
+    const life = buildLife(state);
+    expect(life.today.net).toBe(-6000);
+    expect(life.today.netText).toBe("Net –6,000");
+    expect(life.today.graph).toBe("down-red");
+    expect(life.today.kicker).toBe("If nothing changes");
+    expect(life.today.kicker).not.toBe("Even this month");
+    const today = todayHtml(renderFirstBuild(state));
+    expect(today).toMatch(/Net –6,000/);
+    expect(today).toMatch(/Still due \/ overdue 6,000/);
+    expect(today).toMatch(/Days late 45/);
+    expect(today).toContain('data-graph="down-red"');
+    expect(today).not.toContain('data-graph="flat-zero"');
+    expect(today).not.toContain("#0d9488");
+
+    let other = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    other = money(other, "takeHome", "20000");
+    other = money(other, "monthlyCosts", "15000");
+    other = money(other, "stillDue", "8000");
+    const short = buildLife(other);
+    expect(short.today.net).toBe(-3000);
+    expect(short.today.graph).toBe("down-red");
+    other = money(other, "overdue", "1500");
+    expect(buildLife(other).today.net).toBe(-4500);
+
+    let ahead = go(freshState(), { type: "pick-entry", entry: "ok" });
+    ahead = money(ahead, "takeHome", "42000");
+    ahead = money(ahead, "monthlyCosts", "30000");
+    ahead = money(ahead, "stillDue", "5000");
+    const surplus = buildLife(ahead);
+    expect(surplus.today.net).toBe(7000);
+    expect(surplus.today.graph).toBe("slate-up");
+    expect(surplus.today.mark).toBe("even");
+    const surplusHtml = todayHtml(renderFirstBuild(go(ahead, { type: "open-life" })));
+    expect(surplusHtml).toContain('stroke="#64748b"');
+    expect(surplusHtml).not.toContain("#0d9488");
+
+    let covered = money(ahead, "stillDue", "12000");
+    const level = buildLife(covered);
+    expect(level.today.net).toBe(0);
+    expect(level.today.kicker).not.toBe("Even this month");
+    expect(level.today.graph).toBe("flat-zero");
   });
 
   it("requires a goal name and a real date before the amount", () => {
@@ -1074,17 +1132,18 @@ describe("Slice F action and project", () => {
     expect(state.screen).toBe("l0");
     expect(state.action).toBe("lenders");
     const life = buildLife(state);
-    expect(life.today.net).toBe(0);
-    expect(life.today.graph).toBe("flat-zero");
-    expect(life.today.netText).toBe("Net 0");
+    expect(life.today.net).toBe(-1000);
+    expect(life.today.graph).toBe("down-red");
+    expect(life.today.netText).toBe("Net –1,000");
+    expect(life.today.kicker).toBe("If nothing changes");
     expect(life.expected.show).toBe(false);
     expect(life.showEf).toBe(false);
     const html = renderFirstBuild(state);
     const today = todayHtml(html);
-    expect(today).toMatch(/Even this month/);
-    expect(today).toMatch(/Net 0/);
-    expect(today).toContain('data-graph="flat-zero"');
-    expect(today).toContain('points="20,55 70,55 120,55 180,55 250,55"');
+    expect(today).toMatch(/If nothing changes/);
+    expect(today).toMatch(/Net –1,000/);
+    expect(today).toContain('data-graph="down-red"');
+    expect(today).not.toContain('data-graph="flat-zero"');
     expect(today).not.toContain("#0d9488");
     expect(today.match(/<svg class="ft-graph/g)).toHaveLength(1);
     expect(html).not.toMatch(/Expected result/);

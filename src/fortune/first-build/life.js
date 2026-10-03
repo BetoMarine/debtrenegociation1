@@ -207,7 +207,12 @@ export function goalCover({ net, amount, months }) {
 function netOf(money, expenses) {
   if (money.income == null) return null;
   if (expenses == null) return money.income;
-  return money.income - expenses;
+  let net = money.income - expenses;
+  if (money.costs != null) {
+    const owed = burdenOf(money);
+    if (owed) net -= owed;
+  }
+  return net;
 }
 
 function pctOf(now, target) {
@@ -250,9 +255,9 @@ function steadyCopy() {
   };
 }
 
-function todayCopy(tone, net) {
+function todayCopy(tone, net, owed) {
   if (net != null && net < 0) return strainCopy(net);
-  if (net === 0) {
+  if (net === 0 && !(owed > 0)) {
     return {
       kicker: "Even this month",
       netClass: "zero",
@@ -260,6 +265,16 @@ function todayCopy(tone, net) {
       mark: "even",
       ask: "Why this month is even.",
       quiet: "Even this month.",
+    };
+  }
+  if (net === 0) {
+    return {
+      kicker: "This month",
+      netClass: "zero",
+      graph: "flat-zero",
+      mark: "even",
+      ask: "Why this month is even.",
+      quiet: "This month.",
     };
   }
   if (net != null && net > 0) return steadyCopy();
@@ -290,7 +305,7 @@ export function buildLife(state) {
   const months = monthsOf(money.now, money.target, money.save);
   const tone = toneOf(state?.entry);
   const acted = state?.action === "reduce" || state?.action === "lenders";
-  let copy = todayCopy(tone, net);
+  let copy = todayCopy(tone, net, burden);
   if (net != null && net > 0) {
     copy = {
       ...copy,
