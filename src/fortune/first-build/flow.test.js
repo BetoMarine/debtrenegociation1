@@ -721,7 +721,8 @@ describe("Slice C costs and deeper flows", () => {
     state = go(state, { type: "pick-next", pick: "reduce" });
     expect(state.screen).toBe("rc");
     expect(present(state).title).toBe("Reduce cost");
-    state = go(money(state, "costCut", "1000"), { type: "continue" });
+    expect(present(state).body).toBe("Your new monthly cost.");
+    state = go(money(state, "costCut", "23900"), { type: "continue" });
     expect(state.screen).toBe("l0");
     expect(state.screen).not.toBe("l3");
     expect(state.inputs.monthlyCosts.amount).toBe("23900");
@@ -1140,7 +1141,7 @@ describe("Slice F action and project", () => {
     expect(milestoneIds(before)).toEqual(["today"]);
     expect(buildLife(go(state, { type: "show-plan" })).today.net).toBe(0);
 
-    state = go(money(state, "costCut", "2500"), { type: "continue" });
+    state = go(money(state, "costCut", "27500"), { type: "continue" });
     expect(state.screen).toBe("l0");
     expect(state.action).toBe("reduce");
     expect(state.inputs.monthlyCosts.amount).toBe("27500");
@@ -1269,6 +1270,48 @@ describe("Slice F action and project", () => {
     expect(state.screen).not.toBe("sf");
     expect(state.screen).not.toBe("f0");
   });
+
+  it("uses the entered number as the monthly cost, then surplus after still due", () => {
+    let state = stressedMonth("30000", "30000");
+    state = go(state, { type: "pick-fix", situation: "worry" });
+    state = go(money(state, "stillDue", "0"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "pick-next", pick: "reduce" });
+    expect(present(state).input.label).toBe("New monthly cost");
+    state = go(money(state, "costCut", "26000"), { type: "continue" });
+    expect(state.inputs.monthlyCosts.amount).toBe("26000");
+    const life = buildLife(state);
+    expect(life.today.expenses).toBe(26000);
+    expect(life.today.net).toBe(4000);
+    expect(life.today.netText).toBe("Net +4,000");
+    const today = todayHtml(renderFirstBuild(state));
+    expect(today).toMatch(/Expenses 26,000/);
+    expect(today).toMatch(/Net \+4,000/);
+    expect(today).not.toMatch(/Net \+26,000/);
+
+    let other = stressedMonth("18000", "22000");
+    other = go(other, { type: "pick-fix", situation: "missed" });
+    other = go(money(other, "stillDue", "1500"), { type: "continue" });
+    other = go(other, { type: "continue" });
+    other = go(money(other, "overdue", "800"), { type: "continue" });
+    other = go(other, { type: "edit", key: "daysLate", days: "12" });
+    other = go(other, { type: "continue" });
+    other = go(other, { type: "continue" });
+    expect(other.screen).toBe("fd2");
+    other = go(other, { type: "pick-next", pick: "reduce" });
+    other = go(money(other, "costCut", "9000"), { type: "continue" });
+    expect(other.inputs.monthlyCosts.amount).toBe("9000");
+    const otherLife = buildLife(other);
+    expect(otherLife.today.expenses).toBe(9000);
+    expect(otherLife.today.burden).toBe(2300);
+    expect(otherLife.today.net).toBe(6700);
+    expect(otherLife.today.netText).toBe("Net +6,700");
+    const otherToday = todayHtml(renderFirstBuild(other));
+    expect(otherToday).toMatch(/Expenses 9,000/);
+    expect(otherToday).toMatch(/Still due \/ overdue 2,300/);
+    expect(otherToday).toMatch(/Net \+6,700/);
+  });
 });
 
 describe("Unlock sequence", () => {
@@ -1314,7 +1357,7 @@ describe("Unlock sequence", () => {
     state = toActions(state);
     expect(state.screen).toBe("fd2");
     state = go(state, { type: "pick-next", pick: "reduce" });
-    state = go(money(state, "costCut", "2000"), { type: "continue" });
+    state = go(money(state, "costCut", "16400"), { type: "continue" });
     expect(state.inputs.monthlyCosts.amount).toBe("16400");
     let life = buildLife({ ...state, asOf: new Date(2026, 9, 3) });
     expect(life.today.net).toBe(2000);
@@ -1444,7 +1487,7 @@ describe("Unlock sequence", () => {
     expect(milestoneIds(otherEarly)).toEqual(["today"]);
     other = toActions(other);
     other = go(other, { type: "pick-next", pick: "reduce" });
-    other = go(money(other, "costCut", "5000"), { type: "continue" });
+    other = go(money(other, "costCut", "37000"), { type: "continue" });
     expect(other.inputs.monthlyCosts.amount).toBe("37000");
     expect(buildLife(other).today.net).toBe(5000);
     expect(buildLife(other).today.graph).toBe("slate-up");

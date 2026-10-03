@@ -689,13 +689,12 @@ function projectLife(state, actionName) {
 }
 
 function applyCostCut(state) {
-  const cut = parseAmount(state.inputs.costCut.amount);
-  if (cut === null || cut <= 0) return { ...state, showRequired: true };
+  const nextCost = parseAmount(state.inputs.costCut.amount);
+  if (nextCost === null || nextCost <= 0) return { ...state, showRequired: true };
   const before = lifeSnap(state);
-  const current = parseAmount(state.inputs.monthlyCosts.amount) ?? 0;
   const inputs = {
     ...state.inputs,
-    monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(Math.max(0, current - cut)) },
+    monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(nextCost) },
     costCut: blankMoney(),
   };
   return {
@@ -1238,13 +1237,13 @@ const INPUT_COPY = {
   },
   rc: {
     title: "Reduce cost",
-    body: "How much less you will spend.",
+    body: "Your new monthly cost.",
     chip: "This month",
-    label: "Amount",
+    label: "New monthly cost",
     prefix: "HK$",
     mode: "money",
-    info: "This lowers monthly costs on Your life.",
-    requiredHint: "Enter how much less you will spend.",
+    info: "The number you enter is the monthly cost on Your life.",
+    requiredHint: "Enter the new monthly cost.",
   },
   sf: {
     title: "Emergency fund",
