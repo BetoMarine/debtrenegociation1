@@ -116,6 +116,7 @@ function paintDate(field) {
   shown.textContent = text || "Pick a date";
   shown.classList.toggle("is-placeholder", !text);
   field.parentElement.classList.toggle("is-empty", !text);
+  if (field.value) field.setAttribute("value", field.value);
 }
 
 function keepDoor(next) {
@@ -150,6 +151,15 @@ async function exitApp() {
 }
 
 function onClick(event) {
+  const dateInput = event.target.closest?.("input[type='date']");
+  if (dateInput && root()?.contains(dateInput) && typeof dateInput.showPicker === "function") {
+    try {
+      dateInput.showPicker();
+      event.preventDefault();
+    } catch {
+      /* The browser's own calendar is already opening from this tap. */
+    }
+  }
   const btn = event.target.closest("[data-act]");
   if (!btn || !root()?.contains(btn)) return;
   const act = btn.getAttribute("data-act");
@@ -208,6 +218,15 @@ function onInput(event) {
   schedulePersist();
 }
 
+function onDateBlur(event) {
+  const field = event.target?.closest?.("[data-field]");
+  if (!field || !root()?.contains(field) || field.getAttribute("data-field") !== "date") return;
+  if (!field.value) return;
+  paintDate(field);
+  commitDraft();
+  schedulePersist();
+}
+
 function onKeydown(event) {
   if (event.key !== "Enter") return;
   if (!event.target.matches?.("[data-field]")) return;
@@ -241,6 +260,7 @@ export async function boot() {
   host.addEventListener("click", onClick);
   host.addEventListener("input", onInput);
   host.addEventListener("change", onInput);
+  host.addEventListener("focusout", onDateBlur);
   host.addEventListener("keydown", onKeydown);
   draw();
   await persist();

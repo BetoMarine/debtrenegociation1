@@ -130,6 +130,7 @@ function moneyInputs(state) {
     goalDate: parseIsoDate(inputs.goalDate?.date),
     fundLabel: String(inputs.cushionTarget?.note ?? "").trim(),
     fundWhen: parseIsoDate(inputs.fundWhen?.date),
+    fundWhenIso: parseIsoDate(inputs.fundWhen?.date) ? String(inputs.fundWhen.date) : "",
     fundSave: amount(inputs.fundSave?.amount),
     cover: amount(inputs.cover?.amount),
     debt: amount(inputs.lenderDebt?.amount),
@@ -442,7 +443,8 @@ export function buildLife(state) {
     },
     ef: {
       title: money.fundLabel || "Emergency fund",
-      date: place || formatDate(addMonths(asOf, 12)),
+      date: money.fundWhen ? formatDate(money.fundWhen) : place || formatDate(addMonths(asOf, 12)),
+      whenIso: money.fundWhenIso,
       now: fundNow,
       target: money.target,
       pct: fundPct,

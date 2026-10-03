@@ -1350,6 +1350,15 @@ describe("Unlock sequence", () => {
     expect(go(money(state, "fundTarget", "90000", "Emergency fund"), { type: "continue" }).screen).toBe("sf");
     expect(renderFirstBuild(state)).toMatch(/Each month/);
     expect(renderFirstBuild(state)).toMatch(/id="ft-fund-when"/);
+    const dated = go(state, { type: "edit", key: "fundWhen", date: "2027-06-15" });
+    const datedHtml = renderFirstBuild(dated);
+    expect(datedHtml).toMatch(/value="2027-06-15"/);
+    expect(datedHtml).toMatch(/15 Jun 2027/);
+    expect(datedHtml).toMatch(/id="ft-fund-when"/);
+    const otherDate = go(dated, { type: "edit", key: "fundWhen", date: "2029-01-02" });
+    expect(renderFirstBuild(otherDate)).toMatch(/value="2029-01-02"/);
+    expect(renderFirstBuild(otherDate)).toMatch(/2 Jan 2029/);
+    expect(renderFirstBuild(otherDate)).not.toMatch(/15 Jun 2027/);
 
     state = fillFund(state, "90000", "Emergency fund", "2027-02-01", "2000");
     expect(state.screen).toBe("l0");
@@ -1365,7 +1374,20 @@ describe("Unlock sequence", () => {
     expect(milestoneIds(html)).toEqual(["today", "ef"]);
     expect(html).toMatch(/Target 90,000 · Now 0 · 0%/);
     expect(html).toMatch(/By 1 Feb 2027/);
+    expect(html).toMatch(/1 Feb 2027/);
     expect(html).toMatch(/Save 2,000 · 45 months/);
+    const again = go(state, { type: "open-milestone", id: "ef" });
+    expect(again.screen).toBe("l3");
+    const fundAgain = renderFirstBuild(again);
+    expect(fundAgain).toMatch(/id="ft-fund-when"/);
+    expect(fundAgain).toMatch(/value="2027-02-01"/);
+    expect(fundAgain).toMatch(/1 Feb 2027/);
+    expect(fundAgain).not.toMatch(/Pick a date/);
+    const changed = go(go(again, { type: "edit", key: "fundWhen", date: "2028-11-19" }), { type: "back" });
+    expect(changed.screen).toBe("l0");
+    expect(changed.inputs.fundWhen.date).toBe("2028-11-19");
+    expect(renderFirstBuild(changed)).toMatch(/By 19 Nov 2028/);
+    expect(renderFirstBuild(changed)).toMatch(/19 Nov 2028/);
     expect(html).toMatch(/Emergency fund/);
     const ys = saveLineYs(html);
     expect(ys[0]).toBe(55);

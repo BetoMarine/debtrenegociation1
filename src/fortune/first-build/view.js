@@ -615,6 +615,8 @@ function efDetail(life) {
       <div class="ft-stat"><span>Now</span><b>${escapeHtml(ef.nowText)}</b></div>
       <div class="ft-stat"><span>Funded</span><b>${escapeHtml(ef.pctText)}</b></div>
     </div>
+    <label class="ft-label" for="ft-fund-when">By when</label>
+    ${dateControl("ft-fund-when", "fundWhen", "By when", ef.whenIso || "")}
     <div class="ft-net-rows">
       <div class="ft-net-row"><span>Income</span><b>${escapeHtml(ef.incomeText)}</b></div>
       <div class="ft-net-row"><span>Expenses</span><b class="${ef.expensesOut ? "is-neg" : ""}">${escapeHtml(ef.expensesText)}</b></div>
