@@ -148,15 +148,20 @@ describe("Slice A first-build flow", () => {
     state = go(money(state, "monthlyCosts", "20000"), { type: "continue" });
     expect(state.screen).toBe("g0");
     expect(cushionReady(state)).toBe(false);
-    expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(true);
-    const locked = go(state, { type: "pick-grow", pick: "invest" });
-    expect(locked.screen).toBe("g3");
-    expect(present(locked).callout.title).toBe("Cushion not ready");
-    expect(present(locked).primary).toBe("Continue");
-    expect(present(locked).showPlan).toBe(true);
-    expect(present(locked).body).toBe("Still locked until your cushion is ready.");
-    expect(go(locked, { type: "continue" }).screen).toBe("g0");
-    expect(go(locked, { type: "back" }).screen).toBe("g0");
+    const plan = present(state);
+    expect(plan.choices.map((c) => c.id)).toEqual(["goals"]);
+    expect(plan.choices.find((c) => c.id === "invest")).toBeUndefined();
+    expect(plan.choices.find((c) => c.id === "insurance")).toBeUndefined();
+    const html = renderFirstBuild(state);
+    expect(html).toMatch(/Plan future goals/);
+    expect(html).not.toMatch(/Add insurance/);
+    expect(html).not.toMatch(/Invest/);
+    expect(html).not.toMatch(/is-locked/);
+    const stayed = go(state, { type: "pick-grow", pick: "invest" });
+    expect(stayed.screen).toBe("g0");
+    expect(go(state, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
+    expect(stayed.screen).not.toBe("sf");
+    expect(stayed.screen).not.toBe("f0");
   });
 
   it("unlocks Invest only when current savings cover a real target", () => {
@@ -1302,7 +1307,15 @@ describe("Unlock sequence", () => {
     planning = go(money(planning, "monthlyCosts", "19000"), { type: "continue" });
     expect(planning.screen).toBe("g0");
     expect(go(planning, { type: "back" }).screen).toBe("ic");
+    expect(present(planning).choices.map((choice) => choice.id)).toEqual(["goals"]);
     expect(present(planning).choices.find((choice) => choice.id === "goals").locked).toBe(false);
+    const planHtml = renderFirstBuild(planning);
+    expect(planHtml).toMatch(/Plan future goals/);
+    expect(planHtml).not.toMatch(/Add insurance/);
+    expect(planHtml).not.toMatch(/Invest/);
+    expect(planHtml).not.toMatch(/is-locked/);
+    expect(go(planning, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
+    expect(go(planning, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
     const goalsOpen = go(planning, { type: "pick-grow", pick: "goals" });
     expect(goalsOpen.screen).toBe("g1");
     expect(goalsOpen.screen).not.toBe("sf");
