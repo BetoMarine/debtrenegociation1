@@ -1,6 +1,6 @@
 import { getFortuneHandoff, getFortuneSlice, getPack, saveFortuneSlice, wipeFortune } from "../../db.js";
 import { freshState, hydrate, reduce } from "./flow.js";
-import { rightDoorJoined } from "./life.js";
+import { formatIsoDate, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
 const EXIT_URL = "https://www.google.com/";
@@ -80,33 +80,42 @@ function schedulePersist() {
   }, 200);
 }
 
-function readDraft() {
+function readDrafts() {
   const host = root();
-  if (!host) return null;
-  const amount = host.querySelector("[data-field=amount]");
-  const days = host.querySelector("[data-field=days]");
-  const text = host.querySelector("[data-field=text]");
-  const date = host.querySelector("[data-field=date]");
-  const months = host.querySelector("[data-field=months]");
-  const note = host.querySelector("[data-field=note]");
-  const field = amount || days || text || date || months;
-  if (!field) return null;
-  return {
-    type: "edit",
-    key: field.getAttribute("data-key"),
-    amount: amount ? amount.value : undefined,
-    days: days ? days.value : undefined,
-    text: text ? text.value : undefined,
-    date: date ? date.value : undefined,
-    months: months ? months.value : undefined,
-    note: note ? note.value : "",
-  };
+  if (!host) return [];
+  const keys = [];
+  host.querySelectorAll("[data-key]").forEach((el) => {
+    const key = el.getAttribute("data-key");
+    if (key && !keys.includes(key)) keys.push(key);
+  });
+  return keys.map((key) => {
+    const nodes = [...host.querySelectorAll(`[data-key="${key}"]`)];
+    const value = (name) => nodes.find((node) => node.getAttribute("data-field") === name)?.value;
+    return {
+      type: "edit",
+      key,
+      amount: value("amount"),
+      days: value("days"),
+      text: value("text"),
+      date: value("date"),
+      months: value("months"),
+      note: value("note") ?? "",
+    };
+  });
 }
 
 function commitDraft() {
-  const draft = readDraft();
-  if (!draft) return;
-  state = reduce(state, draft).state;
+  for (const draft of readDrafts()) state = reduce(state, draft).state;
+}
+
+function paintDate(field) {
+  if (!field || field.getAttribute("data-field") !== "date") return;
+  const shown = field.parentElement?.querySelector(".ft-date-shown");
+  if (!shown) return;
+  const text = formatIsoDate(field.value);
+  shown.textContent = text || "Pick a date";
+  shown.classList.toggle("is-placeholder", !text);
+  field.parentElement.classList.toggle("is-empty", !text);
 }
 
 function keepDoor(next) {
@@ -194,6 +203,7 @@ function onClick(event) {
 function onInput(event) {
   const field = event.target.closest("[data-field]");
   if (!field || !root()?.contains(field)) return;
+  paintDate(field);
   commitDraft();
   schedulePersist();
 }

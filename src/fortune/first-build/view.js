@@ -1,5 +1,6 @@
 import { escapeHtml } from "../../dom.js";
 import { present } from "./flow.js";
+import { formatIsoDate } from "./life.js";
 
 const ROUTE_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>`;
 
@@ -56,6 +57,25 @@ function noteField(field) {
     </div>`;
 }
 
+function dateControl(id, key, label, value) {
+  const shown = formatIsoDate(value);
+  const empty = shown ? "" : " is-empty";
+  const placeholder = shown ? "" : " is-placeholder";
+  return `<div class="ft-input is-date${empty}">
+      <span class="ft-date-shown${placeholder}">${escapeHtml(shown || "Pick a date")}</span>
+      <input id="${escapeHtml(id)}" name="date" data-field="date" data-key="${escapeHtml(key)}" type="date" autocomplete="off" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
+    </div>`;
+}
+
+function fundAskFields(ask) {
+  return `<label class="ft-label" for="ft-fund-when">When</label>
+    ${dateControl("ft-fund-when", "fundWhen", "When", ask.when)}
+    <label class="ft-label" for="ft-fund-save">Each month</label>
+    <div class="ft-input">
+      <span class="ft-cur">HK$</span><input id="ft-fund-save" name="amount" data-field="amount" data-key="fundSave" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(ask.save)}" aria-label="Each month" />
+    </div>`;
+}
+
 function inputBlock(view) {
   const field = view.input;
   const required = view.showRequired
@@ -64,13 +84,15 @@ function inputBlock(view) {
   if (field.mode === "text" || field.mode === "date") {
     const isDate = field.mode === "date";
     const value = isDate ? field.date : field.text;
-    const placeholder = isDate ? "Pick a date" : "Tap to enter";
-    const dataField = isDate ? "date" : "text";
-    const empty = isDate && !value ? " is-empty" : "";
-    const type = isDate ? "date" : "text";
+    if (isDate) {
+      return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
+    ${dateControl("ft-amount", field.key, field.label, value)}
+    ${required}
+    ${noteField(field)}`;
+    }
     return `<label class="ft-label" for="ft-amount">${escapeHtml(field.label)}</label>
-    <div class="ft-input${isDate ? " is-date" : ""}${empty}">
-      <input id="ft-amount" name="${dataField}" data-field="${dataField}" data-key="${escapeHtml(field.key)}" type="${type}" autocomplete="off" enterkeyhint="done" maxlength="${isDate ? "10" : "80"}" placeholder="${placeholder}" value="${escapeHtml(value)}" aria-label="${escapeHtml(field.label)}" />
+    <div class="ft-input">
+      <input id="ft-amount" name="text" data-field="text" data-key="${escapeHtml(field.key)}" type="text" autocomplete="off" enterkeyhint="done" maxlength="80" placeholder="Tap to enter" value="${escapeHtml(value)}" aria-label="${escapeHtml(field.label)}" />
     </div>
     ${required}
     ${noteField(field)}`;
@@ -84,7 +106,8 @@ function inputBlock(view) {
     <div class="ft-input">
       ${prefix}<input id="ft-amount" name="${amountName}" data-field="${amountName}" data-key="${escapeHtml(field.key)}" inputmode="${amountMode}" autocomplete="off" enterkeyhint="done" maxlength="${money ? "16" : "5"}" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" />
     </div>`;
-  return field.labelFirst ? `${noteField(field)}${amountRow}${required}` : `${amountRow}${required}${noteField(field)}`;
+  const extra = view.fundAsk ? fundAskFields(view.fundAsk) : "";
+  return field.labelFirst ? `${noteField(field)}${amountRow}${extra}${required}` : `${amountRow}${required}${noteField(field)}`;
 }
 
 function rowsBlock(view) {
@@ -423,6 +446,7 @@ function efBody(ef) {
     <div class="ft-ms-foot" data-ef-now="${ef.now ?? ""}" data-ef-pct="${ef.pct ?? ""}">
       <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>
       <span class="ft-muted is-thin${ef.moved ? " is-moved" : ""}">${escapeHtml(ef.foot)}</span>
+      ${ef.byText ? `<span class="ft-muted is-thin">${escapeHtml(ef.byText)}</span>` : ""}
       ${ef.saveText ? `<span class="ft-muted is-thin">${escapeHtml(ef.saveText)}</span>` : ""}
       ${ef.delta ? `<span class="ft-delta">${escapeHtml(ef.delta)}</span>` : ""}
       <span class="ft-tap">Tap for detail ›</span>
@@ -624,7 +648,8 @@ function screenShell(view, inner) {
 export function renderFirstBuild(state) {
   const view = present(state);
   if (state.screen === "e0") {
-    const under = present({ ...state, screen: "w0", infoOpen: false });
+    const underScreen = state.eraseFrom === "l0" ? "l0" : "w0";
+    const under = present({ ...state, screen: underScreen, infoOpen: false });
     return `<div class="ft-app"><div class="ft-screen" data-screen="e0" data-frame="${escapeHtml(view.frame)}">${topbar(view)}<div class="ft-under" inert>${content(under)}</div>${sheet(view)}</div></div>`;
   }
   if (view.lifeOverlay) {
@@ -640,13 +665,15 @@ export function renderFirstBuild(state) {
     const stage = view.lifeDetail
       ? `<div class="ft-life-stage" inert>${lifeBlock(view.life, "scroll")}</div>${netSheet(view.life)}`
       : `<div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus)}</div>`;
-    const planBack = view.fromInput
-      ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button></div>`
+    const primary = view.fromInput
+      ? `<button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button>`
       : view.projectNext
-        ? `<div class="ft-actions"><button class="ft-btn primary" type="button" data-act="project-next">Continue</button></div>`
+        ? `<button class="ft-btn primary" type="button" data-act="project-next">Continue</button>`
         : view.addGoal
-          ? `<div class="ft-actions"><button class="ft-btn quiet" type="button" data-act="add-goal">Add a goal</button></div>`
+          ? `<button class="ft-btn quiet" type="button" data-act="add-goal">Add a goal</button>`
           : "";
+    const erase = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="open-erase">Erase</button>` : "";
+    const planBack = primary || erase ? `<div class="ft-actions">${primary}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${planBack}`);
   }
   return screenShell(view, screenHtml(view));

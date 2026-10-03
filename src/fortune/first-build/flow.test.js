@@ -880,6 +880,10 @@ describe("Slice E dig-in fixes", () => {
     expect(go(state, { type: "back" }).screen).toBe("gd");
 
     state = go(state, { type: "edit", key: "goalDate", date: "2028-06-15" });
+    const dated = renderFirstBuild(state);
+    expect(dated).toMatch(/15 Jun 2028/);
+    expect(dated).toMatch(/value="2028-06-15"/);
+    expect(dated).not.toMatch(/Pick a date/);
     const plan = go(state, { type: "show-plan" });
     expect(plan.screen).toBe("l0");
     expect(milestoneIds(renderFirstBuild(plan))).toEqual(["today"]);
@@ -1138,6 +1142,13 @@ describe("Unlock sequence", () => {
     return go({ ...state, asOf }, { type: "continue" });
   }
 
+  function fillFund(state, amount, label, date, save) {
+    state = go(state, { type: "edit", key: "fundTarget", amount, note: label });
+    state = go(state, { type: "edit", key: "fundWhen", date });
+    state = go(state, { type: "edit", key: "fundSave", amount: save });
+    return go(state, { type: "continue" });
+  }
+
   it("keeps each later card hidden until that step, for the sample and a second pair", () => {
     let state = stressedMonth("18400", "18400");
     expect(state.screen).toBe("f0");
@@ -1166,22 +1177,43 @@ describe("Unlock sequence", () => {
     state = go(state, { type: "project-next" });
     expect(state.screen).toBe("sf");
     expect(present(state).quiet).toBe("Skip");
-    const skipped = go(state, { type: "skip-fund" });
+    expect(present(state).input.label).toBe("Target");
+    const drafted = go(
+      go(go(state, { type: "edit", key: "fundTarget", amount: "90000", note: "Emergency fund" }), {
+        type: "edit",
+        key: "fundWhen",
+        date: "2027-06-01",
+      }),
+      { type: "edit", key: "fundSave", amount: "500" },
+    );
+    const skipped = go(drafted, { type: "skip-fund" });
     expect(skipped.screen).toBe("l0");
     expect(skipped.inputs.cushionTarget.amount).toBe("");
+    expect(skipped.inputs.fundTarget.amount).toBe("");
+    expect(skipped.inputs.fundWhen.date).toBe("");
+    expect(skipped.inputs.fundSave.amount).toBe("");
     expect(milestoneIds(renderFirstBuild(skipped))).toEqual(["today"]);
     expect(go(skipped, { type: "project-next" }).screen).toBe("sf");
     expect(go(skipped, { type: "add-goal" }).screen).toBe("l0");
+    expect(go(money(state, "fundTarget", "90000", "Emergency fund"), { type: "continue" }).screen).toBe("sf");
+    expect(renderFirstBuild(state)).toMatch(/Each month/);
+    expect(renderFirstBuild(state)).toMatch(/id="ft-fund-when"/);
 
-    state = go(money(state, "fundTarget", "90000", "Emergency fund"), { type: "continue" });
+    state = fillFund(state, "90000", "Emergency fund", "2027-02-01", "2000");
     expect(state.screen).toBe("l0");
     expect(state.inputs.cushionNow.amount).toBe("0");
     expect(state.inputs.cushionTarget.amount).toBe("90000");
     expect(state.inputs.cushionTarget.note).toBe("Emergency fund");
+    expect(state.inputs.cushionNow.amount).toBe("0");
+    expect(state.inputs.fundWhen.date).toBe("2027-02-01");
+    expect(state.inputs.monthlySave.amount).toBe("2000");
+    expect(state.inputs.fundSave.amount).toBe("2000");
     expect(go(state, { type: "back" }).screen).toBe("w0");
     html = renderFirstBuild({ ...state, asOf: new Date(2026, 9, 3) });
     expect(milestoneIds(html)).toEqual(["today", "ef"]);
     expect(html).toMatch(/Target 90,000 · Now 0 · 0%/);
+    expect(html).toMatch(/By 1 Feb 2027/);
+    expect(html).toMatch(/Save 2,000 · 45 months/);
     expect(html).toMatch(/Emergency fund/);
     const ys = saveLineYs(html);
     expect(ys[0]).toBe(55);
@@ -1247,7 +1279,7 @@ describe("Unlock sequence", () => {
     expect(other.screen).toBe("sf");
     const otherSkip = go(other, { type: "skip-fund" });
     expect(go(otherSkip, { type: "project-next" }).screen).toBe("sf");
-    other = go(money(other, "fundTarget", "15000", "Rainy day"), { type: "continue" });
+    other = fillFund(other, "15000", "Rainy day", "2028-01-01", "750");
     expect(milestoneIds(renderFirstBuild(other))).toEqual(["today", "ef"]);
     expect(renderFirstBuild(other)).toMatch(/Target 15,000 · Now 0 · 0%/);
     expect(renderFirstBuild(other)).toMatch(/Rainy day/);
@@ -1335,6 +1367,11 @@ describe("Unlock sequence", () => {
     expect(buildLife(planning).goals[0].funding.pct).toBe(100);
     expect(planning.screen).not.toBe("sf");
     expect(planning.screen).not.toBe("f0");
+    expect(planningHtml).toMatch(/data-act="open-erase"/);
+    const eraseAsk = go(planning, { type: "open-erase" });
+    expect(eraseAsk.screen).toBe("e0");
+    expect(go(eraseAsk, { type: "cancel-erase" }).screen).toBe("l0");
+    expect(go(planning, { type: "back" }).screen).toBe("w0");
     const afterGoal = go(planning, { type: "back" });
     expect(afterGoal.screen).toBe("w0");
     expect(present(afterGoal).title).toBe("Where are you?");
@@ -1349,5 +1386,52 @@ describe("Unlock sequence", () => {
       type: "continue",
     });
     expect(go(money(other, "monthlyCosts", "22000"), { type: "continue" }).screen).toBe("f0");
+  });
+
+  it("marks the goal ring from surplus times months, and leaves an empty fund out", () => {
+    const asOf = new Date(2026, 9, 3);
+    let state = stressedMonth("32000", "30000");
+    state = toActions(state);
+    state = go(state, { type: "pick-next", pick: "lenders" });
+    state = go(money(state, "lenderDebt", "1000"), { type: "continue" });
+    state = go(money(state, "lenderContract", "1000"), { type: "continue" });
+    state = go(money(state, "lenderPremium", "100"), { type: "continue" });
+    state = go(state, { type: "edit", key: "lenderDuration", months: "6" });
+    state = go(state, { type: "continue" });
+    expect(buildLife({ ...state, asOf }).today.net).toBe(2000);
+    state = go(state, { type: "project-next" });
+    state = fillFund(state, "40000", "Buffer", "2027-02-03", "1500");
+    const funded = buildLife({ ...state, asOf });
+    expect(funded.ef.now).toBe(0);
+    expect(funded.ef.pct).toBe(0);
+    expect(funded.ef.byText).toBe("By 3 Feb 2027");
+    state = go({ ...state, asOf }, { type: "project-next" });
+    state = addGoal(state, "Trip", "20000", "2027-02-03", asOf);
+    const trip = buildLife(state).goals[0];
+    expect(trip.funding.months).toBe(4);
+    expect(trip.funding.available).toBe(8000);
+    expect(trip.funding.pct).toBe(40);
+    expect(renderFirstBuild(state)).toMatch(/Could cover 8,000 of 20,000 · 40%/);
+    expect(renderFirstBuild(state)).toMatch(/data-act="open-erase"/);
+    const none = buildLife(money({ ...state, asOf }, "monthlyCosts", "32000"));
+    expect(none.today.net).toBe(0);
+    expect(none.goals[0].funding.pct).toBe(0);
+    const down = buildLife(money({ ...state, asOf }, "monthlyCosts", "36000"));
+    expect(down.today.net).toBe(-4000);
+    expect(down.goals[0].funding.pct).toBe(0);
+    const other = buildLife({
+      ...state,
+      asOf: new Date(2026, 5, 15),
+      inputs: {
+        ...state.inputs,
+        takeHome: { ...state.inputs.takeHome, amount: "28000" },
+        monthlyCosts: { ...state.inputs.monthlyCosts, amount: "25500" },
+      },
+      goals: [{ name: "Desk", amount: "12000", date: "2026-09-02" }],
+    });
+    expect(other.today.net).toBe(2500);
+    expect(other.goals[0].funding.months).toBe(3);
+    expect(other.goals[0].funding.available).toBe(7500);
+    expect(other.goals[0].funding.pct).toBe(63);
   });
 });

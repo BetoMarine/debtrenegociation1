@@ -209,6 +209,8 @@ export function freshState() {
       lenderDuration: { months: "", note: "" },
       costCut: blankMoney(),
       fundTarget: blankMoney(),
+      fundWhen: { date: "", note: "" },
+      fundSave: blankMoney(),
     },
     goals: [],
     goalIndex: null,
@@ -319,7 +321,12 @@ export function canContinue(state) {
     case "rc":
       return (parseAmount(state.inputs.costCut.amount) || 0) > 0;
     case "sf":
-      return (parseAmount(state.inputs.fundTarget.amount) || 0) > 0 && String(state.inputs.fundTarget.note || "").trim().length > 0;
+      return (
+        (parseAmount(state.inputs.fundTarget.amount) || 0) > 0 &&
+        String(state.inputs.fundTarget.note || "").trim().length > 0 &&
+        parseIsoDate(state.inputs.fundWhen.date) !== null &&
+        (parseAmount(state.inputs.fundSave.amount) || 0) > 0
+      );
     case "f1":
     case "f2":
     case "f3":
@@ -566,10 +573,10 @@ function withInput(state, action) {
       text: cleanText(action.text ?? inputs.goalName.text),
       note: cleanNote(action.note ?? inputs.goalName.note),
     };
-  } else if (key === "goalDate") {
-    inputs.goalDate = {
-      date: cleanDate(action.date ?? inputs.goalDate.date),
-      note: cleanNote(action.note ?? inputs.goalDate.note),
+  } else if (key === "goalDate" || key === "fundWhen") {
+    inputs[key] = {
+      date: cleanDate(action.date ?? inputs[key].date),
+      note: cleanNote(action.note ?? inputs[key].note),
     };
   } else if (key === "lenderDuration") {
     inputs.lenderDuration = {
@@ -659,13 +666,18 @@ function applyCostCut(state) {
 function commitFund(state) {
   const amount = parseAmount(state.inputs.fundTarget.amount);
   const label = String(state.inputs.fundTarget.note || "").trim();
-  if (amount === null || amount <= 0 || !label) return { ...state, showRequired: true };
+  const when = parseIsoDate(state.inputs.fundWhen.date);
+  const save = parseAmount(state.inputs.fundSave.amount);
+  if (amount === null || amount <= 0 || !label || !when || save === null || save <= 0) {
+    return { ...state, showRequired: true };
+  }
   return {
     ...state,
     inputs: {
       ...state.inputs,
       cushionTarget: { amount: String(amount), note: label },
       cushionNow: { amount: "0", note: "" },
+      monthlySave: { ...state.inputs.monthlySave, amount: String(save) },
       fundTarget: blankMoney(),
     },
     screen: "l0",
@@ -772,7 +784,12 @@ function step(state, action) {
       if (state.screen !== "sf") return state;
       return {
         ...state,
-        inputs: { ...state.inputs, fundTarget: blankMoney() },
+        inputs: {
+          ...state.inputs,
+          fundTarget: blankMoney(),
+          fundWhen: { date: "", note: "" },
+          fundSave: blankMoney(),
+        },
         screen: "l0",
         projectNext: true,
         fromInput: false,
@@ -820,11 +837,11 @@ function step(state, action) {
       if (state.screen !== "w0" && state.screen !== "i0") return state;
       return { ...state, privacyOpen: !state.privacyOpen };
     case "open-erase":
-      if (state.screen !== "w0") return state;
-      return { ...state, screen: "e0", eraseFrom: "w0" };
+      if (state.screen !== "w0" && state.screen !== "l0") return state;
+      return { ...state, screen: "e0", eraseFrom: state.screen };
     case "cancel-erase":
       if (state.screen !== "e0") return state;
-      return { ...state, screen: "w0", eraseFrom: null };
+      return { ...state, screen: state.eraseFrom === "l0" ? "l0" : "w0", eraseFrom: null };
     case "erase-ok":
       if (state.screen !== "e1") return state;
       return freshState();
@@ -947,8 +964,8 @@ export function hydrate(raw) {
       inputs.daysLate = { days: cleanDays(src.days), note: cleanNote(src.note) };
     } else if (key === "goalName") {
       inputs.goalName = { text: cleanText(src.text), note: cleanNote(src.note) };
-    } else if (key === "goalDate") {
-      inputs.goalDate = { date: cleanDate(src.date), note: cleanNote(src.note) };
+    } else if (key === "goalDate" || key === "fundWhen") {
+      inputs[key] = { date: cleanDate(src.date), note: cleanNote(src.note) };
     } else if (key === "lenderDuration") {
       inputs.lenderDuration = { months: cleanDays(src.months), note: cleanNote(src.note) };
     } else {
@@ -1179,12 +1196,12 @@ const INPUT_COPY = {
   },
   sf: {
     title: "Emergency fund",
-    body: "Name it, then set the amount you want set aside.",
+    body: "Name it, then set the amount you want set aside. Say when, and how much you will put in.",
     chip: "Cushion",
     label: "Target",
     prefix: "HK$",
     mode: "money",
-    requiredHint: "Enter a label and a target to continue.",
+    requiredHint: "Enter a label, a target, a date, and how much you will put in.",
   },
   gd2: {
     title: "Monthly cover",
@@ -1405,6 +1422,10 @@ export function present(state) {
         date: copy.mode === "date" ? field.date : "",
         note: field.note,
       },
+      fundAsk:
+        id === "sf"
+          ? { when: state.inputs.fundWhen.date, save: state.inputs.fundSave.amount }
+          : null,
     };
   }
 

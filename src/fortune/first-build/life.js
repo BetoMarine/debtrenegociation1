@@ -47,6 +47,12 @@ function formatDate(date) {
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** The date the person picked, written so it stays readable in the field. */
+export function formatIsoDate(raw) {
+  const date = parseIsoDate(raw);
+  return date ? formatDate(date) : "";
+}
+
 /** A real calendar day, or null. yyyy-mm-dd only. */
 export function parseIsoDate(raw) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw ?? "").trim());
@@ -123,6 +129,8 @@ function moneyInputs(state) {
     goalName: String(inputs.goalName?.text ?? "").trim(),
     goalDate: parseIsoDate(inputs.goalDate?.date),
     fundLabel: String(inputs.cushionTarget?.note ?? "").trim(),
+    fundWhen: parseIsoDate(inputs.fundWhen?.date),
+    fundSave: amount(inputs.fundSave?.amount),
     cover: amount(inputs.cover?.amount),
     debt: amount(inputs.lenderDebt?.amount),
     contract: amount(inputs.lenderContract?.amount),
@@ -435,6 +443,7 @@ export function buildLife(state) {
       netText: formatSigned(net),
       netClass: copy.netClass,
       foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(showEf ? fundNow : money.now)} \u00b7 ${showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`}`,
+      byText: money.fundWhen ? `By ${formatDate(money.fundWhen)}` : "",
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,
