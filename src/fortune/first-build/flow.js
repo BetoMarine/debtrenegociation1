@@ -182,6 +182,23 @@ function blankDays() {
   return { days: "", note: "" };
 }
 
+/**
+ * Every open, reload, and return visit starts on Where are you.
+ * Saved answers, goals, and the fund stay until Erase.
+ */
+export function landOnDoor(state) {
+  const current = state || freshState();
+  return {
+    ...current,
+    screen: "w0",
+    infoOpen: false,
+    showRequired: false,
+    privacyOpen: false,
+    lifeDetail: false,
+    fromInput: false,
+  };
+}
+
 export function freshState() {
   return {
     version: 1,

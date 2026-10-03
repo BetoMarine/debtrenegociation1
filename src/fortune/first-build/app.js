@@ -1,5 +1,5 @@
 import { getFortuneHandoff, getFortuneSlice, getPack, saveFortuneSlice, wipeFortune } from "../../db.js";
-import { freshState, hydrate, reduce } from "./flow.js";
+import { freshState, hydrate, landOnDoor, reduce } from "./flow.js";
 import { formatIsoDate, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
@@ -235,6 +235,7 @@ export async function boot() {
   await loadDoor();
   state = { ...(saved || freshState()), rightDoorJoined: doorJoined };
   if (state.screen === "l2" && !doorJoined) state = { ...state, screen: "l0" };
+  state = landOnDoor(state);
   const host = root();
   if (!host) return;
   host.addEventListener("click", onClick);
@@ -243,4 +244,10 @@ export async function boot() {
   host.addEventListener("keydown", onKeydown);
   draw();
   await persist();
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    state = landOnDoor(state);
+    draw();
+    persist();
+  });
 }

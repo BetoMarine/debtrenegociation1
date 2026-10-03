@@ -8,6 +8,7 @@ import {
   cushionReady,
   freshState,
   hydrate,
+  landOnDoor,
   parseAmount,
   present,
   reduce,
@@ -239,6 +240,24 @@ describe("Slice A first-build flow", () => {
     state = go(money(state, "monthlyCosts", "8000"), { type: "continue" });
     state = go(state, { type: "pick-grow", pick: "goals" });
     expect(hydrate(state).screen).toBe("g1");
+    const opened = landOnDoor(hydrate(state));
+    expect(opened.screen).toBe("w0");
+    expect(present(opened).title).toBe("Where are you?");
+    expect(opened.inputs.takeHome.amount).toBe("22000");
+    expect(opened.inputs.monthlyCosts.amount).toBe("8000");
+    expect(opened.entry).toBe("ok");
+    const home = renderFirstBuild(opened);
+    expect(home).toMatch(/data-act="open-erase"/);
+    expect(home).toMatch(/data-act="open-life"/);
+    expect(home).toContain(PRIVACY_STRIP);
+    const life = go(opened, { type: "open-life" });
+    expect(life.screen).toBe("l0");
+    expect(buildLife(life).today.net).toBe(14000);
+    expect(go(life, { type: "back" }).screen).toBe("w0");
+    const again = go(opened, { type: "pick-entry", entry: "stable" });
+    expect(again.screen).toBe("i0");
+    expect(again.inputs.takeHome.amount).toBe("22000");
+    expect(again.inputs.monthlyCosts.amount).toBe("8000");
     expect(hydrate({ ...state, screen: "e0" }).screen).toBe("w0");
     expect(hydrate({ version: 1, screen: "f1", entry: "stressed" }).screen).toBe("f0");
     expect(hydrate(null)).toBeNull();
