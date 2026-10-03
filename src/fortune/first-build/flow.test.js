@@ -724,15 +724,26 @@ describe("Slice C costs and deeper flows", () => {
     expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0"]);
     expect(goals.funding.available).toBe(100800);
 
-    state = { ...state, screen: "g0" };
-    state = go(state, { type: "pick-grow", pick: "insurance" });
+    const returned = go(state, { type: "back" });
+    expect(returned.screen).toBe("g0");
+    expect(present(returned).choices.map((choice) => choice.id)).toEqual(["goals"]);
+    expect(renderFirstBuild(returned)).not.toMatch(/Add insurance/);
+    expect(renderFirstBuild(returned)).not.toMatch(/Invest/);
+    expect(renderFirstBuild(returned)).not.toMatch(/Opens when your cushion is ready/);
+    expect(go(returned, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
+    expect(go(returned, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
+    expect(returned.screen).not.toBe("sf");
+    expect(returned.screen).not.toBe("f0");
+
+    const coverState = { ...state, entry: "stable", screen: "g0" };
+    state = go(coverState, { type: "pick-grow", pick: "insurance" });
     state = go(state, { type: "continue" });
     expect(present(state).title).toBe("Monthly cover");
     state = go(money(state, "cover", "900"), { type: "continue" });
     expect(state.screen).toBe("g0");
     expect(buildLife(state).stubs.find((stub) => stub.id === "invest").later).toBe("Cover 900 · a month");
 
-    const locked = go(state, { type: "pick-grow", pick: "invest" });
+    const locked = go({ ...coverState, screen: "g0" }, { type: "pick-grow", pick: "invest" });
     expect(present(locked).frame).toBe("Gd3-invest-still-locked");
     expect(renderFirstBuild(locked)).toMatch(/Cushion not ready/);
     expect(renderFirstBuild(locked)).toMatch(/Show my current plan/);
@@ -883,7 +894,13 @@ describe("Slice E dig-in fixes", () => {
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("l0");
     expect(milestoneIds(renderFirstBuild(state))).toEqual(["today", "goal-0"]);
-    expect(go(state, { type: "back" }).screen).toBe("w0");
+    const menu = go(state, { type: "back" });
+    expect(menu.screen).toBe("g0");
+    expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals"]);
+    expect(renderFirstBuild(menu)).not.toMatch(/Add insurance/);
+    expect(renderFirstBuild(menu)).not.toMatch(/Invest/);
+    expect(menu.screen).not.toBe("sf");
+    expect(menu.screen).not.toBe("f0");
   });
 
   it("hides Right Door on a stable plan and keeps the TODAY to emergency-fund rail continuous", () => {
@@ -1333,5 +1350,18 @@ describe("Unlock sequence", () => {
     expect(buildLife(planning).goals[0].funding.pct).toBe(100);
     expect(planning.screen).not.toBe("sf");
     expect(planning.screen).not.toBe("f0");
+    const afterGoal = go(planning, { type: "back" });
+    expect(afterGoal.screen).toBe("g0");
+    expect(present(afterGoal).title).toBe("Plan what’s next");
+    expect(present(afterGoal).choices.map((choice) => choice.id)).toEqual(["goals"]);
+    const afterHtml = renderFirstBuild(afterGoal);
+    expect(afterHtml).toMatch(/Plan future goals/);
+    expect(afterHtml).not.toMatch(/Add insurance/);
+    expect(afterHtml).not.toMatch(/Invest/);
+    expect(afterHtml).not.toMatch(/Opens when your cushion is ready/);
+    expect(afterHtml).not.toMatch(/is-locked/);
+    expect(go(afterGoal, { type: "pick-grow", pick: "insurance" }).screen).toBe("g0");
+    expect(go(afterGoal, { type: "pick-grow", pick: "invest" }).screen).toBe("g0");
+    expect(milestoneIds(renderFirstBuild(go(afterGoal, { type: "open-life" })))).toEqual(["today", "goal-0"]);
   });
 });

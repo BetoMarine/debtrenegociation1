@@ -354,11 +354,6 @@ export function fundEntered(state) {
   return now !== null && target !== null && target > 0;
 }
 
-/** A goal step is done only after a goal is saved. */
-function goalSaved(state) {
-  return Array.isArray(state?.goals) && state.goals.some((goal) => String(goal?.name || "").trim());
-}
-
 /** Floor is real only from actual amounts, not from tapping Plan. */
 export function cushionReady(state) {
   const now = parseAmount(state.inputs.cushionNow.amount);
@@ -699,6 +694,7 @@ function commitGoal(state) {
     goalIndex: null,
     projectNext: false,
     fromInput: false,
+    lifeFrom: state.entry === "ok" ? "g0" : state.lifeFrom,
     screen: "l0",
     showRequired: false,
     infoOpen: false,
@@ -742,7 +738,7 @@ function step(state, action) {
         }
         return state;
       }
-      if ((action.pick === "insurance" || action.pick === "invest") && state.entry === "ok" && !goalSaved(state)) {
+      if ((action.pick === "insurance" || action.pick === "invest") && state.entry === "ok") {
         return state;
       }
       if (action.pick === "insurance") return { ...state, screen: "g2" };
@@ -1472,7 +1468,7 @@ export function present(state) {
           locked: state.entry !== "ok" && !fundEntered(state),
           sub: state.entry === "ok" || fundEntered(state) ? "" : "Opens after your emergency fund",
         }),
-        ...(state.entry === "ok" && !goalSaved(state)
+        ...(state.entry === "ok"
           ? []
           : [
               choice("insurance", "Add insurance"),
