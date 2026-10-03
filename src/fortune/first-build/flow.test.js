@@ -1641,8 +1641,9 @@ describe("Unlock sequence", () => {
     plan = go(money(plan, "cushionNow", "12000"), { type: "continue" });
     plan = go(money(plan, "cushionTarget", "10000"), { type: "continue" });
     expect(plan.screen).toBe("g0");
-    expect(cushionReady(plan)).toBe(true);
-    expect(present(plan).choices.find((choice) => choice.id === "invest").locked).toBe(false);
+    expect(cushionReady(plan)).toBe(false);
+    expect(present(plan).choices.find((choice) => choice.id === "invest").locked).toBe(true);
+    expect(present(go(plan, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Cushion not ready");
 
     const asOf = new Date(2026, 9, 3);
     plan = go({ ...plan, asOf }, { type: "pick-grow", pick: "goals" });
@@ -1664,7 +1665,8 @@ describe("Unlock sequence", () => {
     other = go(money(other, "cushionNow", "8000"), { type: "continue" });
     other = go(money(other, "cushionTarget", "8000"), { type: "continue" });
     expect(other.screen).toBe("g0");
-    expect(cushionReady(other)).toBe(true);
+    expect(cushionReady(other)).toBe(false);
+    expect(present(other).choices.find((choice) => choice.id === "invest").locked).toBe(true);
     other = go({ ...other, asOf }, { type: "pick-grow", pick: "goals" });
     other = go(other, { type: "continue" });
     other = addGoal(other, "Course", "50000", "2027-04-01", asOf);
@@ -1702,10 +1704,92 @@ describe("Unlock sequence", () => {
     expect(noIncome.screen).toBe("f0");
     expect(noIncome.entry).toBe("stressed");
 
+    const clear = walk("ok", "26000", "17000", "0");
+    let opened = go(money(clear, "cushionNow", "9000"), { type: "continue" });
+    opened = go(money(opened, "cushionTarget", "9000"), { type: "continue" });
+    expect(opened.screen).toBe("g0");
+    expect(cushionReady(opened)).toBe(true);
+    expect(present(opened).choices.find((choice) => choice.id === "invest").locked).toBe(false);
+    expect(present(go(opened, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+
     const saved = hydrate(plan);
     expect(saved.inputs.stillDue.amount).toBe("4000");
     expect(saved.inputs.cushionNow.amount).toBe("12000");
     expect(landOnDoor(saved).screen).toBe("w0");
     expect(landOnDoor(saved).entry).toBe("ok");
+  });
+
+  it("keeps Invest closed while anything is still due or overdue", () => {
+    function menu(entry, income, costs, still, saved, target) {
+      let state = go(freshState(), { type: "pick-entry", entry });
+      state = go(money(state, "takeHome", income), { type: "continue" });
+      state = go(money(state, "monthlyCosts", costs), { type: "continue" });
+      state = go(money(state, "stillDue", still), { type: "continue" });
+      if (entry === "stable") {
+        expect(state.screen).toBe("s0");
+        state = go(state, { type: "pick-cushion", situation: "ok" });
+        state = go(state, { type: "continue" });
+        state = go(money(state, "cushionNow", saved), { type: "continue" });
+        state = go(money(state, "cushionTarget", target), { type: "continue" });
+        state = go(money(state, "monthlySave", "500"), { type: "continue" });
+        state = go(state, { type: "continue" });
+        if (state.screen === "sd3") state = go(state, { type: "continue" });
+        return state;
+      }
+      expect(state.screen).toBe("i3");
+      state = go(money(state, "cushionNow", saved), { type: "continue" });
+      state = go(money(state, "cushionTarget", target), { type: "continue" });
+      return state;
+    }
+
+    function expectClosed(state) {
+      expect(state.screen).toBe("g0");
+      expect(cushionReady(state)).toBe(false);
+      expect(present(state).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
+      expect(present(state).choices.find((choice) => choice.id === "invest").locked).toBe(true);
+      const invest = go(state, { type: "pick-grow", pick: "invest" });
+      expect(invest.screen).toBe("g3");
+      expect(present(invest).callout.title).toBe("Cushion not ready");
+      expect(present(invest).callout.title).not.toBe("Unlocked");
+      expect(present(invest).callout.body).not.toMatch(/Cushion gate met/);
+      expect(renderFirstBuild(invest)).not.toMatch(/Unlocked/);
+    }
+
+    const planDue = menu("ok", "26000", "17000", "4000", "9000", "9000");
+    expectClosed(planDue);
+    expect(buildLife(planDue).today.burdenText).toBe("Still due / overdue 4,000");
+    expect(buildLife(planDue).today.net).toBe(5000);
+
+    const stableDue = menu("stable", "24000", "16000", "3000", "12000", "12000");
+    expectClosed(stableDue);
+    expect(buildLife(stableDue).today.net).toBe(5000);
+    expect(buildLife(stableDue).today.burdenText).toBe("Still due / overdue 3,000");
+
+    const planAgain = menu("ok", "31000", "20000", "4000", "15000", "15000");
+    expectClosed(planAgain);
+    expect(buildLife(planAgain).today.net).toBe(7000);
+    expect(buildLife(planAgain).today.burdenText).toBe("Still due / overdue 4,000");
+
+    const empty = menu("ok", "26000", "17000", "0", "0", "9000");
+    expectClosed(empty);
+
+    const planClear = menu("ok", "26000", "17000", "0", "9000", "9000");
+    expect(planClear.screen).toBe("g0");
+    expect(cushionReady(planClear)).toBe(true);
+    expect(present(planClear).choices.find((choice) => choice.id === "invest").locked).toBe(false);
+    expect(present(go(planClear, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+
+    const stableClear = menu("stable", "24000", "16000", "0", "12000", "12000");
+    expect(stableClear.screen).toBe("g0");
+    expect(cushionReady(stableClear)).toBe(true);
+    expect(present(stableClear).choices.find((choice) => choice.id === "invest").locked).toBe(false);
+    expect(present(go(stableClear, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+
+    const owed = money(planClear, "overdue", "800");
+    expect(buildLife(owed).today.burdenText).toBe("Still due / overdue 800");
+    expect(cushionReady(owed)).toBe(false);
+    expect(present({ ...owed, screen: "g0" }).choices.find((choice) => choice.id === "invest").locked).toBe(true);
+    const late = money(owed, "overdue", "0");
+    expect(cushionReady(late)).toBe(true);
   });
 });

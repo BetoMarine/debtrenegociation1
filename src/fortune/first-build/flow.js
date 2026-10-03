@@ -378,12 +378,14 @@ export function fundEntered(state) {
   return now !== null && target !== null && target > 0;
 }
 
-/** Floor is real only from actual amounts, not from tapping Plan. */
+/** Invest opens when savings already cover a real target and nothing is still due or overdue. */
 export function cushionReady(state) {
   const now = parseAmount(state.inputs.cushionNow.amount);
   const target = parseAmount(state.inputs.cushionTarget.amount);
-  if (now === null || target === null || target <= 0) return false;
-  return now >= target;
+  if (now === null || target === null || target <= 0 || now < target) return false;
+  const still = parseAmount(state.inputs.stillDue.amount) || 0;
+  const overdue = parseAmount(state.inputs.overdue.amount) || 0;
+  return still + overdue === 0;
 }
 
 function monthNet(state) {
