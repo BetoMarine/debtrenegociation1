@@ -250,6 +250,9 @@ export function freshState() {
     privacyOpen: false,
     rightDoorJoined: false,
     stressedSpans: [],
+    fundSpanMonths: null,
+    fundSpanSave: null,
+    fundSpanTarget: null,
   };
 }
 
@@ -371,6 +374,47 @@ export function monthsToCushion(now, target, save) {
   const gap = target - now;
   if (gap <= 0) return 0;
   return Math.ceil(gap / save);
+}
+
+/**
+ * Months the PDF draws for the fund. Your life still uses the gap left.
+ * A saved cushion keeps the months the monthly amount took, and never draws 0.
+ */
+export function timelineFundMonths(state) {
+  const now = parseAmount(state?.inputs?.cushionNow?.amount);
+  const target = parseAmount(state?.inputs?.cushionTarget?.amount);
+  const save = parseAmount(state?.inputs?.monthlySave?.amount);
+  if (!(save > 0) || !(target > 0)) return null;
+  const remembered =
+    state?.fundSpanMonths > 0 && state.fundSpanSave === save && state.fundSpanTarget === target
+      ? state.fundSpanMonths
+      : null;
+  if (now != null && now < target) return Math.ceil((target - now) / save);
+  if (remembered) return remembered;
+  return Math.ceil(target / save);
+}
+
+function stampFundSpan(state) {
+  const now = parseAmount(state?.inputs?.cushionNow?.amount);
+  const target = parseAmount(state?.inputs?.cushionTarget?.amount);
+  const save = parseAmount(state?.inputs?.monthlySave?.amount);
+  if (now == null || !(target > 0) || !(save > 0)) return state;
+  const gap = target - now;
+  if (gap > 0) {
+    return {
+      ...state,
+      fundSpanMonths: Math.ceil(gap / save),
+      fundSpanSave: save,
+      fundSpanTarget: target,
+    };
+  }
+  if (state.fundSpanMonths > 0 && state.fundSpanSave === save && state.fundSpanTarget === target) return state;
+  return {
+    ...state,
+    fundSpanMonths: Math.ceil(target / save),
+    fundSpanSave: save,
+    fundSpanTarget: target,
+  };
 }
 
 /** The emergency-fund plan exists once both amounts the person entered are real. */
@@ -707,9 +751,9 @@ function withInput(state, action) {
     after.save !== baseline.save ||
     after.burden !== baseline.burden;
   if (!moved) {
-    return { ...next, lifeMove: state.lifeMove?.key === key ? null : state.lifeMove };
+    return stampFundSpan({ ...next, lifeMove: state.lifeMove?.key === key ? null : state.lifeMove });
   }
-  return {
+  return stampFundSpan({
     ...next,
     lifeMove: {
       key,
@@ -723,7 +767,7 @@ function withInput(state, action) {
       wasSave: baseline.save,
       wasBurden: baseline.burden,
     },
-  };
+  });
 }
 
 function projectLife(state, actionName) {
@@ -782,7 +826,7 @@ function commitFund(state) {
   if (amount === null || amount <= 0 || !label || !when || save === null || save <= 0) {
     return { ...state, showRequired: true };
   }
-  return {
+  const committed = {
     ...state,
     inputs: {
       ...state.inputs,
@@ -799,6 +843,7 @@ function commitFund(state) {
     infoOpen: false,
     lifeDetail: false,
   };
+  return stampFundSpan(committed);
 }
 
 function commitGoal(state) {
@@ -1172,6 +1217,9 @@ export function hydrate(raw) {
     goalIndex: null,
     rightDoorJoined: false,
     stressedSpans: cleanSpans(raw.stressedSpans),
+    fundSpanMonths: parseDays(raw.fundSpanMonths) > 0 ? parseDays(raw.fundSpanMonths) : null,
+    fundSpanSave: parseAmount(raw.fundSpanSave),
+    fundSpanTarget: parseAmount(raw.fundSpanTarget),
   };
 }
 
@@ -1425,10 +1473,9 @@ function monthPicture(state) {
 /** Plain numbers for the downloadable timeline. Omits a stretch that was never entered. */
 export function futureSnapshot(state) {
   const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
-  const now = parseAmount(state?.inputs?.cushionNow?.amount);
   const target = parseAmount(state?.inputs?.cushionTarget?.amount);
   const save = parseAmount(state?.inputs?.monthlySave?.amount);
-  const months = monthsToCushion(now, target, save);
+  const months = timelineFundMonths(state);
   const by = formatIsoDate(state?.inputs?.fundWhen?.date);
   const life = buildLife({ ...state, asOf });
   return {

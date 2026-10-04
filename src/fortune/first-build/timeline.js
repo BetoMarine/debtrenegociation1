@@ -1,13 +1,35 @@
 /**
  * Your future life as one timeline. Stretches come only from numbers already saved.
- * Portfolio returns are the existing forecast mixes. This file does not change them.
+ * Forecast returns here are the locked 5 / 6 / 7 / 8. The 15 Sep template μ
+ * (12 / 15 / 20 / 35) stays on the engine and is not what this PDF prints.
  */
 import { jsPDF } from "jspdf";
-import { CASH_BENCHMARK, TEMPLATES, formatMuSigma } from "../templates.js";
+import { CASH_BENCHMARK } from "../templates.js";
 import { timeToGoal } from "../timeToGoal.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const PORTFOLIO_IDS = ["firm", "balanced", "growth", "frontier"];
+
+/**
+ * Locked forecast returns. Firm's bad year is the one lock this build was given.
+ * Balanced, Growth, and Frontier have no bad-year figure in this build, so their
+ * lines do not invent one. The old 16 / 20 / 28 / 45 swings are not printed.
+ */
+export const FORECAST_RETURNS = [
+  {
+    id: "firm",
+    label: "Firm",
+    mu: 0.05,
+    badYear: "Bad year about 10%",
+    mix: "30% stocks / 45% bonds / 10% REIT / 15% cash",
+  },
+  { id: "balanced", label: "Balanced", mu: 0.06 },
+  { id: "growth", label: "Growth", mu: 0.07 },
+  { id: "frontier", label: "Frontier", mu: 0.08 },
+];
+
+function forecastById(id) {
+  return FORECAST_RETURNS.find((row) => row.id === id);
+}
 
 function formatDate(date) {
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
@@ -35,18 +57,22 @@ function pdfSafe(text) {
 }
 
 export function portfolioReturns() {
-  return PORTFOLIO_IDS.map((id) => {
-    const template = TEMPLATES[id];
-    return { id, label: template.label, mu: template.mu, line: `${template.label} · ${formatMuSigma(template)}` };
+  return FORECAST_RETURNS.map((row) => {
+    const pct = Math.round(row.mu * 100);
+    const parts = [`${row.label} · ${pct}% a year`];
+    if (row.badYear) parts.push(row.badYear);
+    if (row.mix) parts.push(row.mix);
+    return { id: row.id, label: row.label, mu: row.mu, line: parts.join(" · ") };
   });
 }
 
-/** Months the existing default mix (Balanced) reaches a goal sooner than cash. */
+/** Months Balanced at the locked 6% reaches a goal sooner than cash. */
 export function boostTextFor(surplus, goalAmount) {
-  const cut = shortenBy(surplus, goalAmount, TEMPLATES.balanced.mu);
+  const balanced = forecastById("balanced");
+  const cut = shortenBy(surplus, goalAmount, balanced.mu);
   if (!cut) return "";
   const word = cut.monthsSooner === 1 ? "month" : "months";
-  return `${TEMPLATES.balanced.label} shortens this by ${cut.monthsSooner} ${word}`;
+  return `${balanced.label} shortens this by ${cut.monthsSooner} ${word}`;
 }
 
 export function shortenBy(surplus, goalAmount, mu) {
@@ -87,7 +113,7 @@ export function timelineLines(snap) {
   }
 
   const fund = snap.fund;
-  if (fund && fund.monthly > 0 && fund.months != null && fund.months >= 0 && fund.target > 0) {
+  if (fund && fund.monthly > 0 && fund.months > 0 && fund.target > 0) {
     const end = addMonths(cursor, fund.months);
     lines.push(`${n}. Emergency fund`);
     lines.push(`Save ${grouped(fund.monthly)} x ${fund.months} months`);
@@ -108,11 +134,12 @@ export function timelineLines(snap) {
   }
 
   if (snap.boostOpen) {
+    const balanced = forecastById("balanced");
     for (const goal of snap.goals || []) {
-      const cut = shortenBy(snap.surplus, goal.amount, TEMPLATES.balanced.mu);
+      const cut = shortenBy(snap.surplus, goal.amount, balanced.mu);
       if (!cut) continue;
       const sooner = addMonths(goal.date instanceof Date ? goal.date : cursor, -cut.monthsSooner);
-      lines.push(`${n}. ${TEMPLATES.balanced.label} shortens ${goal.name}`);
+      lines.push(`${n}. ${balanced.label} shortens ${goal.name}`);
       lines.push(`${cut.monthsSooner} ${cut.monthsSooner === 1 ? "month" : "months"} sooner`);
       lines.push(`Ends ${formatDate(sooner)}`);
       lines.push("");

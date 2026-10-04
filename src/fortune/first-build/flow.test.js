@@ -1939,7 +1939,7 @@ describe("Full journey", () => {
     state = go(state, { type: "continue" });
     state = go(state, { type: "edit", key: "goalName", text: "Trip" });
     state = go(state, { type: "continue" });
-    state = go(money(state, "goalAmount", "80000"), { type: "continue" });
+    state = go(money(state, "goalAmount", "200000"), { type: "continue" });
     state = go(state, { type: "edit", key: "goalDate", date: "2028-10-01" });
     state = go({ ...state, asOf: new Date(2026, 9, 4) }, { type: "continue" });
     state = go(state, { type: "add-goal" });
@@ -1968,12 +1968,18 @@ describe("Full journey", () => {
     expect(lines.join("\n")).toMatch(/Reduce cost/);
     expect(lines.join("\n")).toMatch(/1 month before saving starts/);
     expect(lines.join("\n")).toMatch(/Emergency fund/);
-    expect(lines.join("\n")).toMatch(/Save 2,000 x 0 months/);
+    expect(lines.join("\n")).toMatch(/Save 2,000 x 6 months/);
+    expect(lines.join("\n")).toMatch(/4 Nov 2026 - 4 May 2027/);
+    expect(lines.join("\n")).not.toMatch(/x 0 months/);
     expect(lines.join("\n")).toMatch(/Trip/);
     expect(lines.join("\n")).toMatch(/Course/);
-    expect(lines.join("\n")).toMatch(/Balanced shortens/);
-    expect(lines.join("\n")).toMatch(/Firm · Assumed 12\.0% a year/);
-    expect(lines.join("\n")).toMatch(/Frontier · Assumed 35\.0% a year/);
+    expect(lines.join("\n")).toMatch(/Balanced shortens Trip/);
+    expect(lines.join("\n")).toMatch(/4 months sooner/);
+    expect(lines.join("\n")).toMatch(/Firm · 5% a year · Bad year about 10%/);
+    expect(lines.join("\n")).toMatch(/Balanced · 6% a year/);
+    expect(lines.join("\n")).toMatch(/Growth · 7% a year/);
+    expect(lines.join("\n")).toMatch(/Frontier · 8% a year/);
+    expect(lines.join("\n")).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
 
     const lenders = go(stressedToActions("30000", "30000"), { type: "pick-next", pick: "lenders" });
     expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune/);
@@ -2008,6 +2014,8 @@ describe("Full journey", () => {
     expect(html).not.toMatch(/shortens this/);
     const lines = timelineLines(futureSnapshot(state));
     expect(lines.join("\n")).not.toMatch(/shortens/);
+    expect(lines.join("\n")).not.toMatch(/x 0 months/);
+    expect(lines.join("\n")).toMatch(/Save 1,000 x 20 months/);
     expect(lines.join("\n")).toContain(LIFE_DISCLAIMER);
   });
 });
