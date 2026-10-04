@@ -394,6 +394,20 @@ input {
   color: #fff;
 }
 
+.ft-journey {
+  margin: 0 0 8px;
+  color: var(--ft-muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ft-boost {
+  display: block;
+  margin-top: 4px;
+  color: var(--ft-muted);
+  font-size: 13px;
+}
+
 .ft-btn.quiet {
   min-height: 48px;
   background: transparent;

@@ -1,5 +1,6 @@
 import { getFortuneHandoff, getFortuneSlice, getPack, saveFortuneSlice, wipeFortune } from "../../db.js";
-import { freshState, hydrate, landOnDoor, reduce } from "./flow.js";
+import { freshState, futureSnapshot, hydrate, landOnDoor, reduce } from "./flow.js";
+import { buildFutureLifePdf } from "./timeline.js";
 import { formatIsoDate, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
@@ -201,7 +202,12 @@ function onClick(event) {
     apply(reduce(state, { type: act }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal") {
+  if (act === "download-life") {
+    event.preventDefault();
+    buildFutureLifePdf(futureSnapshot(state)).save("your-future-life.pdf");
+    return;
+  }
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings") {
     apply(reduce(state, { type: act }));
     return;
   }

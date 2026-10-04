@@ -5,7 +5,8 @@
  * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
 
-import { buildLife, formatPlain, parseIsoDate } from "./life.js";
+import { buildLife, formatIsoDate, formatPlain, parseIsoDate } from "./life.js";
+import { boostTextFor } from "./timeline.js";
 
 export const SCREEN_IDS = [
   "w0",
@@ -248,6 +249,7 @@ export function freshState() {
     fromInput: false,
     privacyOpen: false,
     rightDoorJoined: false,
+    stressedSpans: [],
   };
 }
 
@@ -378,6 +380,44 @@ export function fundEntered(state) {
   return now !== null && target !== null && target > 0;
 }
 
+/** The month is covered when take-home meets costs and what is still due. Overdue is a separate gate. */
+export function monthCovered(state) {
+  const income = parseAmount(state?.inputs?.takeHome?.amount);
+  const costs = parseAmount(state?.inputs?.monthlyCosts?.amount);
+  if (income == null || income <= 0 || costs == null) return false;
+  const still = parseAmount(state?.inputs?.stillDue?.amount) || 0;
+  return income - costs - still >= 0;
+}
+
+/** Stressed leaves on this. It is not the same gate as "nothing is due". */
+export function nothingOverdue(state) {
+  return (parseAmount(state?.inputs?.overdue?.amount) || 0) === 0;
+}
+
+/**
+ * Stressed finishes as stable once the month is covered and nothing is overdue.
+ * Stable finishes as comfortable once the cushion is saved and nothing is due.
+ * Comfortable uses the existing Invest gate. Nothing is due stays still due plus overdue.
+ */
+export function promoteJourney(state) {
+  let next = state;
+  const acted = next.action === "reduce" || next.action === "lenders";
+  if (next.entry === "stressed" && acted && monthCovered(next) && nothingOverdue(next)) {
+    next = { ...next, entry: "stable" };
+  }
+  const cushionDone = next.screen === "l0" || next.screen === "g0" || next.screen === "sd3";
+  if (next.entry === "stable" && cushionDone && cushionReady(next)) {
+    next = { ...next, entry: "ok" };
+  }
+  return next;
+}
+
+function rememberSpan(spans, span) {
+  const list = Array.isArray(spans) ? spans.slice() : [];
+  if (!span || !(span.months > 0) || list.some((item) => item.kind === span.kind)) return list;
+  return [...list, span];
+}
+
 /** Invest opens when savings already cover a real target and nothing is still due or overdue. */
 export function cushionReady(state) {
   const now = parseAmount(state.inputs.cushionNow.amount);
@@ -490,8 +530,21 @@ function advance(state) {
       return { ...state, screen: "tl3", showRequired: false, infoOpen: false };
     case "tl3":
       return { ...state, screen: "tl4", showRequired: false, infoOpen: false };
-    case "tl4":
-      return projectLife(state, "lenders");
+    case "tl4": {
+      const months = parseDays(state.inputs.lenderDuration.months);
+      const withSpan =
+        months != null && months > 0
+          ? {
+              ...state,
+              stressedSpans: rememberSpan(state.stressedSpans, {
+                kind: "lenders",
+                label: "Talk to lenders",
+                months,
+              }),
+            }
+          : state;
+      return projectLife(withSpan, "lenders");
+    }
     case "g3":
       return { ...state, screen: "g0" };
     default:
@@ -698,7 +751,14 @@ function applyCostCut(state) {
     costCut: blankMoney(),
   };
   return {
-    ...projectLife({ ...state, inputs }, "reduce"),
+    ...projectLife(
+      {
+        ...state,
+        inputs,
+        stressedSpans: rememberSpan(state.stressedSpans, { kind: "reduce", label: "Reduce cost", months: 1 }),
+      },
+      "reduce",
+    ),
     lifeMove: {
       key: "monthlyCosts",
       wasNet: before.net,
@@ -896,6 +956,17 @@ function step(state, action) {
     case "erase-ok":
       if (state.screen !== "e1") return state;
       return freshState();
+    case "open-savings":
+      if (state.screen !== "l0" || state.entry !== "stable" || cushionReady(state)) return state;
+      return {
+        ...state,
+        screen: "i3",
+        cushionSituation: state.cushionSituation || "small",
+        projectNext: false,
+        showRequired: false,
+        infoOpen: false,
+        lifeDetail: false,
+      };
     case "open-life":
       if (["e0", "e1"].includes(state.screen) || state.screen.startsWith("l")) return state;
       return {
@@ -967,11 +1038,23 @@ export function reduce(state, action) {
   }
   const stepped = step(current, action);
   const next = stepped.screen !== current.screen ? { ...stepped, lifeBaseline: null } : stepped;
-  return { wipe: false, state: next };
+  return { wipe: false, state: promoteJourney(next) };
 }
 
 function oneOf(value, allowed) {
   return allowed.includes(value) ? value : null;
+}
+
+function cleanSpans(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((span) => {
+      const kind = span?.kind === "lenders" ? "lenders" : span?.kind === "reduce" ? "reduce" : "";
+      const months = parseDays(span?.months);
+      if (!kind || months == null || months <= 0) return null;
+      return { kind, label: kind === "lenders" ? "Talk to lenders" : "Reduce cost", months };
+    })
+    .filter(Boolean);
 }
 
 function cleanMove(raw) {
@@ -1088,6 +1171,7 @@ export function hydrate(raw) {
       : [],
     goalIndex: null,
     rightDoorJoined: false,
+    stressedSpans: cleanSpans(raw.stressedSpans),
   };
 }
 
@@ -1338,6 +1422,38 @@ function monthPicture(state) {
   return { income, costs, burden, left };
 }
 
+/** Plain numbers for the downloadable timeline. Omits a stretch that was never entered. */
+export function futureSnapshot(state) {
+  const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
+  const now = parseAmount(state?.inputs?.cushionNow?.amount);
+  const target = parseAmount(state?.inputs?.cushionTarget?.amount);
+  const save = parseAmount(state?.inputs?.monthlySave?.amount);
+  const months = monthsToCushion(now, target, save);
+  const by = formatIsoDate(state?.inputs?.fundWhen?.date);
+  const life = buildLife({ ...state, asOf });
+  return {
+    asOf,
+    horizon: "Today → age 70",
+    disclaimer: LIFE_DISCLAIMER,
+    stressed: Array.isArray(state?.stressedSpans) ? state.stressedSpans : [],
+    fund:
+      save != null && save > 0 && target != null && target > 0 && months != null
+        ? { monthly: save, months, target, byText: by ? `By ${by}` : "" }
+        : null,
+    goals: (Array.isArray(state?.goals) ? state.goals : [])
+      .map((goal) => {
+        const date = parseIsoDate(goal?.date);
+        const amount = parseAmount(goal?.amount);
+        const name = String(goal?.name || "").trim();
+        if (!name || !date || amount == null || amount <= 0) return null;
+        return { name, amount, date, dateText: formatIsoDate(goal.date) };
+      })
+      .filter(Boolean),
+    surplus: life.today.net > 0 ? life.today.net : 0,
+    boostOpen: cushionReady(state),
+  };
+}
+
 export function present(state) {
   const id = state.screen;
   const ready = cushionReady(state);
@@ -1377,12 +1493,23 @@ export function present(state) {
   };
 
   if (id.startsWith("l")) {
+    const life = buildLife(state);
+    const surplus = life.today.net > 0 ? life.today.net : 0;
+    if (ready) {
+      for (const goal of life.goals || []) {
+        const text = boostTextFor(surplus, goal.funding?.target);
+        if (text) goal.funding.boostText = text;
+      }
+    }
+    life.journey = state.entry === "ok" && ready ? "comfortable" : state.entry === "stable" ? "stable" : "";
+    life.journeyLabel = life.journey === "comfortable" ? "Comfortable" : life.journey === "stable" ? "Stable" : "";
     return {
       ...base,
       kind: "life",
       chip: "Your life",
       showLifeLink: false,
-      life: buildLife(state),
+      offerSavings: id === "l0" && state.entry === "stable" && !ready,
+      life,
       lifeFocus: LIFE_FOCUS[id],
       lifeDetail: state.lifeDetail === true && id === "l1",
       fromInput: state.fromInput === true && id === "l0",

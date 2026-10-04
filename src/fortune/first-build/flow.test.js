@@ -7,12 +7,16 @@ import {
   canContinue,
   cushionReady,
   freshState,
+  futureSnapshot,
   hydrate,
   landOnDoor,
+  monthCovered,
+  nothingOverdue,
   parseAmount,
   present,
   reduce,
 } from "./flow.js";
+import { timelineLines } from "./timeline.js";
 import { buildLife, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
@@ -1856,5 +1860,154 @@ describe("Unlock sequence", () => {
     expect(present({ ...owed, screen: "g0" }).choices.find((choice) => choice.id === "invest").locked).toBe(true);
     const late = money(owed, "overdue", "0");
     expect(cushionReady(late)).toBe(true);
+  });
+});
+
+describe("Full journey", () => {
+  function stressedToActions(income, costs) {
+    let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = go(money(state, "takeHome", income), { type: "continue" });
+    state = go(money(state, "monthlyCosts", costs), { type: "continue" });
+    state = go(state, { type: "pick-fix", situation: "worry" });
+    state = go(money(state, "stillDue", "0"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    return go(state, { type: "continue" });
+  }
+
+  it("leaves stressed for stable when the month is covered and nothing is overdue", () => {
+    let state = stressedToActions("36000", "36000");
+    expect(state.screen).toBe("fd2");
+    state = go(state, { type: "pick-next", pick: "reduce" });
+    state = go(money(state, "costCut", "22000"), { type: "continue" });
+    expect(state.inputs.monthlyCosts.amount).toBe("22000");
+    expect(monthCovered(state)).toBe(true);
+    expect(nothingOverdue(state)).toBe(true);
+    expect(state.entry).toBe("stable");
+    expect(present(state).life.journey).toBe("stable");
+    expect(renderFirstBuild(state)).toMatch(/data-journey="stable"/);
+    expect(renderFirstBuild(state)).toMatch(/Build a cushion/);
+    expect(state.stressedSpans).toEqual([{ kind: "reduce", label: "Reduce cost", months: 1 }]);
+
+    let owed = stressedToActions("36000", "20000");
+    owed = go(owed, { type: "back" });
+    owed = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    owed = go(money(owed, "takeHome", "36000"), { type: "continue" });
+    owed = go(money(owed, "monthlyCosts", "20000"), { type: "continue" });
+    owed = go(owed, { type: "pick-fix", situation: "missed" });
+    owed = go(money(owed, "stillDue", "0"), { type: "continue" });
+    owed = go(owed, { type: "continue" });
+    owed = go(money(owed, "overdue", "800"), { type: "continue" });
+    owed = go(owed, { type: "edit", key: "daysLate", days: "4" });
+    owed = go(owed, { type: "continue" });
+    owed = go(owed, { type: "continue" });
+    owed = go(owed, { type: "pick-next", pick: "reduce" });
+    owed = go(money(owed, "costCut", "18000"), { type: "continue" });
+    expect(monthCovered(owed)).toBe(true);
+    expect(nothingOverdue(owed)).toBe(false);
+    expect(owed.entry).toBe("stressed");
+    expect(present(owed).life.journey).toBe("");
+  });
+
+  it("reaches comfortable with the fund saved, one card per goal, and a boost only when nothing is due", () => {
+    let state = stressedToActions("30000", "30000");
+    state = go(state, { type: "pick-next", pick: "reduce" });
+    state = go(money(state, "costCut", "26000"), { type: "continue" });
+    expect(state.entry).toBe("stable");
+    state = go(state, { type: "project-next" });
+    state = go(state, { type: "edit", key: "fundTarget", amount: "12000", note: "Emergency fund" });
+    state = go(state, { type: "edit", key: "fundWhen", date: "2027-06-01" });
+    state = go(state, { type: "edit", key: "fundSave", amount: "2000" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("l0");
+    expect(state.entry).toBe("stable");
+    expect(present(state).offerSavings).toBe(true);
+    state = go(state, { type: "open-savings" });
+    expect(state.screen).toBe("i3");
+    state = go(money(state, "cushionNow", "12000"), { type: "continue" });
+    state = go(money(state, "cushionTarget", "12000"), { type: "continue" });
+    expect(state.entry).toBe("stable");
+    expect(state.screen).toBe("sd");
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("sd2");
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("sd3");
+    state = go(state, { type: "continue" });
+    expect(state.entry).toBe("ok");
+    expect(state.screen).toBe("g0");
+
+    state = go(state, { type: "pick-grow", pick: "goals" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "edit", key: "goalName", text: "Trip" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "goalAmount", "80000"), { type: "continue" });
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-10-01" });
+    state = go({ ...state, asOf: new Date(2026, 9, 4) }, { type: "continue" });
+    state = go(state, { type: "add-goal" });
+    expect(state.screen).toBe("ig");
+    state = go(state, { type: "edit", key: "goalName", text: "Course" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "goalAmount", "50000"), { type: "continue" });
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-04-01" });
+    state = go({ ...state, asOf: new Date(2026, 9, 4) }, { type: "continue" });
+
+    const html = renderFirstBuild(state);
+    expect(html).toMatch(/data-journey="comfortable"/);
+    expect(html).toMatch(/Comfortable/);
+    expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0", "goal-1"]);
+    expect(html).toMatch(/Balanced shortens this by \d+ months/);
+    expect(html).toMatch(/Open Right Door/);
+    expect(html).toMatch(/from=fortune/);
+    expect(html).toMatch(/Download your future life/);
+    expect(html).toMatch(/Today → age 70/);
+    expect(html).toContain(LIFE_DISCLAIMER);
+
+    const lines = timelineLines(futureSnapshot({ ...state, asOf: new Date(2026, 9, 4) }));
+    expect(lines[0]).toBe("Your future life");
+    expect(lines.join("\n")).toMatch(/Today to age 70/);
+    expect(lines.join("\n")).toContain(LIFE_DISCLAIMER);
+    expect(lines.join("\n")).toMatch(/Reduce cost/);
+    expect(lines.join("\n")).toMatch(/1 month before saving starts/);
+    expect(lines.join("\n")).toMatch(/Emergency fund/);
+    expect(lines.join("\n")).toMatch(/Save 2,000 x 0 months/);
+    expect(lines.join("\n")).toMatch(/Trip/);
+    expect(lines.join("\n")).toMatch(/Course/);
+    expect(lines.join("\n")).toMatch(/Balanced shortens/);
+    expect(lines.join("\n")).toMatch(/Firm · Assumed 12\.0% a year/);
+    expect(lines.join("\n")).toMatch(/Frontier · Assumed 35\.0% a year/);
+
+    const lenders = go(stressedToActions("30000", "30000"), { type: "pick-next", pick: "lenders" });
+    expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune/);
+  });
+
+  it("keeps the boost shut while anything is due", () => {
+    let state = go(freshState(), { type: "pick-entry", entry: "stable" });
+    state = go(money(state, "takeHome", "30000"), { type: "continue" });
+    state = go(money(state, "monthlyCosts", "16000"), { type: "continue" });
+    state = go(money(state, "stillDue", "3000"), { type: "continue" });
+    expect(state.screen).toBe("s0");
+    state = go(state, { type: "pick-cushion", situation: "ok" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "cushionNow", "20000"), { type: "continue" });
+    state = go(money(state, "cushionTarget", "20000"), { type: "continue" });
+    expect(cushionReady(state)).toBe(false);
+    expect(state.entry).toBe("stable");
+    state = go(money(state, "monthlySave", "1000"), { type: "continue" });
+    state = go(state, { type: "continue" });
+    expect(state.screen).toBe("g0");
+    expect(present(state).choices.find((choice) => choice.id === "invest").locked).toBe(true);
+    state = go(state, { type: "pick-grow", pick: "goals" });
+    state = go(state, { type: "continue" });
+    state = go(state, { type: "edit", key: "goalName", text: "Van" });
+    state = go(state, { type: "continue" });
+    state = go(money(state, "goalAmount", "40000"), { type: "continue" });
+    state = go(state, { type: "edit", key: "goalDate", date: "2028-01-01" });
+    state = go({ ...state, asOf: new Date(2026, 9, 4) }, { type: "continue" });
+    const html = renderFirstBuild(state);
+    expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0"]);
+    expect(html).not.toMatch(/data-journey="comfortable"/);
+    expect(html).not.toMatch(/shortens this/);
+    const lines = timelineLines(futureSnapshot(state));
+    expect(lines.join("\n")).not.toMatch(/shortens/);
+    expect(lines.join("\n")).toContain(LIFE_DISCLAIMER);
   });
 });

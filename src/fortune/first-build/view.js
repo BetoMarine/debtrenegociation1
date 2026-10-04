@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../dom.js";
+import { fortuneOutboundHref } from "../../refer.js";
 import { present } from "./flow.js";
 import { formatIsoDate } from "./life.js";
 
@@ -150,7 +151,7 @@ function content(view) {
 
 function rdNote(view) {
   if (!view.rdLater) return "";
-  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p>`;
+  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p><a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`;
 }
 
 function actions(view) {
@@ -473,7 +474,7 @@ function goalBody(goal) {
     ${graph(goal.graph)}
     <div class="ft-goal-row">
       ${doughnut(fund.pct)}
-      <div class="ft-goal-card"><b>${escapeHtml(fund.name)}</b><span>Date by ${escapeHtml(fund.dateText)}</span><span class="ft-goal-fund">Could cover ${escapeHtml(fund.coverText)} of ${escapeHtml(fund.targetText)} · ${fund.pct}%</span><span class="ft-muted is-thin">Emergency fund left out</span></div>
+      <div class="ft-goal-card"><b>${escapeHtml(fund.name)}</b><span>Date by ${escapeHtml(fund.dateText)}</span><span class="ft-goal-fund">Could cover ${escapeHtml(fund.coverText)} of ${escapeHtml(fund.targetText)} · ${fund.pct}%</span><span class="ft-muted is-thin">Emergency fund left out</span>${fund.boostText ? `<span class="ft-boost">${escapeHtml(fund.boostText)}</span>` : ""}</div>
     </div>`;
 }
 
@@ -577,7 +578,10 @@ function lifeBlock(life, focus) {
   }
   const pill = life.pill ? `<span class="ft-jpill is-${life.pill.tone}">${escapeHtml(life.pill.label)}</span>` : "";
   const note = focus === "rd" ? `<p class="ft-life-note">${escapeHtml(life.rd.note)}</p>` : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  const journey = life.journey
+    ? `<p class="ft-journey" data-journey="${escapeHtml(life.journey)}">${escapeHtml(life.journeyLabel)}</p>`
+    : "";
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {
@@ -675,7 +679,10 @@ export function renderFirstBuild(state) {
           ? `<button class="ft-btn quiet" type="button" data-act="add-goal">Add a goal</button>`
           : "";
     const erase = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="open-erase">Erase</button>` : "";
-    const planBack = primary || erase ? `<div class="ft-actions">${primary}${erase}</div>` : "";
+    const download = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="download-life">Download your future life</button>` : "";
+    const door = view.id === "l0" ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>` : "";
+    const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
+    const planBack = primary || erase || download || door || savings ? `<div class="ft-actions">${primary}${savings}${download}${door}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${planBack}`);
   }
   return screenShell(view, screenHtml(view));
