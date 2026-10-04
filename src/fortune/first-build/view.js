@@ -399,7 +399,7 @@ function graph(kind, pct) {
   return `<svg class="ft-graph" data-graph="${escapeHtml(kind)}" viewBox="0 0 280 110" aria-hidden="true">${axis()}${lines[kind] || ""}</svg>`;
 }
 
-function msRow({ n, tone, stub, testId, button, act, value, body }) {
+function msRow({ n, tone, stub, testId, button, act, value, body, extra = "" }) {
   const numClass = [
     "ft-ms-num",
     stub ? "is-stub" : "",
@@ -414,7 +414,24 @@ function msRow({ n, tone, stub, testId, button, act, value, body }) {
   const card = button
     ? `<button class="${cardClass}" type="button" data-act="${act}"${value ? ` data-value="${escapeHtml(value)}"` : ""}>${inner}</button>`
     : `<div class="${cardClass}">${inner}</div>`;
-  return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}" data-n="${escapeHtml(String(n))}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div>${card}</div>`;
+  return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}" data-n="${escapeHtml(String(n))}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div><div class="ft-ms-main">${card}${extra}</div></div>`;
+}
+
+function boostSlot(scope, boost, result) {
+  if (!boost?.offer) return "";
+  const open = boost.open === scope;
+  const button = `<button class="ft-btn boost" type="button" data-act="open-boost" data-value="${escapeHtml(scope)}">Boost</button>`;
+  const line = result ? `<p class="ft-boost-result">${escapeHtml(result)}</p>` : "";
+  if (!open) return `<div class="ft-boost-slot" data-boost-for="${escapeHtml(scope)}">${button}${scope === "life" ? line : ""}</div>`;
+  const picks = (boost.portfolios || [])
+    .map((row) => {
+      const on = row.id === boost.pick;
+      return `<button class="ft-boost-pick${on ? " is-on" : ""}" type="button" data-act="pick-boost" data-value="${escapeHtml(row.id)}" aria-pressed="${on ? "true" : "false"}">${escapeHtml(row.line)}</button>`;
+    })
+    .join("");
+  const more = boost.mode === "more";
+  const toggle = `<div class="ft-boost-toggle" data-boost-mode="${more ? "more" : "sooner"}"><button type="button" data-act="boost-mode" data-value="more" aria-pressed="${more ? "true" : "false"}">More money</button><button type="button" data-act="boost-mode" data-value="sooner" aria-pressed="${more ? "false" : "true"}">Earlier</button></div>`;
+  return `<div class="ft-boost-slot is-open" data-boost-for="${escapeHtml(scope)}">${button}<div class="ft-boost-panel"><p class="ft-boost-kicker">Model portfolios</p>${picks}${toggle}${line}</div></div>`;
 }
 
 function todayBody(today) {
@@ -573,6 +590,7 @@ function lifeBlock(life, focus) {
         act: "open-milestone",
         value: goal.id,
         body: goalBody(goal),
+        extra: goal.funding?.offerBoost ? boostSlot(goal.id, life.boost, goal.funding.boostText || "") : "",
       }),
     );
   }
@@ -680,13 +698,17 @@ export function renderFirstBuild(state) {
           : "";
     const erase = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="open-erase">Erase</button>` : "";
     const download = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="download-life">Download your future life</button>` : "";
+    const future =
+      view.id === "l0" && view.life?.boost?.offer
+        ? `<div class="ft-future"><p class="ft-future-label">Your future life</p>${boostSlot("life", view.life.boost, view.life.boost.lifeText || "")}</div>`
+        : "";
     const door =
       view.id === "l0" && view.offerDoor
         ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`
         : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
     const planBack = primary || erase || download || door || savings ? `<div class="ft-actions">${primary}${savings}${download}${door}${erase}</div>` : "";
-    return screenShell(view, `${topbar(view)}${stage}${planBack}`);
+    return screenShell(view, `${topbar(view)}${stage}${future}${planBack}`);
   }
   return screenShell(view, screenHtml(view));
 }

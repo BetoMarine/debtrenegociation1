@@ -16,7 +16,7 @@ import {
   present,
   reduce,
 } from "./flow.js";
-import { timelineLines } from "./timeline.js";
+import { buildFutureLifePdf, timelineLines } from "./timeline.js";
 import { buildLife, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
@@ -400,6 +400,17 @@ function todayHtml(html) {
 
 function milestoneIds(html) {
   return [...html.matchAll(/data-ms="(today|expect|rd|ef|invest|goals|age|goal-\d+)"/g)].map((match) => match[1]);
+}
+
+function sliceMs(html, id) {
+  const start = html.indexOf(`data-ms="${id}"`);
+  if (start < 0) return "";
+  const rest = html.slice(start + 1);
+  const cuts = [/data-ms="/, /class="ft-future"/, /class="ft-actions"/]
+    .map((pattern) => rest.search(pattern))
+    .filter((index) => index >= 0);
+  if (!cuts.length) return html.slice(start);
+  return html.slice(start, start + 1 + Math.min(...cuts));
 }
 
 function saveLineYs(html) {
@@ -1957,6 +1968,9 @@ describe("Full journey", () => {
     expect(html).toMatch(/Balanced shortens this by \d+ months/);
     expect(html).not.toMatch(/Right Door complete/);
     expect(html).not.toMatch(/Open Right Door/);
+    expect(sliceMs(html, "ef")).not.toMatch(/Boost|open-boost/);
+    expect(sliceMs(html, "goal-0")).toMatch(/data-act="open-boost" data-value="goal-0"/);
+    expect(html).toMatch(/data-act="open-boost" data-value="life"/);
     expect(html).toMatch(/Download your future life/);
     expect(html).toMatch(/Today → age 70/);
     expect(html).toContain(LIFE_DISCLAIMER);
@@ -1980,6 +1994,45 @@ describe("Full journey", () => {
     expect(lines.join("\n")).toMatch(/Growth · 7% a year/);
     expect(lines.join("\n")).toMatch(/Frontier · 8% a year/);
     expect(lines.join("\n")).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
+
+    const pdf = buildFutureLifePdf(futureSnapshot({ ...state, asOf: new Date(2026, 9, 4) })).output();
+    expect(pdf).toContain("Not advice. Not a guarantee.");
+    expect(pdf).toContain("Save 2,000 x 6 months");
+    expect(pdf).toContain("4 Nov 2026 - 4 May 2027");
+    expect(pdf).not.toContain("x 0 months");
+    expect(pdf).toContain("Firm");
+    expect(pdf).toContain("5% a year");
+    expect(pdf).toContain("6% a year");
+    expect(pdf).toContain("7% a year");
+    expect(pdf).toContain("8% a year");
+    expect(pdf).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
+    const fills = [...pdf.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) rg/g)].map((match) =>
+      match.slice(1).map((part) => {
+        const n = Number(part);
+        return n > 1 ? n / 255 : n;
+      }),
+    );
+    expect(fills.length).toBeGreaterThan(2);
+    expect(fills.some(([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b) > 0.15)).toBe(true);
+    expect(fills.every(([r, g, b]) => r < 0.05 && g < 0.05 && b < 0.05)).toBe(false);
+
+    const opened = go(state, { type: "open-boost", id: "goal-0" });
+    const panel = renderFirstBuild(opened);
+    expect(panel).toMatch(/Firm · 5% a year · Bad year about 10%/);
+    expect(panel).toMatch(/Balanced · 6% a year/);
+    expect(panel).toMatch(/Growth · 7% a year/);
+    expect(panel).toMatch(/Frontier · 8% a year/);
+    expect(panel).toMatch(/More money/);
+    expect(panel).toMatch(/Earlier/);
+    expect(sliceMs(panel, "ef")).not.toMatch(/open-boost|Model portfolios/);
+    const more = go(go(opened, { type: "pick-boost", id: "growth" }), { type: "boost-mode", mode: "more" });
+    const moreHtml = renderFirstBuild(more);
+    expect(moreHtml).toMatch(/Growth · 7% a year · [\d,]+ becomes [\d,]+/);
+    expect(sliceMs(moreHtml, "goal-0")).toMatch(/Growth · 7% a year/);
+    expect(sliceMs(moreHtml, "ef")).not.toMatch(/Boost|becomes/);
+    const sooner = go(more, { type: "boost-mode", mode: "sooner" });
+    expect(renderFirstBuild(sooner)).toMatch(/Growth shortens this by \d+ months/);
+    expect(renderFirstBuild(sooner)).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
 
     const lenders = go(stressedToActions("30000", "30000"), { type: "pick-next", pick: "lenders" });
     expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune/);
@@ -2008,6 +2061,18 @@ describe("Full journey", () => {
     expect(firstHtml).not.toMatch(/Open Right Door/);
     expect(milestoneIds(firstHtml)).toEqual(["today", "ef"]);
     expect(buildLife(first).today.net).toBe(50000);
+    expect(sliceMs(firstHtml, "ef")).not.toMatch(/Boost|open-boost/);
+    expect(firstHtml).toMatch(/data-act="open-boost" data-value="life"/);
+    const firstOpen = renderFirstBuild(go(first, { type: "open-boost", id: "life" }));
+    expect(firstOpen).toMatch(/Firm · 5% a year · Bad year about 10%/);
+    expect(firstOpen).toMatch(/Balanced · 6% a year/);
+    expect(firstOpen).toMatch(/Growth · 7% a year/);
+    expect(firstOpen).toMatch(/Frontier · 8% a year/);
+    expect(firstOpen).toMatch(/More money/);
+    expect(firstOpen).toMatch(/Earlier/);
+    const firstMore = go(go(first, { type: "pick-boost", id: "firm" }), { type: "boost-mode", mode: "more" });
+    expect(renderFirstBuild(firstMore)).toMatch(/Over 12 months · Firm · 5% a year · [\d,]+ becomes [\d,]+/);
+    expect(sliceMs(renderFirstBuild(firstMore), "ef")).not.toMatch(/Boost|becomes|5% a year/);
 
     const second = savedPlan("42000", "18000", "9000");
     const secondHtml = renderFirstBuild(second);
@@ -2016,6 +2081,8 @@ describe("Full journey", () => {
     expect(secondHtml).not.toMatch(/Open Right Door/);
     expect(milestoneIds(secondHtml)).toEqual(["today", "ef"]);
     expect(buildLife(second).today.net).toBe(24000);
+    expect(sliceMs(secondHtml, "ef")).not.toMatch(/Boost|open-boost/);
+    expect(secondHtml).toMatch(/data-act="open-boost" data-value="life"/);
 
     let short = go(freshState(), { type: "pick-entry", entry: "stressed" });
     short = go(money(short, "takeHome", "12000"), { type: "continue" });
@@ -2074,6 +2141,8 @@ describe("Full journey", () => {
     expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0"]);
     expect(html).not.toMatch(/data-journey="comfortable"/);
     expect(html).not.toMatch(/shortens this/);
+    expect(html).not.toMatch(/data-act="open-boost"/);
+    expect(html).not.toMatch(/>Boost</);
     const lines = timelineLines(futureSnapshot(state));
     expect(lines.join("\n")).not.toMatch(/shortens/);
     expect(lines.join("\n")).not.toMatch(/x 0 months/);

@@ -6,7 +6,7 @@
  */
 
 import { buildLife, formatIsoDate, formatPlain, parseIsoDate } from "./life.js";
-import { boostTextFor } from "./timeline.js";
+import { earlierText, forecastReturn, moreMoneyText, portfolioReturns } from "./timeline.js";
 
 export const SCREEN_IDS = [
   "w0",
@@ -253,6 +253,9 @@ export function freshState() {
     fundSpanMonths: null,
     fundSpanSave: null,
     fundSpanTarget: null,
+    boostPick: null,
+    boostMode: "sooner",
+    boostFor: null,
   };
 }
 
@@ -1069,6 +1072,24 @@ function step(state, action) {
     case "close-net":
       if (!state.lifeDetail) return state;
       return { ...state, lifeDetail: false };
+    case "open-boost": {
+      if (state.screen !== "l0" || !boostAvailable(state)) return state;
+      const id = String(action.id || "");
+      if (id !== "life" && !/^goal-\d+$/.test(id)) return state;
+      return { ...state, boostFor: state.boostFor === id ? null : id };
+    }
+    case "pick-boost": {
+      if (state.screen !== "l0" || !boostAvailable(state)) return state;
+      const id = oneOf(action.id, BOOST_IDS);
+      if (!id) return state;
+      return { ...state, boostPick: id };
+    }
+    case "boost-mode": {
+      if (state.screen !== "l0" || !boostAvailable(state)) return state;
+      const mode = action.mode === "more" || action.mode === "sooner" ? action.mode : oneOf(action.id, ["more", "sooner"]);
+      if (!mode) return state;
+      return { ...state, boostMode: mode };
+    }
     default:
       return state;
   }
@@ -1220,6 +1241,9 @@ export function hydrate(raw) {
     fundSpanMonths: parseDays(raw.fundSpanMonths) > 0 ? parseDays(raw.fundSpanMonths) : null,
     fundSpanSave: parseAmount(raw.fundSpanSave),
     fundSpanTarget: parseAmount(raw.fundSpanTarget),
+    boostPick: oneOf(raw.boostPick, ["firm", "balanced", "growth", "frontier"]),
+    boostMode: raw.boostMode === "more" ? "more" : "sooner",
+    boostFor: null,
   };
 }
 
@@ -1498,7 +1522,18 @@ export function futureSnapshot(state) {
       .filter(Boolean),
     surplus: life.today.net > 0 ? life.today.net : 0,
     boostOpen: cushionReady(state),
+    boostPick: state?.boostPick || null,
+    boostMode: state?.boostMode === "more" ? "more" : "sooner",
   };
+}
+
+const BOOST_IDS = ["firm", "balanced", "growth", "frontier"];
+
+/** Fund saved, nothing due, and cash left over after the month. */
+export function boostAvailable(state) {
+  if (!cushionReady(state)) return false;
+  const net = buildLife(state).today.net;
+  return net != null && net > 0;
 }
 
 export function present(state) {
@@ -1542,12 +1577,34 @@ export function present(state) {
   if (id.startsWith("l")) {
     const life = buildLife(state);
     const surplus = life.today.net > 0 ? life.today.net : 0;
-    if (ready) {
+    const offer = ready && surplus > 0;
+    const pickId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : "balanced";
+    const mode = state.boostMode === "more" ? "more" : "sooner";
+    const picked = forecastReturn(pickId);
+    if (offer) {
       for (const goal of life.goals || []) {
-        const text = boostTextFor(surplus, goal.funding?.target);
+        const text =
+          mode === "more"
+            ? moreMoneyText(picked.label, surplus, goal.funding?.months, picked.mu)
+            : earlierText(picked.label, surplus, goal.funding?.target, picked.mu);
         if (text) goal.funding.boostText = text;
+        goal.funding.offerBoost = true;
       }
     }
+    const parts = (life.goals || []).map((goal) => goal.funding?.boostText).filter(Boolean);
+    let lifeText = parts.join(" · ");
+    if (offer && mode === "more" && !lifeText) {
+      const year = moreMoneyText(picked.label, surplus, 12, picked.mu);
+      lifeText = year ? `Over 12 months · ${year}` : "";
+    }
+    life.boost = {
+      offer,
+      open: typeof state.boostFor === "string" ? state.boostFor : "",
+      pick: pickId,
+      mode,
+      portfolios: portfolioReturns(),
+      lifeText,
+    };
     life.journey = state.entry === "ok" && ready ? "comfortable" : state.entry === "stable" ? "stable" : "";
     life.journeyLabel = life.journey === "comfortable" ? "Comfortable" : life.journey === "stable" ? "Stable" : "";
     return {

@@ -207,6 +207,12 @@ function onClick(event) {
     buildFutureLifePdf(futureSnapshot(state)).save("your-future-life.pdf");
     return;
   }
+  if (act === "open-boost" || act === "pick-boost" || act === "boost-mode") {
+    event.preventDefault();
+    const value = btn.getAttribute("data-value");
+    apply(reduce(state, { type: act, id: value, mode: value }));
+    return;
+  }
   if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings") {
     apply(reduce(state, { type: act }));
     return;
