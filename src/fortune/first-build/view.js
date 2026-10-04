@@ -680,7 +680,10 @@ export function renderFirstBuild(state) {
           : "";
     const erase = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="open-erase">Erase</button>` : "";
     const download = view.id === "l0" ? `<button class="ft-btn quiet" type="button" data-act="download-life">Download your future life</button>` : "";
-    const door = view.id === "l0" ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>` : "";
+    const door =
+      view.id === "l0" && view.offerDoor
+        ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`
+        : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
     const planBack = primary || erase || download || door || savings ? `<div class="ft-actions">${primary}${savings}${download}${door}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${planBack}`);

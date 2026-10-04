@@ -1556,6 +1556,7 @@ export function present(state) {
       chip: "Your life",
       showLifeLink: false,
       offerSavings: id === "l0" && state.entry === "stable" && !ready,
+      offerDoor: id === "l0" && (!monthCovered(state) || !nothingOverdue(state)),
       life,
       lifeFocus: LIFE_FOCUS[id],
       lifeDetail: state.lifeDetail === true && id === "l1",

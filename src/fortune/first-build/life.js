@@ -320,7 +320,14 @@ export function buildLife(state) {
   }
   const move = state?.lifeMove || null;
   const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
-  const joined = state?.rightDoorJoined === true;
+  const fundSaved =
+    money.now != null &&
+    money.target != null &&
+    money.target > 0 &&
+    money.now >= money.target &&
+    (money.stillDue || 0) === 0 &&
+    (money.overdue || 0) === 0;
+  const joined = state?.rightDoorJoined === true && !(state?.entry === "ok" && fundSaved);
   const effect = joined
     ? rightDoorEffectNet({
         income: money.income,

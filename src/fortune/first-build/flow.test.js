@@ -1955,8 +1955,8 @@ describe("Full journey", () => {
     expect(html).toMatch(/Comfortable/);
     expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0", "goal-1"]);
     expect(html).toMatch(/Balanced shortens this by \d+ months/);
-    expect(html).toMatch(/Open Right Door/);
-    expect(html).toMatch(/from=fortune/);
+    expect(html).not.toMatch(/Right Door complete/);
+    expect(html).not.toMatch(/Open Right Door/);
     expect(html).toMatch(/Download your future life/);
     expect(html).toMatch(/Today → age 70/);
     expect(html).toContain(LIFE_DISCLAIMER);
@@ -1983,6 +1983,68 @@ describe("Full journey", () => {
 
     const lenders = go(stressedToActions("30000", "30000"), { type: "pick-next", pick: "lenders" });
     expect(renderFirstBuild(lenders)).not.toMatch(/from=fortune/);
+  });
+
+  it("drops the Right Door card once comfortable with the fund saved, and keeps the link while the month is short or overdue", () => {
+    function savedPlan(income, costs, fund) {
+      let state = go(freshState(), { type: "pick-entry", entry: "ok" });
+      state = go(money(state, "takeHome", income), { type: "continue" });
+      state = go(money(state, "monthlyCosts", costs), { type: "continue" });
+      state = go(money(state, "stillDue", "0"), { type: "continue" });
+      state = go(money(state, "cushionNow", fund), { type: "continue" });
+      state = go(money(state, "cushionTarget", fund), { type: "continue" });
+      expect(state.screen).toBe("g0");
+      expect(cushionReady(state)).toBe(true);
+      state = go(state, { type: "open-life" });
+      return { ...state, rightDoorJoined: true };
+    }
+
+    const first = savedPlan("100000", "50000", "40000");
+    const firstHtml = renderFirstBuild(first);
+    expect(first.entry).toBe("ok");
+    expect(present(first).life.journey).toBe("comfortable");
+    expect(firstHtml).not.toMatch(/Right Door complete/);
+    expect(firstHtml).not.toMatch(/data-ms="rd"/);
+    expect(firstHtml).not.toMatch(/Open Right Door/);
+    expect(milestoneIds(firstHtml)).toEqual(["today", "ef"]);
+    expect(buildLife(first).today.net).toBe(50000);
+
+    const second = savedPlan("42000", "18000", "9000");
+    const secondHtml = renderFirstBuild(second);
+    expect(present(second).life.journey).toBe("comfortable");
+    expect(secondHtml).not.toMatch(/Right Door complete/);
+    expect(secondHtml).not.toMatch(/Open Right Door/);
+    expect(milestoneIds(secondHtml)).toEqual(["today", "ef"]);
+    expect(buildLife(second).today.net).toBe(24000);
+
+    let short = go(freshState(), { type: "pick-entry", entry: "stressed" });
+    short = go(money(short, "takeHome", "12000"), { type: "continue" });
+    short = go(money(short, "monthlyCosts", "28000"), { type: "continue" });
+    expect(short.screen).toBe("f0");
+    short = go(short, { type: "open-life" });
+    const shortHtml = renderFirstBuild({ ...short, rightDoorJoined: true });
+    expect(shortHtml).toMatch(/Open Right Door/);
+    expect(shortHtml).toMatch(/from=fortune/);
+    expect(shortHtml).toMatch(/Right Door complete/);
+    expect(milestoneIds(shortHtml)).toEqual(["today", "rd"]);
+
+    let owed = go(freshState(), { type: "pick-entry", entry: "stable" });
+    owed = go(money(owed, "takeHome", "40000"), { type: "continue" });
+    owed = go(money(owed, "monthlyCosts", "22000"), { type: "continue" });
+    owed = go(money(owed, "stillDue", "0"), { type: "continue" });
+    expect(owed.screen).toBe("s0");
+    owed = money(owed, "overdue", "1500");
+    expect(monthCovered(owed)).toBe(true);
+    expect(nothingOverdue(owed)).toBe(false);
+    const owedLife = go(owed, { type: "open-life" });
+    expect(renderFirstBuild(owedLife)).toMatch(/Open Right Door/);
+    expect(renderFirstBuild(owedLife)).not.toMatch(/Right Door complete/);
+
+    const later = money(savedPlan("100000", "50000", "40000"), "monthlySave", "5000");
+    const lines = timelineLines(futureSnapshot({ ...later, asOf: new Date(2026, 9, 4) }));
+    expect(lines.join("\n")).toMatch(/Save 5,000 x 8 months/);
+    expect(lines.join("\n")).not.toMatch(/x 0 months/);
+    expect(lines.join("\n")).not.toMatch(/12\.0%|15\.0%|35\.0%|16% swing/);
   });
 
   it("keeps the boost shut while anything is due", () => {
