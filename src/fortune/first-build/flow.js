@@ -1578,29 +1578,30 @@ export function present(state) {
     const life = buildLife(state);
     const surplus = life.today.net > 0 ? life.today.net : 0;
     const offer = ready && surplus > 0;
-    const pickId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : "balanced";
+    const chosenId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : null;
     const mode = state.boostMode === "more" ? "more" : "sooner";
-    const picked = forecastReturn(pickId);
+    const picked = chosenId ? forecastReturn(chosenId) : null;
     if (offer) {
       for (const goal of life.goals || []) {
+        goal.funding.offerBoost = true;
+        if (!picked) continue;
         const text =
           mode === "more"
             ? moreMoneyText(picked.label, surplus, goal.funding?.months, picked.mu)
             : earlierText(picked.label, surplus, goal.funding?.target, picked.mu);
         if (text) goal.funding.boostText = text;
-        goal.funding.offerBoost = true;
       }
     }
     const parts = (life.goals || []).map((goal) => goal.funding?.boostText).filter(Boolean);
     let lifeText = parts.join(" · ");
-    if (offer && mode === "more" && !lifeText) {
+    if (offer && picked && mode === "more" && !lifeText) {
       const year = moreMoneyText(picked.label, surplus, 12, picked.mu);
       lifeText = year ? `Over 12 months · ${year}` : "";
     }
     life.boost = {
       offer,
       open: typeof state.boostFor === "string" ? state.boostFor : "",
-      pick: pickId,
+      pick: chosenId,
       mode,
       portfolios: portfolioReturns(),
       lifeText,
