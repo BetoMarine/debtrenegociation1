@@ -1,19 +1,28 @@
 name: GitHub Pages
 
+# Pushes to main used to build the app and publish dist onto gh-pages.
+# That publish deletes files already on gh-pages, then copies the build
+# over the branch. Live Fortune, live Right Door, and the preview pages
+# live only on gh-pages, so a publish swaps the two live bundles and
+# removes the previews.
+#
+# This workflow still checks main. It does not publish. GitHub Pages
+# keeps serving the gh-pages branch.
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +33,3 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - name: Publish gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          enable_jekyll: false
