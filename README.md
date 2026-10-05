@@ -35,7 +35,7 @@ On each start / privacy screen:
 
 A small footer link (“Other tools from Plan Your Life”) is optional. It is not a chooser.
 
-This repo’s workflow publishes `npm run build` to the `gh-pages` branch on each push to `main`. Completing a pack still does not POST names, HKID, amounts, or files — hosting is JS/CSS only.
+Pushes to `main` run tests and `npm run build`. They do not publish to the `gh-pages` branch, so the live pages and preview pages stay as they are on that branch. Completing a pack still does not POST names, HKID, amounts, or files — hosting is JS/CSS only.
 
 If the public URL is 404, turn on Pages once (Safari, not the GitHub app):
 
