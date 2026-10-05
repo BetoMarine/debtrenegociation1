@@ -1965,7 +1965,8 @@ describe("Full journey", () => {
     expect(html).toMatch(/data-journey="comfortable"/);
     expect(html).toMatch(/Comfortable/);
     expect(milestoneIds(html)).toEqual(["today", "ef", "goal-0", "goal-1"]);
-    expect(html).toMatch(/Balanced shortens this by \d+ months/);
+    expect(html).not.toMatch(/Balanced shortens/);
+    expect(html).not.toMatch(/ft-boost-pick is-on/);
     expect(html).not.toMatch(/Right Door complete/);
     expect(html).not.toMatch(/Open Right Door/);
     expect(sliceMs(html, "ef")).not.toMatch(/Boost|open-boost/);
@@ -1987,19 +1988,30 @@ describe("Full journey", () => {
     expect(lines.join("\n")).not.toMatch(/x 0 months/);
     expect(lines.join("\n")).toMatch(/Trip/);
     expect(lines.join("\n")).toMatch(/Course/);
-    expect(lines.join("\n")).toMatch(/Balanced shortens Trip/);
-    expect(lines.join("\n")).toMatch(/4 months sooner/);
-    expect(lines.join("\n")).toMatch(/Firm · 5% a year · Bad year about 10%/);
-    expect(lines.join("\n")).toMatch(/Balanced · 6% a year/);
-    expect(lines.join("\n")).toMatch(/Growth · 7% a year/);
-    expect(lines.join("\n")).toMatch(/Frontier · 8% a year/);
-    expect(lines.join("\n")).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
+    expect(lines.join("\n")).not.toMatch(/shortens/);
+    const pickedLines = timelineLines(
+      futureSnapshot({ ...state, boostPick: "balanced", asOf: new Date(2026, 9, 4) }),
+    );
+    expect(pickedLines.join("\n")).toMatch(/Balanced shortens Trip/);
+    expect(pickedLines.join("\n")).toMatch(/4 months sooner/);
+    expect(pickedLines.join("\n")).toMatch(/Firm · 5% a year · Bad year about 10%/);
+    expect(pickedLines.join("\n")).toMatch(/Balanced · 6% a year · Bad year about 15%/);
+    expect(pickedLines.join("\n")).toMatch(/Growth · 7% a year · Bad year about 20%/);
+    expect(pickedLines.join("\n")).toMatch(/Frontier · 8% a year · Bad year about 25%/);
+    expect(pickedLines.join("\n")).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%|16% swing|20% swing|28% swing|45% swing/);
+    expect(pickedLines.join("\n")).not.toMatch(/12% a year|15% a year|20% a year|35% a year/);
 
-    const pdf = buildFutureLifePdf(futureSnapshot({ ...state, asOf: new Date(2026, 9, 4) })).output();
+    const pdf = buildFutureLifePdf(
+      futureSnapshot({ ...state, boostPick: "balanced", asOf: new Date(2026, 9, 4) }),
+    ).output();
     expect(pdf).toContain("Not advice. Not a guarantee.");
     expect(pdf).toContain("Save 2,000 x 6 months");
     expect(pdf).toContain("4 Nov 2026 - 4 May 2027");
     expect(pdf).not.toContain("x 0 months");
+    expect(pdf).toContain("Bad year about 10%");
+    expect(pdf).toContain("Bad year about 15%");
+    expect(pdf).toContain("Bad year about 20%");
+    expect(pdf).toContain("Bad year about 25%");
     expect(pdf).toContain("Firm");
     expect(pdf).toContain("5% a year");
     expect(pdf).toContain("6% a year");
@@ -2019,14 +2031,20 @@ describe("Full journey", () => {
     const opened = go(state, { type: "open-boost", id: "goal-0" });
     const panel = renderFirstBuild(opened);
     expect(panel).toMatch(/Firm · 5% a year · Bad year about 10%/);
-    expect(panel).toMatch(/Balanced · 6% a year/);
-    expect(panel).toMatch(/Growth · 7% a year/);
-    expect(panel).toMatch(/Frontier · 8% a year/);
+    expect(panel).toMatch(/Balanced · 6% a year · Bad year about 15%/);
+    expect(panel).toMatch(/Growth · 7% a year · Bad year about 20%/);
+    expect(panel).toMatch(/Frontier · 8% a year · Bad year about 25%/);
+    expect(panel).not.toMatch(/ft-boost-pick is-on/);
+    const unpicked = [...panel.matchAll(/data-act="pick-boost" data-value="[^"]*" aria-pressed="(true|false)"/g)];
+    expect(unpicked.map((match) => match[1])).toEqual(["false", "false", "false", "false"]);
     expect(panel).toMatch(/More money/);
     expect(panel).toMatch(/Earlier/);
     expect(sliceMs(panel, "ef")).not.toMatch(/open-boost|Model portfolios/);
     const more = go(go(opened, { type: "pick-boost", id: "growth" }), { type: "boost-mode", mode: "more" });
     const moreHtml = renderFirstBuild(more);
+    expect(moreHtml).toMatch(/data-value="growth" aria-pressed="true"/);
+    expect(moreHtml).toMatch(/class="ft-boost-pick is-on"/);
+    expect(moreHtml).not.toMatch(/data-value="balanced" aria-pressed="true"/);
     expect(moreHtml).toMatch(/Growth · 7% a year · 96,000 becomes 102,720/);
     expect(sliceMs(moreHtml, "goal-0")).toMatch(/Growth · 7% a year/);
     expect(sliceMs(moreHtml, "ef")).not.toMatch(/Boost|becomes/);
@@ -2065,9 +2083,16 @@ describe("Full journey", () => {
     expect(firstHtml).toMatch(/data-act="open-boost" data-value="life"/);
     const firstOpen = renderFirstBuild(go(first, { type: "open-boost", id: "life" }));
     expect(firstOpen).toMatch(/Firm · 5% a year · Bad year about 10%/);
-    expect(firstOpen).toMatch(/Balanced · 6% a year/);
-    expect(firstOpen).toMatch(/Growth · 7% a year/);
-    expect(firstOpen).toMatch(/Frontier · 8% a year/);
+    expect(firstOpen).toMatch(/Balanced · 6% a year · Bad year about 15%/);
+    expect(firstOpen).toMatch(/Growth · 7% a year · Bad year about 20%/);
+    expect(firstOpen).toMatch(/Frontier · 8% a year · Bad year about 25%/);
+    expect(firstOpen).not.toMatch(/ft-boost-pick is-on/);
+    expect([...firstOpen.matchAll(/data-act="pick-boost"[^>]*aria-pressed="(true|false)"/g)].map((match) => match[1])).toEqual([
+      "false",
+      "false",
+      "false",
+      "false",
+    ]);
     expect(firstOpen).toMatch(/More money/);
     expect(firstOpen).toMatch(/Earlier/);
     const firstMore = go(go(first, { type: "pick-boost", id: "firm" }), { type: "boost-mode", mode: "more" });
