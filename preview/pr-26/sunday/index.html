@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-pyl-app="sunday">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      /* pyl-shell-guard */
+      (function () {
+        var expected = document.documentElement.getAttribute("data-pyl-app");
+        var path = location.pathname || "";
+        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        var preview = /\/preview\/pr-\d+\//.test(path);
+        var controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+        var swUrl = (controller && controller.scriptURL) || "";
+        var foreignPreview = preview && swUrl && swUrl.indexOf("/preview/") === -1;
+        var wrongApp = expected !== app;
+        if (!wrongApp && !foreignPreview) return;
+        document.documentElement.style.visibility = "hidden";
+        function go() {
+          location.reload();
+        }
+        if (!("serviceWorker" in navigator)) {
+          go();
+          return;
+        }
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) {
+            var url = (r.active && r.active.scriptURL) || (r.waiting && r.waiting.scriptURL) || (r.installing && r.installing.scriptURL) || "";
+            if (wrongApp || (preview && url && url.indexOf("/preview/") === -1)) return r.unregister();
+            return Promise.resolve();
+          }));
+        }).then(function () {
+          if (!self.caches || !caches.keys) return;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) {
+              if (wrongApp) return caches.delete(k);
+              if (preview && !/pyl-pr-|preview/i.test(k)) return caches.delete(k);
+              return Promise.resolve();
+            }));
+          });
+        }).then(go, go);
+      })();
+    </script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#fafafa" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Sunday Pack" />
+    <meta
+      name="description"
+      content="Prepare a 1-page counsellor briefing on this phone. You bring it. We never email Enrich, banks, or lenders."
+    />
+    <title>Sunday Pack</title>
+    <link rel="manifest" href="../sunday/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="../sunday/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="../sunday/apple-touch-icon.png" />
+    <script type="module" crossorigin src="../assets/sunday-Dkn1tC7N.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-DOVJv0Nw.js">
+    <link rel="stylesheet" crossorigin href="../assets/register-sw-B5zi9vUu.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
