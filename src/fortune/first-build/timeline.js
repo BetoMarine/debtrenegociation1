@@ -84,19 +84,17 @@ export function boostTextFor(surplus, goalAmount) {
   return earlierText(balanced.label, surplus, goalAmount, balanced.mu);
 }
 
-/** Same monthly savings, grown at the model's yearly rate, versus cash put aside. */
+/**
+ * The amount on the line, grown once at the model's yearly rate.
+ * Twelve months of 5% is that amount times 1.05, not a monthly deposit at 5%/12.
+ */
 export function moreMoneyFor(surplus, months, mu) {
   if (!(surplus > 0) || !(months > 0) || !(mu > 0)) return null;
-  const cash = surplus * months;
-  const r = mu / 12;
-  const grown = (surplus * ((1 + r) ** months - 1)) / r;
-  if (!(grown - cash > 0.5)) return null;
-  return {
-    cash: Math.round(cash),
-    grown: Math.round(grown),
-    extra: Math.round(grown - cash),
-    months,
-  };
+  const cash = Math.round(surplus * months);
+  if (!(cash > 0)) return null;
+  const grown = Math.round(cash * (1 + mu));
+  if (!(grown > cash)) return null;
+  return { cash, grown, extra: grown - cash, months };
 }
 
 export function moreMoneyText(label, surplus, months, mu) {

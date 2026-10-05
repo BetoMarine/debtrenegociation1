@@ -16,7 +16,7 @@ import {
   present,
   reduce,
 } from "./flow.js";
-import { buildFutureLifePdf, timelineLines } from "./timeline.js";
+import { buildFutureLifePdf, moreMoneyFor, timelineLines } from "./timeline.js";
 import { buildLife, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
@@ -2027,7 +2027,7 @@ describe("Full journey", () => {
     expect(sliceMs(panel, "ef")).not.toMatch(/open-boost|Model portfolios/);
     const more = go(go(opened, { type: "pick-boost", id: "growth" }), { type: "boost-mode", mode: "more" });
     const moreHtml = renderFirstBuild(more);
-    expect(moreHtml).toMatch(/Growth · 7% a year · [\d,]+ becomes [\d,]+/);
+    expect(moreHtml).toMatch(/Growth · 7% a year · 96,000 becomes 102,720/);
     expect(sliceMs(moreHtml, "goal-0")).toMatch(/Growth · 7% a year/);
     expect(sliceMs(moreHtml, "ef")).not.toMatch(/Boost|becomes/);
     const sooner = go(more, { type: "boost-mode", mode: "sooner" });
@@ -2071,7 +2071,7 @@ describe("Full journey", () => {
     expect(firstOpen).toMatch(/More money/);
     expect(firstOpen).toMatch(/Earlier/);
     const firstMore = go(go(first, { type: "pick-boost", id: "firm" }), { type: "boost-mode", mode: "more" });
-    expect(renderFirstBuild(firstMore)).toMatch(/Over 12 months · Firm · 5% a year · [\d,]+ becomes [\d,]+/);
+    expect(renderFirstBuild(firstMore)).toMatch(/Over 12 months · Firm · 5% a year · 600,000 becomes 630,000/);
     expect(sliceMs(renderFirstBuild(firstMore), "ef")).not.toMatch(/Boost|becomes|5% a year/);
 
     const second = savedPlan("42000", "18000", "9000");
@@ -2148,5 +2148,43 @@ describe("Full journey", () => {
     expect(lines.join("\n")).not.toMatch(/x 0 months/);
     expect(lines.join("\n")).toMatch(/Save 1,000 x 20 months/);
     expect(lines.join("\n")).toContain(LIFE_DISCLAIMER);
+  });
+
+  it("grows the amount on the more-money line once at the yearly rate", () => {
+    expect(moreMoneyFor(100000 / 12, 12, 0.05)).toMatchObject({ cash: 100000, grown: 105000 });
+    expect(moreMoneyFor(5300, 12, 0.05)).toMatchObject({ cash: 63600, grown: 66780 });
+    expect(moreMoneyFor(5300, 12, 0.06)).toMatchObject({ cash: 63600, grown: 67416 });
+    expect(moreMoneyFor(5300, 12, 0.07)).toMatchObject({ cash: 63600, grown: 68052 });
+    expect(moreMoneyFor(5300, 12, 0.08)).toMatchObject({ cash: 63600, grown: 68688 });
+
+    function yearLine(income, costs, pick) {
+      let state = go(freshState(), { type: "pick-entry", entry: "ok" });
+      state = go(money(state, "takeHome", income), { type: "continue" });
+      state = go(money(state, "monthlyCosts", costs), { type: "continue" });
+      state = go(money(state, "stillDue", "0"), { type: "continue" });
+      state = go(money(state, "cushionNow", "4000"), { type: "continue" });
+      state = go(money(state, "cushionTarget", "4000"), { type: "continue" });
+      state = go(state, { type: "open-life" });
+      state = go(state, { type: "pick-boost", id: pick });
+      state = go(state, { type: "boost-mode", mode: "more" });
+      return renderFirstBuild(state);
+    }
+
+    const firm = yearLine("15300", "10000", "firm");
+    expect(firm).toContain("Over 12 months · Firm · 5% a year · 63,600 becomes 66,780");
+    expect(firm).not.toContain("65,078");
+    expect(sliceMs(firm, "ef")).not.toMatch(/Boost|becomes/);
+    expect(yearLine("15300", "10000", "balanced")).toContain(
+      "Over 12 months · Balanced · 6% a year · 63,600 becomes 67,416",
+    );
+    expect(yearLine("15300", "10000", "growth")).toContain(
+      "Over 12 months · Growth · 7% a year · 63,600 becomes 68,052",
+    );
+    expect(yearLine("15300", "10000", "frontier")).toContain(
+      "Over 12 months · Frontier · 8% a year · 63,600 becomes 68,688",
+    );
+    expect(yearLine("20000", "10000", "firm")).toContain(
+      "Over 12 months · Firm · 5% a year · 120,000 becomes 126,000",
+    );
   });
 });
