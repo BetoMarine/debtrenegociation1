@@ -135,13 +135,37 @@ function alertLine(view) {
 }
 
 function checksBlock(view) {
+  const skip = view.debtSkip
+    ? `<button class="ft-choice${view.debtSkip.on ? " is-on" : ""}" type="button" data-act="no-debt" aria-pressed="${view.debtSkip.on ? "true" : "false"}"><span class="ft-choice-label">${escapeHtml(view.debtSkip.label)}<span class="ft-sub">${escapeHtml(view.debtSkip.sub)}</span></span></button>`
+    : "";
   return `<div class="ft-choices">${view.checks
     .map((item) => {
       const on = item.on ? " is-on" : "";
       const mark = item.on ? "✓" : "";
       return `<button class="ft-choice${on}" type="button" data-act="toggle-debt" data-value="${escapeHtml(item.id)}" aria-pressed="${item.on ? "true" : "false"}"><span class="ft-choice-label">${escapeHtml(item.label)}</span><b aria-hidden="true">${mark}</b></button>`;
     })
-    .join("")}</div>${alertLine(view)}`;
+    .join("")}${skip}</div>${alertLine(view)}`;
+}
+
+function hubCards(cards) {
+  return (cards || [])
+    .map((card) => {
+      const kicker = card.kicker ? `<span class="ft-hub-kicker">${escapeHtml(card.kicker)}</span>` : "";
+      return `<button class="ft-hub-card" type="button" data-act="${escapeHtml(card.act)}" data-hub="${escapeHtml(card.id)}"><span>${kicker}<b>${escapeHtml(card.title)}</b><span class="ft-sub">${escapeHtml(card.body)}</span></span></button>`;
+    })
+    .join("");
+}
+
+function goalBlock(view) {
+  const form = view.goalForm;
+  if (!form) return "";
+  return `<label class="ft-label" for="ft-goal-name">Goal name</label>
+    <div class="ft-input"><input id="ft-goal-name" name="text" data-field="text" data-key="goalName" type="text" autocomplete="off" enterkeyhint="done" maxlength="80" placeholder="Tap to enter" value="${escapeHtml(form.name)}" aria-label="Goal name" /></div>
+    <label class="ft-label" for="ft-goal-amount">Target amount</label>
+    <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-goal-amount" name="amount" data-field="amount" data-key="goalAmount" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(form.amount)}" aria-label="Target amount" /></div>
+    <label class="ft-label" for="ft-goal-when">When</label>
+    <div class="ft-input"><input id="ft-goal-when" name="date" data-field="date" data-key="goalDate" type="month" autocomplete="off" value="${escapeHtml(form.month)}" aria-label="When" /></div>
+    ${alertLine(view)}`;
 }
 
 function fieldsBlock(view) {
@@ -186,6 +210,8 @@ function content(view) {
   if (view.kind === "choices") main = `<div class="ft-choices">${choices(view)}</div>`;
   if (view.kind === "checks") main = checksBlock(view);
   if (view.kind === "fields") main = fieldsBlock(view);
+  if (view.kind === "hub") main = `${hubCards(view.lead)}${rowsBlock(view)}${hubCards(view.rest)}`;
+  if (view.kind === "goal") main = `${goalBlock(view)}${calloutBlock(view)}`;
   if (view.kind === "input") main = inputBlock(view);
   if (view.kind === "picture") main = `${rowsBlock(view)}${calloutBlock(view)}`;
   if (view.kind === "handoff") main = stepsBlock(view);
@@ -214,7 +240,7 @@ function actions(view) {
   if (view.primary && view.id !== "e1") {
     const tone = view.primaryTone === "warn" ? " is-warn" : "";
     parts.push(
-      `<button class="ft-btn primary${tone}" type="button" data-act="continue">${escapeHtml(view.primary)}</button>`,
+      `<button class="ft-btn primary${tone}" type="button" data-act="${escapeHtml(view.primaryAct || "continue")}">${escapeHtml(view.primary)}</button>`,
     );
   }
   if (view.id === "e1" && view.primary) {

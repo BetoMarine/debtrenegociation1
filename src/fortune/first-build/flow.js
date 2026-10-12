@@ -64,6 +64,11 @@ export const SCREEN_IDS = [
   "d8",
   "d9",
   "d10",
+  "sv",
+  "ex",
+  "ml",
+  "mt",
+  "gy",
 ];
 
 const DEBT_KINDS = [
@@ -206,7 +211,7 @@ const INPUT_SCREENS = {
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -273,6 +278,9 @@ export function freshState() {
     debtFork: null,
     debtVia: null,
     debtGate: false,
+    noDebt: false,
+    rdTaken: false,
+    boostFrom: null,
     goals: [],
     goalIndex: null,
     action: null,
@@ -350,6 +358,10 @@ function cleanText(raw) {
 
 function cleanDate(raw) {
   const s = String(raw ?? "").trim();
+  if (/^\d{4}-\d{2}$/.test(s)) {
+    const day = `${s}-01`;
+    return parseIsoDate(day) ? day : "";
+  }
   return parseIsoDate(s) ? s : "";
 }
 
@@ -397,7 +409,17 @@ export function canContinue(state) {
         (parseAmount(state.inputs.fundSave.amount) || 0) > 0
       );
     case "dt":
-      return state.debtTypes.length > 0;
+      return true;
+    case "sv":
+      return parseAmount(state.inputs.cushionNow.amount) !== null;
+    case "ex":
+      return parseAmount(state.inputs.spendBills.amount) !== null && parseAmount(state.inputs.spendPersonal.amount) !== null;
+    case "gy":
+      return (
+        cleanText(state.inputs.goalName.text).trim().length > 0 &&
+        parseAmount(state.inputs.goalAmount.amount) !== null &&
+        parseIsoDate(state.inputs.goalDate.date) !== null
+      );
     case "d3":
       return parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
     case "d4":
@@ -588,7 +610,24 @@ function advance(state) {
     case "i0":
       return { ...state, screen: "dt", showRequired: false, infoOpen: false };
     case "dt":
-      return { ...state, screen: "d3", showRequired: false, infoOpen: false };
+      if (state.noDebt || state.debtTypes.length === 0) {
+        return {
+          ...state,
+          noDebt: true,
+          debtTypes: [],
+          debtSuggest: "",
+          screen: "sv",
+          showRequired: false,
+          infoOpen: false,
+          inputs: {
+            ...state.inputs,
+            debtOwed: blankMoney(),
+            debtInstallment: blankMoney(),
+            spendDebt: blankMoney(),
+          },
+        };
+      }
+      return { ...state, noDebt: false, screen: "d3", showRequired: false, infoOpen: false };
     case "d3":
       return { ...applyDebtSuggest(state), screen: "d4", showRequired: false, infoOpen: false };
     case "d4":
@@ -602,7 +641,39 @@ function advance(state) {
       return { ...state, screen: "d7", debtFork: "fit", showRequired: false, infoOpen: false };
     }
     case "d8":
-      return { ...state, screen: "d9", showRequired: false, infoOpen: false };
+      return { ...state, screen: "d9", rdTaken: true, showRequired: false, infoOpen: false };
+    case "sv": {
+      const now = parseAmount(state.inputs.cushionNow.amount);
+      if (now == null) return { ...state, showRequired: true };
+      const target = parseAmount(state.inputs.cushionTarget.amount);
+      const inputs =
+        now > 0 && !(target > 0)
+          ? {
+              ...state.inputs,
+              cushionTarget: { ...state.inputs.cushionTarget, amount: state.inputs.cushionNow.amount },
+            }
+          : state.inputs;
+      return { ...state, inputs, screen: "ex", showRequired: false, infoOpen: false };
+    }
+    case "ex": {
+      const bills = parseAmount(state.inputs.spendBills.amount);
+      const personal = parseAmount(state.inputs.spendPersonal.amount);
+      if (bills == null || personal == null) return { ...state, showRequired: true };
+      return {
+        ...state,
+        planFrom: "ex",
+        screen: "ml",
+        showRequired: false,
+        infoOpen: false,
+        inputs: {
+          ...state.inputs,
+          spendDebt: blankMoney(),
+          monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(bills + personal) },
+        },
+      };
+    }
+    case "gy":
+      return savePlanGoal(state);
     case "ic": {
       if (state.costsReturn === "fd3") {
         return { ...state, screen: "fd3", costsReturn: null, showRequired: false, infoOpen: false };
@@ -694,7 +765,7 @@ function advance(state) {
       return projectLife(withSpan, "lenders");
     }
     case "g3":
-      if (boostAvailable(state)) return { ...state, screen: "bx", showRequired: false, infoOpen: false };
+      if (boostAvailable(state)) return { ...state, screen: "bx", boostFrom: "g3", showRequired: false, infoOpen: false };
       return { ...state, screen: "g0" };
     default:
       return state;
@@ -723,6 +794,15 @@ function backTo(state) {
       return state.debtFork === "short" ? "d8" : "d7";
     case "d10":
       return state.debtVia === "d9" ? "d9" : "d7";
+    case "sv":
+      return "dt";
+    case "ex":
+      return "sv";
+    case "ml":
+      return state.planFrom === "d10" ? "d10" : "ex";
+    case "mt":
+    case "gy":
+      return "ml";
     case "ic":
       if (state.costsReturn === "fd3") return "fd2";
       if (state.debtGate) return "d10";
@@ -796,7 +876,7 @@ function backTo(state) {
     case "g3":
       return "g0";
     case "bx":
-      return "g3";
+      return state.boostFrom === "ml" ? "ml" : "g3";
     case "l1":
     case "l2":
     case "l3":
@@ -974,6 +1054,28 @@ function commitFund(state) {
   return stampFundSpan(committed);
 }
 
+function savePlanGoal(state) {
+  const name = cleanText(state.inputs.goalName.text).trim();
+  const date = parseIsoDate(state.inputs.goalDate.date) ? state.inputs.goalDate.date : "";
+  const price = parseAmount(state.inputs.goalAmount.amount);
+  if (!name || !date || price === null) return { ...state, showRequired: true };
+  const goals = Array.isArray(state.goals) ? state.goals.slice() : [];
+  goals.push({ name, amount: String(price), date });
+  return {
+    ...state,
+    goals,
+    screen: "ml",
+    showRequired: false,
+    infoOpen: false,
+    inputs: {
+      ...state.inputs,
+      goalName: { text: "", note: "" },
+      goalAmount: blankMoney(),
+      goalDate: { date: "", note: "" },
+    },
+  };
+}
+
 function commitGoal(state) {
   const name = String(state.inputs.goalName.text || "").trim();
   const date = state.inputs.goalDate.date;
@@ -1021,11 +1123,14 @@ function step(state, action) {
       const debtTypes = state.debtTypes.includes(id)
         ? state.debtTypes.filter((kind) => kind !== id)
         : [...state.debtTypes, id];
-      return { ...state, debtTypes, showRequired: false };
+      return { ...state, debtTypes, noDebt: false, showRequired: false };
     }
+    case "no-debt":
+      if (state.screen !== "dt") return state;
+      return { ...state, noDebt: state.noDebt !== true, debtTypes: [], showRequired: false };
     case "pick-debt-fork":
       if (state.screen !== "d7") return state;
-      if (action.pick === "improve") return { ...state, screen: "d9", debtFork: "fit", showRequired: false, infoOpen: false };
+      if (action.pick === "improve") return { ...state, screen: "d9", debtFork: "fit", rdTaken: true, showRequired: false, infoOpen: false };
       if (action.pick === "later") return { ...state, screen: "d10", debtVia: "d7", debtFork: "fit", showRequired: false, infoOpen: false };
       return state;
     case "pick-after":
@@ -1034,13 +1139,13 @@ function step(state, action) {
         return { ...state, screen: "ic", debtGate: true, showRequired: false, infoOpen: false };
       }
       if (action.pick === "plan") {
-        return { ...state, screen: "g0", planFrom: "d10", showRequired: false, infoOpen: false };
+        return { ...state, screen: "ml", planFrom: "d10", showRequired: false, infoOpen: false };
       }
       if (action.pick === "now") return { ...state, screen: "d5", showRequired: false, infoOpen: false };
       return state;
     case "pack-opened":
       if (state.screen !== "d9") return state;
-      return { ...state, screen: "d10", debtVia: "d9", showRequired: false, infoOpen: false };
+      return { ...state, screen: "d10", debtVia: "d9", rdTaken: true, showRequired: false, infoOpen: false };
     case "pick-fix":
       if (!FIX_DETAIL[action.situation]) return state;
       return { ...state, fixSituation: action.situation, screen: "i1", showRequired: false };
@@ -1179,7 +1284,7 @@ function step(state, action) {
         infoOpen: false,
       };
     case "show-plan":
-      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen) && !DEBT_SHOW.has(state.screen)) return state;
+      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen) && !DEBT_SHOW.has(state.screen) && !["sv", "ex", "mt", "gy"].includes(state.screen)) return state;
       return {
         ...state,
         screen: "l0",
@@ -1244,6 +1349,48 @@ function step(state, action) {
       if (!mode) return state;
       return { ...state, boostMode: mode };
     }
+    case "savings-later":
+      if (state.screen !== "sv") return state;
+      return {
+        ...state,
+        screen: "ex",
+        showRequired: false,
+        infoOpen: false,
+        inputs: { ...state.inputs, cushionNow: blankMoney() },
+      };
+    case "open-me":
+      if (state.screen !== "ml") return state;
+      return { ...state, screen: "mt", showRequired: false, infoOpen: false };
+    case "open-rd":
+      if (state.screen !== "ml" || state.rdTaken !== true) return state;
+      return { ...state, screen: "d9", showRequired: false, infoOpen: false };
+    case "open-stabilize":
+      if (state.screen !== "ml") return state;
+      return { ...state, screen: "ic", debtGate: true, showRequired: false, infoOpen: false };
+    case "open-goals":
+      if (state.screen !== "ml") return state;
+      return {
+        ...state,
+        screen: "gy",
+        goalEdit: false,
+        showRequired: false,
+        infoOpen: false,
+        inputs: {
+          ...state.inputs,
+          goalName: { text: "", note: "" },
+          goalAmount: blankMoney(),
+          goalDate: { date: "", note: "" },
+        },
+      };
+    case "open-boost-mix":
+      if (state.screen !== "ml" || !boostAvailable(state)) return state;
+      return { ...state, screen: "bx", boostFrom: "ml", showRequired: false, infoOpen: false };
+    case "edit-split":
+      if (state.screen !== "ml" && state.screen !== "mt") return state;
+      return { ...state, screen: state.noDebt || state.planFrom === "ex" ? "ex" : "d4", showRequired: false, infoOpen: false };
+    case "open-now":
+      if (state.screen !== "ml") return state;
+      return { ...state, screen: "d5", showRequired: false, infoOpen: false };
     default:
       return state;
   }
@@ -1348,7 +1495,7 @@ export function hydrate(raw) {
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
     if (!(entry === "ok" && (screen === "i3" || screen === "i3b"))) screen = entry ? "i0" : "w0";
   }
-  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10", "ex"].includes(raw.planFrom) ? raw.planFrom : "i0";
   const debtTypes = DEBT_KINDS.map((kind) => kind.id).filter((id) => Array.isArray(raw.debtTypes) && raw.debtTypes.includes(id));
   return {
     ...base,
@@ -1404,6 +1551,9 @@ export function hydrate(raw) {
     debtFork: oneOf(raw.debtFork, ["fit", "short"]),
     debtVia: oneOf(raw.debtVia, ["d7", "d9"]),
     debtGate: raw.debtGate === true,
+    noDebt: raw.noDebt === true,
+    rdTaken: raw.rdTaken === true,
+    boostFrom: raw.boostFrom === "ml" ? "ml" : raw.boostFrom === "g3" ? "g3" : null,
   };
 }
 
@@ -1714,6 +1864,46 @@ export function boostAvailable(state) {
   return net != null && net > 0;
 }
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function monthText(iso) {
+  const date = parseIsoDate(iso);
+  if (!date) return "";
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function monthValue(iso) {
+  const date = parseIsoDate(iso);
+  if (!date) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function plusAmount(n) {
+  if (n == null || !Number.isFinite(n)) return "\u2014";
+  if (n > 0) return `+${formatPlain(n)}`;
+  return signedAmount(n);
+}
+
+/** Declared split for Me today. Debt repayment stays off the row when she has none. */
+function meTodayPicture(state) {
+  const pic = debtPicture(state);
+  const showRepay = pic.repay != null && pic.repay > 0;
+  const rows = [{ label: "Pay", value: formatPlain(pic.pay) }];
+  if (showRepay) rows.push({ label: "Debt repayment", value: formatPlain(pic.repay) });
+  if (pic.bills != null) rows.push({ label: "Bills", value: formatPlain(pic.bills) });
+  if (pic.personal != null) rows.push({ label: "Personal", value: formatPlain(pic.personal) });
+  const expense = showRepay || pic.bills != null || pic.personal != null
+    ? (showRepay ? pic.repay : 0) + (pic.bills || 0) + (pic.personal || 0)
+    : parseAmount(state.inputs.monthlyCosts.amount);
+  if (pic.bills == null && pic.personal == null && !showRepay && expense != null) {
+    rows.push({ label: "Expenses", value: formatPlain(expense) });
+  }
+  const left = pic.left != null ? pic.left : pic.pay != null && expense != null ? pic.pay - expense : null;
+  rows.push({ label: "Left", value: plusAmount(left), neg: left < 0, pos: left > 0 });
+  const summary = `Pay ${formatPlain(pic.pay)} · Expenses ${formatPlain(expense)} · Left ${plusAmount(left)}`;
+  return { rows, summary, showRepay, left };
+}
+
 function debtScreens(state, base) {
   const id = state.screen;
   const quietPlan = { showLifeLink: false, showPlan: true };
@@ -1724,11 +1914,17 @@ function debtScreens(state, base) {
       kind: "checks",
       chip: "Debt",
       title: "What kind of debt?",
-      body: "Pick all that fit. You can change later.",
+      body: "Pick what fits — or say you have none.",
       checks: DEBT_KINDS.map((kind) => ({ ...kind, on: state.debtTypes.includes(kind.id) })),
-      primary: "Continue",
-      showRequired: state.showRequired === true,
-      requiredHint: "Pick at least one kind of debt.",
+      debtSkip: {
+        on: state.noDebt === true,
+        label: "I don't have debt",
+        sub: "Skip — continue without inventing debt",
+      },
+      note: "Healthy month. You can skip. Next: savings on hand.",
+      primary: state.debtTypes.length > 0 && !state.noDebt ? "Continue" : "Continue without debt",
+      showRequired: false,
+      requiredHint: "",
     };
   }
   if (id === "d3") {
@@ -1912,6 +2108,171 @@ function debtScreens(state, base) {
   return null;
 }
 
+function planScreens(state, base) {
+  const id = state.screen;
+  const quiet = { showLifeLink: false, showPlan: true };
+  if (id === "sv") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "fields",
+      chip: "Savings",
+      title: "Savings on hand",
+      body: "How much do you have set aside right now?",
+      frame: "I11-savings-on-hand",
+      info: "Cash you already have set aside. Invest waits until this floor is in place.",
+      fields: [{ key: "cushionNow", label: "Amount on hand", amount: state.inputs.cushionNow.amount, hint: "" }],
+      facts: [
+        {
+          title: "Feeds your cushion",
+          body: "This amount helps unlock Stabilize → Invest when the floor is ready.",
+        },
+      ],
+      note: "Empty until she enters. Never invent.",
+      primary: "Continue",
+      quiet: "Not sure yet",
+      quietAct: "savings-later",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter an amount, or choose Not sure yet.",
+    };
+  }
+  if (id === "ex") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "fields",
+      chip: "Spend",
+      title: "This month’s spend",
+      body: "Bills and personal. Nothing added for debt.",
+      frame: "I14-expenses",
+      fields: [
+        { key: "spendBills", label: "Bills", amount: state.inputs.spendBills.amount, hint: "" },
+        { key: "spendPersonal", label: "Personal", amount: state.inputs.spendPersonal.amount, hint: "" },
+      ],
+      note: "Empty until she enters. Never invent.",
+      primary: "Continue",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter bills and personal. A blank is not a number.",
+    };
+  }
+  if (id === "ml") {
+    const today = meTodayPicture(state);
+    const goal = (state.goals || [])[0];
+    const goalBody = goal
+      ? `${goal.name} · ${monthText(goal.date)}`
+      : "Name what you are saving toward";
+    const lead = [{ id: "me", act: "open-me", title: "Me today", body: today.summary }];
+    const rest = [];
+    if (state.rdTaken) {
+      rest.push({
+        id: "rd",
+        act: "open-rd",
+        kicker: "First after Me today",
+        title: "Right Door",
+        body: "You chose Improve — package path stays on plan even while Left is positive.",
+      });
+      rest.push({
+        id: "stabilize",
+        act: "open-stabilize",
+        title: "Stabilize",
+        body: "Emergency fund / cushion",
+      });
+    }
+    rest.push({
+      id: "goals",
+      act: "open-goals",
+      title: "Goals",
+      body: goal ? `Created · ${goalBody}` : "Name what you are saving toward",
+    });
+    if (boostAvailable(state)) {
+      rest.push({
+        id: "boost",
+        act: "open-boost-mix",
+        title: "Boost",
+        body: state.noDebt ? "Open — cushion ready · no debt" : "Open — cushion ready",
+      });
+      rest.push({
+        id: "open-boost",
+        act: "open-boost-mix",
+        title: "Open Boost",
+        body: "Firm · Balanced · Growth · Frontier",
+      });
+    }
+    return {
+      ...base,
+      kind: "hub",
+      chip: "Plan",
+      title: "My Life",
+      body: state.rdTaken ? "Plan · after she took Right Door" : "Me today · expenses visible",
+      frame: state.rdTaken ? "I04-plan-rd-first" : "I14-my-life",
+      showLifeLink: false,
+      showPlan: false,
+      lead,
+      rows: today.rows,
+      rest,
+      note: state.rdTaken ? "" : "No Right Door card — she did not take RD.",
+      quiet: state.rdTaken ? "Back to Your Now" : "Edit expenses",
+      quietAct: state.rdTaken ? "open-now" : "edit-split",
+    };
+  }
+  if (id === "mt") {
+    const today = meTodayPicture(state);
+    return {
+      ...base,
+      kind: "picture",
+      chip: "Me today",
+      title: "Me today",
+      body: "From amounts you entered.",
+      frame: "I06-me-today",
+      showLifeLink: false,
+      showPlan: false,
+      rows: today.rows,
+      callout: {
+        tone: "ok",
+        title: "Expense split from your journey",
+        body: today.showRepay
+          ? "Debt repayment · Bills · Personal — not blank."
+          : "Bills · Personal — not blank.",
+      },
+      note: "Change any part anytime.",
+      primary: "Back to My Life",
+      primaryAct: "back",
+      quiet: "Edit split",
+      quietAct: "edit-split",
+    };
+  }
+  if (id === "gy") {
+    const name = cleanText(state.inputs.goalName.text).trim();
+    const when = monthText(state.inputs.goalDate.date);
+    const amount = parseAmount(state.inputs.goalAmount.amount);
+    const bits = [name, when, amount == null ? "" : formatPlain(amount)].filter(Boolean);
+    return {
+      ...base,
+      kind: "goal",
+      chip: "Goal",
+      title: "Name a goal",
+      body: "Something you want to save toward.",
+      frame: "I15-goal",
+      showLifeLink: false,
+      showPlan: false,
+      goalForm: {
+        name: state.inputs.goalName.text,
+        amount: state.inputs.goalAmount.amount,
+        month: monthValue(state.inputs.goalDate.date),
+      },
+      callout: bits.length
+        ? { tone: "ok", title: bits.join(" · "), body: "Goal stays on plan. Boost stays reachable after you save this." }
+        : null,
+      primary: "Save goal",
+      quiet: "Not now",
+      quietAct: "back",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter a name, an amount, and a month.",
+    };
+  }
+  return null;
+}
+
 export function present(state) {
   const id = state.screen;
   const ready = cushionReady(state);
@@ -2026,6 +2387,8 @@ export function present(state) {
 
   const debt = debtScreens(state, base);
   if (debt) return debt;
+  const plan = planScreens(state, base);
+  if (plan) return plan;
 
   if (id === "e0") {
     return {
@@ -2279,16 +2642,26 @@ export function present(state) {
   }
 
   if (id === "bx") {
+    const picked = BOOST_IDS.includes(state.boostPick) ? forecastReturn(state.boostPick) : null;
     return {
       ...base,
       kind: "confirm",
       title: "Boost",
-      body: "Pick a card. None is chosen until you do.",
-      chip: "Plan",
-      showPlan: true,
+      body: "Investment benchmark · pick a mix",
+      chip: "Boost",
+      showPlan: false,
       showLifeLink: false,
       frame: "H11-boost-cards",
       investBoost: investBoost(state),
+      callout: {
+        tone: "ok",
+        title: "Benchmark open",
+        body: "Pick a mix. None is chosen until you do.",
+      },
+      primary: picked ? `Use ${picked.label}` : "Use this mix",
+      primaryAct: "back",
+      quiet: "Back to Your life",
+      quietAct: "back",
     };
   }
 

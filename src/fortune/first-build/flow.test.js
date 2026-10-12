@@ -2303,8 +2303,20 @@ describe("Slice G debt enquire to Right Door", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = editMoney(state, "takeHome", "18400");
     state = step(state, { type: "continue" });
-    expect(step(state, { type: "continue" }).showRequired).toBe(true);
-    expect(step(state, { type: "continue" }).screen).toBe("dt");
+    const door = renderFirstBuild(state);
+    expect(door).toMatch(/I don't have debt/);
+    expect(door).toMatch(/Continue without debt/);
+    expect(door).not.toMatch(/Pick at least one kind of debt/);
+    const skipped = step(state, { type: "continue" });
+    expect(skipped.screen).toBe("sv");
+    expect(skipped.showRequired).toBe(false);
+    expect(skipped.noDebt).toBe(true);
+    expect(skipped.debtTypes).toEqual([]);
+    expect(skipped.inputs.debtOwed.amount).toBe("");
+    expect(skipped.inputs.debtInstallment.amount).toBe("");
+    expect(skipped.inputs.spendDebt.amount).toBe("");
+    expect(renderFirstBuild(skipped)).toMatch(/Savings on hand/);
+    expect(renderFirstBuild(skipped)).not.toMatch(/Pick at least one kind of debt/);
     state = step(state, { type: "toggle-debt", id: "cards" });
     state = step(state, { type: "toggle-debt", id: "loans" });
     state = step(state, { type: "toggle-debt", id: "mortgage" });
@@ -2389,7 +2401,12 @@ describe("Slice G debt enquire to Right Door", () => {
     const after = step(short, { type: "pack-opened" });
     expect(after.screen).toBe("d10");
     expect(step(after, { type: "pick-after", pick: "stabilize" }).screen).toBe("ic");
-    expect(step(after, { type: "pick-after", pick: "plan" }).screen).toBe("g0");
+    const planned = step(after, { type: "pick-after", pick: "plan" });
+    expect(planned.screen).toBe("ml");
+    expect(planned.rdTaken).toBe(true);
+    const plannedHtml = renderFirstBuild(planned);
+    expect(plannedHtml.indexOf('data-act="open-rd"')).toBeGreaterThan(plannedHtml.indexOf("Me today"));
+    expect(plannedHtml.indexOf('data-act="open-stabilize"')).toBeGreaterThan(plannedHtml.indexOf('data-act="open-rd"'));
     expect(step(after, { type: "pick-after", pick: "now" }).screen).toBe("d5");
 
     let fit = toSplit("18400", "20000", "2000", ["mortgage"]);
@@ -2404,8 +2421,19 @@ describe("Slice G debt enquire to Right Door", () => {
     expect(offer).toMatch(/Improve with Right Door/);
     expect(offer).toMatch(/Not now/);
     expect(offer).not.toMatch(/Start Right Door package/);
-    expect(step(fit, { type: "pick-debt-fork", pick: "later" }).screen).toBe("d10");
+    const later = step(fit, { type: "pick-debt-fork", pick: "later" });
+    expect(later.screen).toBe("d10");
+    expect(later.rdTaken).toBe(false);
+    const laterPlan = step(later, { type: "pick-after", pick: "plan" });
+    expect(laterPlan.screen).toBe("ml");
+    expect(renderFirstBuild(laterPlan)).not.toMatch(/data-act="open-rd"/);
     expect(step(fit, { type: "pick-debt-fork", pick: "improve" }).screen).toBe("d9");
+    const took = step(step(fit, { type: "pick-debt-fork", pick: "improve" }), { type: "pack-opened" });
+    const withDoor = step(took, { type: "pick-after", pick: "plan" });
+    const doorHtml = renderFirstBuild(withDoor);
+    expect(doorHtml).toMatch(/data-act="open-rd"/);
+    expect(doorHtml).toMatch(/3,200|2,000/);
+    expect(doorHtml.indexOf('data-act="open-rd"')).toBeGreaterThan(doorHtml.indexOf("Me today"));
   });
 
   it("keeps an edited repayment when the installment changes", () => {
@@ -2417,5 +2445,82 @@ describe("Slice G debt enquire to Right Door", () => {
     state = step(state, { type: "continue" });
     expect(state.inputs.spendDebt.amount).toBe("1000");
     expect(state.inputs.spendBills.amount).toBe("");
+  });
+});
+
+describe("Slice I scenario positive", () => {
+  it("continues with no debt selected into savings and never asks for a debt kind", () => {
+    let state = step(freshState(), { type: "pick-entry", entry: "ok" });
+    state = editMoney(state, "takeHome", "100000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("dt");
+    const asked = renderFirstBuild(state);
+    expect(asked).toMatch(/I don't have debt/);
+    expect(asked).toMatch(/Continue without debt/);
+    expect(asked).not.toMatch(/Pick at least one kind of debt/);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("sv");
+    expect(state.noDebt).toBe(true);
+    expect(state.debtTypes).toEqual([]);
+    expect(state.inputs.debtOwed.amount).toBe("");
+    expect(state.inputs.debtInstallment.amount).toBe("");
+    expect(state.inputs.spendDebt.amount).toBe("");
+    expect(renderFirstBuild(state)).toMatch(/Savings on hand/);
+    expect(renderFirstBuild(state)).toMatch(/Amount on hand/);
+  });
+
+  it("walks 100k / 50k / 200k into a car goal and Boost with no Right Door card", () => {
+    let state = step(freshState(), { type: "pick-entry", entry: "ok" });
+    state = editMoney(state, "takeHome", "100000");
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "no-debt" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("sv");
+    expect(step(state, { type: "continue" }).screen).toBe("sv");
+    state = editMoney(state, "cushionNow", "200000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ex");
+    expect(state.inputs.cushionTarget.amount).toBe("200000");
+    expect(cushionReady(state)).toBe(true);
+    state = editMoney(state, "spendBills", "30000");
+    state = editMoney(state, "spendPersonal", "20000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ml");
+    expect(state.inputs.monthlyCosts.amount).toBe("50000");
+    expect(state.inputs.spendDebt.amount).toBe("");
+    const plan = renderFirstBuild(state);
+    expect(plan).toMatch(/My Life/);
+    expect(plan).toMatch(/100,000/);
+    expect(plan).toMatch(/30,000/);
+    expect(plan).toMatch(/20,000/);
+    expect(plan).toMatch(/\+50,000/);
+    expect(plan).not.toMatch(/Debt repayment/);
+    expect(plan).not.toMatch(/data-act="open-rd"/);
+    expect(plan).toMatch(/data-act="open-boost-mix"/);
+    state = step(state, { type: "open-goals" });
+    state = step(state, { type: "edit", key: "goalName", text: "Buy a car" });
+    state = editMoney(state, "goalAmount", "80000");
+    state = step(state, { type: "edit", key: "goalDate", date: "2027-12" });
+    expect(renderFirstBuild(state)).toMatch(/Dec 2027/);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ml");
+    expect(state.goals[0]).toMatchObject({ name: "Buy a car", amount: "80000", date: "2027-12-01" });
+    const afterGoal = renderFirstBuild(state);
+    expect(afterGoal).toMatch(/data-act="open-boost-mix"/);
+    expect(afterGoal).not.toMatch(/data-act="open-rd"/);
+    state = step(state, { type: "open-boost-mix" });
+    expect(state.screen).toBe("bx");
+    const cards = renderFirstBuild(state);
+    expect(cards).toMatch(/Bad year about 10%/);
+    expect(cards).toMatch(/Bad year about 15%/);
+    expect(cards).toMatch(/Bad year about 20%/);
+    expect(cards).toMatch(/Bad year about 25%/);
+    expect([...cards.matchAll(/data-act="pick-boost"[^>]*aria-pressed="(true|false)"/g)].map((match) => match[1])).toEqual([
+      "false",
+      "false",
+      "false",
+      "false",
+    ]);
+    expect(step(state, { type: "back" }).screen).toBe("ml");
   });
 });
