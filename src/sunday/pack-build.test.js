@@ -13,6 +13,7 @@ import {
   PACK_READY,
   bookUnlocked,
   crisisSkipScreen,
+  entryForDeepLink,
   packageAskLine,
   packageFactLine,
   packageIsReady,
@@ -69,6 +70,9 @@ describe("pack entry order", () => {
     expect(resolveSundayScreen(PACK_DOCS, { packageReady: false })).toBe(PACK_BUILD);
     expect(resolveSundayScreen(PACK_DOCS_SAVED, { packageReady: false })).toBe(PACK_BUILD);
     expect(resolveSundayScreen(PACK_READY, { packageReady: false })).toBe(PACK_FORMING);
+    expect(entryForDeepLink("sunday-door", fresh)).toBe("sunday-privacy");
+    fresh.privacyAccepted = true;
+    expect(entryForDeepLink("sunday-door", fresh)).toBe(PACK_BUILD);
   });
 });
 

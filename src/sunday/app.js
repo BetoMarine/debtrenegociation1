@@ -19,7 +19,7 @@ import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isF
 import { makeFireHandoff } from "../handoff.js";
 import { emptyDraftLoan, migrateSundayPack, newSundayPack, normalizeLoan } from "./model.js";
 import { buildSundayPdf } from "./pdf.js";
-import { isPackScreen, privacyContinueScreen, resolveSundayScreen } from "./pack-build.js";
+import { entryForDeepLink, isPackScreen, privacyContinueScreen, resolveSundayScreen } from "./pack-build.js";
 import { renderPackScreen } from "./pack-build-view.js";
 
 const SUNDAY_EVENT_TYPES = [
@@ -85,7 +85,7 @@ function syncScreenFromHash() {
     return;
   }
   if (SUNDAY_SCREENS.includes(name)) {
-    const resolved = resolveSundayScreen(name, sunday);
+    const resolved = entryForDeepLink(name, sunday);
     screen = resolved;
     if (resolved !== name && location.hash !== `#/${resolved}`) {
       location.replace(`#/${resolved}`);

@@ -144,6 +144,12 @@ export function crisisSkipScreen() {
  * Deep link #/sunday-door and the book screen stay behind a ready package
  * and a docs step that has been shown (skipping the files is allowed).
  */
+/** A deep link never opens booking before privacy, and never before the package gate. */
+export function entryForDeepLink(name, pack) {
+  if (!pack?.privacyAccepted) return "sunday-privacy";
+  return resolveSundayScreen(name, pack);
+}
+
 export function resolveSundayScreen(name, pack) {
   if (BOOK_HASHES.has(name)) return bookUnlocked(pack) ? PACK_BOOK : PACK_BUILD;
   if ((name === PACK_DOCS || name === PACK_DOCS_SAVED) && !(pack?.packageReady && packageIsReady(pack?.packageMath))) {
