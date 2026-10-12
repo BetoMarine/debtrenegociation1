@@ -7,7 +7,12 @@
       (function () {
         var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
-        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        if (/\/preview\/pack-build(?:\/|$)/.test(path)) {
+          window.__PYL_STORAGE_NS__ = "pyl-preview-pack-build";
+        }
+        var app = /\/preview\/pack-build(?:\/|$)/.test(path)
+          ? "sunday"
+          : /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
         if (expected === app) return;
         document.documentElement.style.visibility = "hidden";
         function go() {
@@ -45,9 +50,11 @@
     <link rel="manifest" href="../sunday/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="../sunday/icons/icon.svg" />
     <link rel="apple-touch-icon" href="../sunday/apple-touch-icon.png" />
-    <script type="module" crossorigin src="../assets/sunday-DGU4wKPQ.js"></script>
-    <link rel="modulepreload" crossorigin href="../assets/register-sw-D2RaHzNW.js">
-    <link rel="stylesheet" crossorigin href="../assets/register-sw-CTi1pIoH.css">
+    <script type="module" crossorigin src="../assets/sunday-Dvn0RztN.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-pVHSefcd.js">
+    <link rel="modulepreload" crossorigin href="../assets/handoff-CmTiETzm.js">
+    <link rel="stylesheet" crossorigin href="../assets/handoff-CTi1pIoH.css">
+    <link rel="stylesheet" crossorigin href="../assets/sunday-CZwFl6xZ.css">
   </head>
   <body>
     <div id="app"></div>
