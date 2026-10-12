@@ -17,15 +17,24 @@ describe("Plan Your Life DRAFT shelf lock", () => {
     expect(shelf).toMatch(/#0f172a/);
   });
 
-  it("publishes two live tools with Open links and no Fortune Open CTA", () => {
+  it("publishes two live debt tools and a Fortune vs Offshore version chooser", () => {
     expect(shelf).toMatch(/two live tools/);
+    expect(shelf).toMatch(/two versions/);
     expect(shelf).toMatch(/Fortune Teller is testing/);
+    expect(shelf).toMatch(/Which version fits/);
+    expect(shelf).toMatch(/mass affluent/);
+    expect(shelf).toMatch(/domestic helpers/);
     expect(shelf).toMatch(/Open Right Door/);
     expect(shelf).toMatch(/Open Sunday Pack/);
+    expect(shelf).toMatch(/Open Offshore/);
+    expect(shelf).toMatch(/Fortune testing build/);
+    expect(shelf).not.toMatch(/Open Fortune Teller/);
     expect(shelf).toContain('href="https://betomarine.github.io/debtrenegociation1/"');
     expect(shelf).toContain('href="https://betomarine.github.io/debtrenegociation1/sunday/"');
-    expect(shelf).not.toMatch(/Open Fortune Teller/);
-    expect(shelf).not.toContain('href="https://betomarine.github.io/debtrenegociation1/fortune/"');
+    expect(shelf).toContain('href="https://betomarine.github.io/debtrenegociation1/offshore/"');
+    expect(shelf).toContain('href="https://betomarine.github.io/debtrenegociation1/fortune/"');
+    expect(shelf).toMatch(/does not open the dig-in/);
+    expect(shelf).not.toMatch(/dig-in is live/i);
   });
 
   it("labels the locked shelf statuses", () => {
@@ -37,9 +46,14 @@ describe("Plan Your Life DRAFT shelf lock", () => {
     expect(shelf).toMatch(/Enrich door/);
     expect(shelf).toMatch(/Not a literacy lecture/);
     expect(shelf).toMatch(/>Testing</);
-    expect(shelf).toMatch(/Fortune Teller/);
-    expect(shelf).toMatch(/>Research</);
-    expect(shelf).toMatch(/Offshore/);
+    expect(shelf).toMatch(/Fortune · mass affluent/);
+    expect(shelf).toMatch(/debt support is <strong class="text-slate-200">Right Door<\/strong>/);
+    expect(shelf).not.toMatch(/>Research</);
+    expect(shelf).toMatch(/Offshore · helpers/);
+    expect(shelf).toMatch(/>Helpers version</);
+    expect(shelf).toMatch(/Debt support is <strong class="text-slate-200">Sunday Pack<\/strong>/);
+    expect(shelf).toMatch(/Invent-spend never/);
+    expect(shelf).toMatch(/passport held/);
     expect(shelf).toMatch(/>Ideation</);
     expect(shelf).toMatch(/Digital twin/);
     expect(shelf).not.toMatch(/PYL Invest/);

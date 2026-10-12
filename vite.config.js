@@ -14,6 +14,7 @@ export default defineConfig({
         main: resolve(root, "index.html"),
         sunday: resolve(root, "sunday/index.html"),
         fortune: resolve(root, "fortune/index.html"),
+        offshore: resolve(root, "offshore/index.html"),
       },
     },
   },
@@ -34,6 +35,8 @@ export default defineConfig({
         "fortune/icons/icon-192.png",
         "fortune/icons/icon-512.png",
         "fortune/apple-touch-icon.png",
+        "offshore/icon-192.png",
+        "offshore/icon-512.png",
       ],
       manifest: false,
       injectManifest: {

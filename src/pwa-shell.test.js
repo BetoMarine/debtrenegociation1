@@ -22,6 +22,10 @@ describe("MPA HTML shell routing", () => {
     expect(htmlShellForPath("/debtrenegociation1/fortune/index.html")).toBe("fortune/index.html");
     expect(htmlShellForPath("/sunday/")).toBe("sunday/index.html");
     expect(htmlShellForPath("/debtrenegociation1/sunday")).toBe("sunday/index.html");
+    expect(htmlShellForPath("/offshore/")).toBe("offshore/index.html");
+    expect(htmlShellForPath("/offshore")).toBe("offshore/index.html");
+    expect(htmlShellForPath("/debtrenegociation1/offshore/")).toBe("offshore/index.html");
+    expect(htmlShellForPath("/debtrenegociation1/offshore/index.html")).toBe("offshore/index.html");
     expect(htmlShellForPath("/pyl/")).toBe("pyl/index.html");
     expect(htmlShellForPath("/")).toBe("index.html");
     expect(htmlShellForPath("/index.html")).toBe("index.html");
@@ -36,6 +40,8 @@ describe("MPA HTML shell routing", () => {
     expect(swSrc).toMatch(/htmlShellForPath/);
     expect(swSrc).toMatch(/fortune\/index\.html/);
     expect(swSrc).toMatch(/sunday\/index\.html/);
+    expect(swSrc).toMatch(/offshore\/index\.html/);
+    expect(swSrc).toMatch(/\/offshore\(\?:\\\/\|\$\)\//);
     expect(swSrc).not.toMatch(/createHandlerBoundToURL\("index\.html"\)\s*\)/);
   });
 });
@@ -55,6 +61,8 @@ describe("PoC version isolation", () => {
 
 describe("product HTML shell guard", () => {
   it("labels each app document and heals a wrong cached shell", () => {
+    expect(productIdForPath("/offshore/")).toBe("offshore");
+    expect(productIdForPath("/debtrenegociation1/offshore/")).toBe("offshore");
     expect(productIdForPath("/fortune/")).toBe("fortune");
     expect(productIdForPath("/sunday/")).toBe("sunday");
     expect(productIdForPath("/")).toBe("right-door");
