@@ -1,4 +1,10 @@
 import { recommendSundayDoor, normalizeFlags, hasCrisisFlags } from "./door.js";
+import {
+  emptyPackageInputs,
+  packageIsReady,
+  packageMathFromInputs,
+  sanitizeInputs,
+} from "./pack-build.js";
 
 export const LOAN_TYPES = [
   "hk_money_lender",
@@ -34,15 +40,35 @@ export function newSundayPack(lang) {
     split: { bills: "", allowance: "", keep: "" },
     splitNote: "",
     door: null,
+    packageInputs: emptyPackageInputs(),
+    packageMath: packageMathFromInputs(null),
+    packageReady: false,
+    docsStepShown: false,
+    bookIntent: false,
+    docs: { loan: null, pay: null, id: null },
     screen: "sunday-privacy",
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
 }
 
+function sanitizeDocMeta(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  const name = String(doc.name || "").slice(0, 120);
+  if (!name) return null;
+  return {
+    name,
+    type: String(doc.type || "").slice(0, 80),
+    size: Number(doc.size) || 0,
+  };
+}
+
 export function migrateSundayPack(raw, lang) {
   if (!raw) return raw;
   const split = raw.split || {};
+  const packageInputs = sanitizeInputs(raw.packageInputs);
+  const packageMath = packageMathFromInputs(packageInputs);
+  const docs = raw.docs || {};
   return {
     ...newSundayPack(lang || raw.lang),
     ...raw,
@@ -57,6 +83,16 @@ export function migrateSundayPack(raw, lang) {
     },
     splitNote: raw.splitNote || "",
     door: raw.door || recommendSundayDoor(raw.flags),
+    packageInputs,
+    packageMath,
+    packageReady: !!raw.packageReady && packageIsReady(packageMath),
+    docsStepShown: !!raw.docsStepShown,
+    bookIntent: !!raw.bookIntent,
+    docs: {
+      loan: sanitizeDocMeta(docs.loan),
+      pay: sanitizeDocMeta(docs.pay),
+      id: sanitizeDocMeta(docs.id),
+    },
   };
 }
 
@@ -97,6 +133,7 @@ export function hasGuarantor(loans) {
 
 export function canGeneratePdf(pack) {
   if (!pack?.privacyAccepted) return false;
+  if (pack.packageReady && packageIsReady(pack.packageMath)) return true;
   if (hasCrisisFlags(pack.flags)) return true;
   return Array.isArray(pack.loans) && pack.loans.length >= 1;
 }
