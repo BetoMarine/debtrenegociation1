@@ -7,7 +7,7 @@
       (function () {
         var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
-        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        var app = /\/offshore(?:\/|$)/.test(path) ? "offshore" : /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
         if (expected === app) return;
         document.documentElement.style.visibility = "hidden";
         function go() {
