@@ -75,6 +75,80 @@ function addMonths(date, count) {
   return next;
 }
 
+function atMidnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function toIso(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Completion date for a cushion that is still short.
+ * Earliest day is as-of plus the whole months Left can cover the gap.
+ * A stored date counts only when it is on or after that day.
+ * The plan date is the stored viable day, otherwise the earliest day the month can reach.
+ */
+export function cushionFinish(state) {
+  const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
+  const inputs = state?.inputs || {};
+  const nowRaw = amount(inputs.cushionNow?.amount);
+  const pending = state?.fundPending === true;
+  const target = pending ? amount(inputs.fundTarget?.amount) : amount(inputs.cushionTarget?.amount);
+  const income = amount(inputs.takeHome?.amount);
+  const costs = amount(inputs.monthlyCosts?.amount);
+  const stillRaw = amount(inputs.stillDue?.amount);
+  const overdueRaw = amount(inputs.overdue?.amount);
+  const still = stillRaw || 0;
+  const overdue = overdueRaw || 0;
+  let left = null;
+  if (income != null) {
+    if (costs == null) left = stillRaw == null && overdueRaw == null ? income : income - still - overdue;
+    else left = income - costs - still - overdue;
+  }
+  const now = nowRaw == null ? 0 : nowRaw;
+  const incomplete = target != null && target > 0 && now < target;
+  const gap = incomplete ? target - now : 0;
+  let months = null;
+  let earliest = null;
+  if (incomplete && left != null && left > 0 && gap > 0) {
+    months = Math.ceil(gap / left);
+    earliest = atMidnight(addMonths(asOf, months));
+  }
+  const stored = parseIsoDate(inputs.fundWhen?.date);
+  const storedDay = stored ? atMidnight(stored) : null;
+  const viable = Boolean(incomplete && storedDay && earliest && storedDay.getTime() >= earliest.getTime());
+  const doneBy = incomplete ? (viable ? storedDay : earliest) : null;
+  const label = doneBy ? formatDate(doneBy) : "";
+  return {
+    incomplete,
+    gap,
+    left,
+    now: nowRaw,
+    target,
+    months,
+    earliest,
+    stored: storedDay,
+    viable,
+    doneBy,
+    doneByIso: doneBy ? toIso(doneBy) : "",
+    label,
+    doneByText: label ? `Done by ${label}` : "",
+  };
+}
+
+/** True when this calendar day can be the cushion finish. A complete cushion has nothing to prove. */
+export function cushionDateViable(state, date) {
+  if (!(date instanceof Date)) return false;
+  const finish = cushionFinish(state);
+  if (!finish.incomplete) return true;
+  if (!finish.earliest) return false;
+  return atMidnight(date).getTime() >= finish.earliest.getTime();
+}
+
 /** True once Right Door or a Fix handoff has actually joined. A blank draft pack does not count. */
 export function rightDoorJoined(pack, handoff) {
   if (handoff && (handoff.source === "right-door" || handoff.source === "sunday")) return true;
@@ -365,6 +439,7 @@ export function buildLife(state) {
   }
 
   const showEf = money.target != null && money.target > 0;
+  const finish = cushionFinish(state);
   const fundNow = showEf && money.now == null ? 0 : money.now;
   const fundPct = showEf ? pctOf(fundNow, money.target) ?? 0 : pct;
   const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
@@ -450,13 +525,19 @@ export function buildLife(state) {
     },
     ef: {
       title: money.fundLabel || "Emergency fund",
-      date: money.fundWhen ? formatDate(money.fundWhen) : place || formatDate(addMonths(asOf, 12)),
+      date:
+        finish.incomplete && finish.doneBy
+          ? formatDate(finish.doneBy)
+          : money.fundWhen
+            ? formatDate(money.fundWhen)
+            : place || formatDate(addMonths(asOf, 12)),
       whenIso: money.fundWhenIso,
       now: fundNow,
       target: money.target,
       pct: fundPct,
       rising: showEf,
       net,
+      incomplete: finish.incomplete,
       targetText: formatPlain(money.target),
       nowText: formatPlain(showEf ? fundNow : money.now),
       pctText: showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`,
@@ -467,7 +548,12 @@ export function buildLife(state) {
       netText: formatSigned(net),
       netClass: copy.netClass,
       foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(showEf ? fundNow : money.now)} \u00b7 ${showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`}`,
-      byText: money.fundWhen ? `By ${formatDate(money.fundWhen)}` : "",
+      byText:
+        finish.incomplete && finish.doneByText
+          ? finish.doneByText
+          : money.fundWhen
+            ? `By ${formatDate(money.fundWhen)}`
+            : "",
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,

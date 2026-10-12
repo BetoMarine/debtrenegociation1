@@ -1,11 +1,11 @@
 /**
  * Fortune Teller first build.
  * Slice A: one continuous flow. Cold start and post-erase land on Where are you? (W0).
- * Invest stays locked until the cushion floor is real.
+ * Invest and Boost stay open while a cushion is still building. Still-due and overdue keep them shut.
  * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
 
-import { buildLife, formatIsoDate, formatPlain, parseIsoDate } from "./life.js";
+import { buildLife, cushionDateViable, cushionFinish, formatIsoDate, formatPlain, parseIsoDate } from "./life.js";
 import { earlierText, forecastReturn, moreMoneyText, portfolioReturns } from "./timeline.js";
 
 export const SCREEN_IDS = [
@@ -69,6 +69,9 @@ export const SCREEN_IDS = [
   "ml",
   "mt",
   "gy",
+  "cd",
+  "cd2",
+  "gn",
 ];
 
 const DEBT_KINDS = [
@@ -211,7 +214,7 @@ const INPUT_SCREENS = {
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -308,6 +311,11 @@ export function freshState() {
     boostPick: null,
     boostMode: "sooner",
     boostFor: null,
+    goalResume: null,
+    dateFrom: null,
+    dateHeld: "",
+    fundPending: false,
+    dateRejected: false,
   };
 }
 
@@ -421,6 +429,11 @@ export function canContinue(state) {
         parseAmount(state.inputs.goalAmount.amount) !== null &&
         parseIsoDate(state.inputs.goalDate.date) !== null
       );
+    case "cd":
+      return parseIsoDate(state.inputs.fundWhen.date) !== null;
+    case "cd2":
+    case "gn":
+      return true;
     case "d3":
       return parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
     case "d4":
@@ -675,6 +688,14 @@ function advance(state) {
     }
     case "gy":
       return savePlanGoal(state);
+    case "cd":
+      return acceptCushionDate(state);
+    case "cd2": {
+      const back = state.dateFrom === "ml" || state.dateFrom === "l0" ? state.dateFrom : "l0";
+      return { ...state, screen: back, showRequired: false, infoOpen: false, dateRejected: false, fundPending: false };
+    }
+    case "gn":
+      return state;
     case "ic": {
       if (state.costsReturn === "fd3") {
         return { ...state, screen: "fd3", costsReturn: null, showRequired: false, infoOpen: false };
@@ -804,6 +825,12 @@ function backTo(state) {
     case "mt":
     case "gy":
       return "ml";
+    case "cd":
+      return state.dateFrom === "ml" ? "ml" : state.dateFrom === "sf" ? "sf" : "l0";
+    case "cd2":
+      return "cd";
+    case "gn":
+      return state.goalResume === "gy" ? "gy" : "ig2";
     case "ic":
       if (state.costsReturn === "fd3") return "fd2";
       if (state.debtGate) return "d10";
@@ -879,7 +906,7 @@ function backTo(state) {
       if (state.investFrom === "ml" || state.investFrom === "l0") return state.investFrom;
       return "g0";
     case "bx":
-      return state.boostFrom === "ml" ? "ml" : "g3";
+      return ["ml", "gy", "l0", "gn", "g3"].includes(state.boostFrom) ? state.boostFrom : "g3";
     case "l1":
     case "l2":
     case "l3":
@@ -1029,14 +1056,10 @@ function applyCostCut(state) {
   };
 }
 
-function commitFund(state) {
+function finishFund(state) {
   const amount = parseAmount(state.inputs.fundTarget.amount);
   const label = String(state.inputs.fundTarget.note || "").trim();
-  const when = parseIsoDate(state.inputs.fundWhen.date);
   const save = parseAmount(state.inputs.fundSave.amount);
-  if (amount === null || amount <= 0 || !label || !when || save === null || save <= 0) {
-    return { ...state, showRequired: true };
-  }
   const committed = {
     ...state,
     inputs: {
@@ -1050,6 +1073,8 @@ function commitFund(state) {
     projectNext: true,
     fromInput: false,
     lifeFrom: null,
+    fundPending: false,
+    dateRejected: false,
     showRequired: false,
     infoOpen: false,
     lifeDetail: false,
@@ -1057,17 +1082,76 @@ function commitFund(state) {
   return stampFundSpan(committed);
 }
 
+function commitFund(state) {
+  const amount = parseAmount(state.inputs.fundTarget.amount);
+  const label = String(state.inputs.fundTarget.note || "").trim();
+  const when = parseIsoDate(state.inputs.fundWhen.date);
+  const save = parseAmount(state.inputs.fundSave.amount);
+  if (amount === null || amount <= 0 || !label || !when || save === null || save <= 0) {
+    return { ...state, showRequired: true };
+  }
+  const pending = { ...state, fundPending: true };
+  if (!cushionDateViable(pending, when)) {
+    return {
+      ...state,
+      screen: "cd",
+      dateFrom: "sf",
+      dateHeld: "",
+      fundPending: true,
+      dateRejected: true,
+      showRequired: true,
+      infoOpen: false,
+    };
+  }
+  return finishFund(state);
+}
+
+function acceptCushionDate(state) {
+  const when = parseIsoDate(state.inputs.fundWhen.date);
+  if (!when || !cushionDateViable(state, when)) {
+    return { ...state, screen: "cd", dateRejected: true, showRequired: true, infoOpen: false };
+  }
+  const stamped = {
+    ...state,
+    dateRejected: false,
+    showRequired: false,
+    infoOpen: false,
+    inputs: {
+      ...state.inputs,
+      fundWhen: { date: state.inputs.fundWhen.date, note: state.inputs.fundWhen.note || "" },
+    },
+  };
+  if (state.fundPending) {
+    const committed = finishFund(stamped);
+    return { ...committed, fundPending: false, screen: "cd2", dateFrom: "l0", dateRejected: false };
+  }
+  return { ...stamped, screen: "cd2", fundPending: false };
+}
+
+function goalStartsTooEarly(state) {
+  const finish = cushionFinish(state);
+  const picked = parseIsoDate(state.inputs.goalDate.date);
+  if (!finish.doneBy || !picked) return false;
+  return picked.getTime() < finish.doneBy.getTime();
+}
+
+function nudgeGoal(state, resume) {
+  return { ...state, screen: "gn", goalResume: resume, showRequired: false, infoOpen: false };
+}
+
 function savePlanGoal(state) {
   const name = cleanText(state.inputs.goalName.text).trim();
   const date = parseIsoDate(state.inputs.goalDate.date) ? state.inputs.goalDate.date : "";
   const price = parseAmount(state.inputs.goalAmount.amount);
   if (!name || !date || price === null) return { ...state, showRequired: true };
+  if (goalStartsTooEarly(state)) return nudgeGoal(state, "gy");
   const goals = Array.isArray(state.goals) ? state.goals.slice() : [];
   goals.push({ name, amount: String(price), date });
   return {
     ...state,
     goals,
     screen: "ml",
+    goalResume: null,
     showRequired: false,
     infoOpen: false,
     inputs: {
@@ -1084,6 +1168,7 @@ function commitGoal(state) {
   const date = state.inputs.goalDate.date;
   const price = parseAmount(state.inputs.goalAmount.amount);
   if (!name || !parseIsoDate(date) || price === null) return { ...state, showRequired: true };
+  if (goalStartsTooEarly(state)) return nudgeGoal(state, "ig2");
   const goals = Array.isArray(state.goals) ? state.goals.slice() : [];
   const next = { name, amount: String(price), date };
   if (state.goalEdit === true && Number.isInteger(state.goalIndex) && goals[state.goalIndex]) goals[state.goalIndex] = next;
@@ -1093,6 +1178,7 @@ function commitGoal(state) {
     goals,
     goalEdit: false,
     goalIndex: null,
+    goalResume: null,
     projectNext: false,
     fromInput: false,
     screen: "l0",
@@ -1241,6 +1327,35 @@ function step(state, action) {
       return advance(state);
     case "back": {
       if (state.lifeDetail) return { ...state, lifeDetail: false, showRequired: false, infoOpen: false };
+      if (state.screen === "l3") {
+        const when = parseIsoDate(state.inputs.fundWhen.date);
+        if (when && !cushionDateViable(state, when)) {
+          return {
+            ...state,
+            screen: "cd",
+            dateFrom: "l0",
+            dateRejected: true,
+            showRequired: true,
+            fundPending: false,
+            lifeDetail: false,
+            infoOpen: false,
+          };
+        }
+      }
+      if (state.screen === "cd" && state.dateFrom !== "sf") {
+        return {
+          ...state,
+          screen: state.dateFrom === "ml" ? "ml" : "l0",
+          showRequired: false,
+          infoOpen: false,
+          dateRejected: false,
+          lifeDetail: false,
+          inputs: {
+            ...state.inputs,
+            fundWhen: { date: state.dateHeld || "", note: "" },
+          },
+        };
+      }
       if (state.screen === "l0") {
         const backInput = returnToInput(state);
         if (backInput) return backInput;
@@ -1301,7 +1416,10 @@ function step(state, action) {
       return returnToInput(state) || state;
     case "open-milestone": {
       if (state.screen !== "l0") return state;
-      if (action.id === "ef" && !fundEntered(state)) return state;
+      if (action.id === "ef") {
+        if (!fundEntered(state)) return state;
+        return { ...state, screen: "l3", dateHeld: state.inputs.fundWhen.date || "", lifeDetail: false };
+      }
       if (String(action.id || "").startsWith("goal-")) {
         const index = Number(String(action.id).slice(5));
         const goal = state.goals?.[index];
@@ -1386,8 +1504,45 @@ function step(state, action) {
         },
       };
     case "open-boost-mix":
-      if (state.screen !== "ml" || !boostAvailable(state)) return state;
-      return { ...state, screen: "bx", boostFrom: "ml", showRequired: false, infoOpen: false };
+      if (!["ml", "gy", "l0", "gn"].includes(state.screen) || !boostAvailable(state)) return state;
+      return { ...state, screen: "bx", boostFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
+    case "use-done-by": {
+      if (state.screen !== "gn") return state;
+      const finish = cushionFinish(state);
+      if (!finish.doneByIso) return state;
+      const next = {
+        ...state,
+        inputs: {
+          ...state.inputs,
+          goalDate: { date: finish.doneByIso, note: state.inputs.goalDate.note || "" },
+        },
+      };
+      return next.goalResume === "gy" ? savePlanGoal(next) : commitGoal(next);
+    }
+    case "pick-later-date":
+      if (state.screen !== "gn") return state;
+      return {
+        ...state,
+        screen: state.goalResume === "gy" ? "gy" : "ig2",
+        showRequired: false,
+        infoOpen: false,
+      };
+    case "edit-cushion-date": {
+      if (!["ml", "l0", "cd2"].includes(state.screen)) return state;
+      if (state.screen !== "cd2" && !cushionFinish(state).incomplete) return state;
+      const finish = cushionFinish(state);
+      return {
+        ...state,
+        screen: "cd",
+        dateFrom: state.screen === "cd2" ? state.dateFrom || "l0" : state.screen,
+        dateHeld: finish.viable ? state.inputs.fundWhen.date : state.dateHeld || "",
+        dateRejected: false,
+        showRequired: false,
+        fundPending: false,
+        infoOpen: false,
+        lifeDetail: false,
+      };
+    }
     case "open-invest":
       if ((state.screen !== "ml" && state.screen !== "l0") || !boostAvailable(state)) return state;
       return { ...state, screen: "g3", investFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
@@ -1559,7 +1714,7 @@ export function hydrate(raw) {
     debtGate: raw.debtGate === true,
     noDebt: raw.noDebt === true,
     rdTaken: raw.rdTaken === true,
-    boostFrom: raw.boostFrom === "ml" ? "ml" : raw.boostFrom === "g3" ? "g3" : null,
+    boostFrom: ["ml", "g3", "gy", "l0", "gn"].includes(raw.boostFrom) ? raw.boostFrom : null,
     investFrom: raw.investFrom === "ml" || raw.investFrom === "l0" || raw.investFrom === "g0" ? raw.investFrom : null,
   };
 }
@@ -1838,7 +1993,7 @@ export function futureSnapshot(state) {
       })
       .filter(Boolean),
     surplus: life.today.net > 0 ? life.today.net : 0,
-    boostOpen: cushionReady(state),
+    boostOpen: boostAvailable(state),
     boostPick: state?.boostPick || null,
     boostMode: state?.boostMode === "more" ? "more" : "sooner",
   };
@@ -1864,9 +2019,11 @@ function investBoost(state) {
   return { pick: chosenId, mode, portfolios: portfolioReturns(), line };
 }
 
-/** Fund saved, nothing due, and cash left over after the month. */
+/** Nothing still due or overdue, and cash left over after the month. An unfinished cushion does not close this. */
 export function boostAvailable(state) {
-  if (!cushionReady(state)) return false;
+  const still = parseAmount(state.inputs.stillDue.amount) || 0;
+  const overdue = parseAmount(state.inputs.overdue.amount) || 0;
+  if (still + overdue > 0) return false;
   const net = buildLife(state).today.net;
   return net != null && net > 0;
 }
@@ -2115,9 +2272,98 @@ function debtScreens(state, base) {
   return null;
 }
 
+function cushionWhy(state) {
+  const finish = cushionFinish(state);
+  const picked = formatIsoDate(state.inputs.fundWhen.date);
+  if (finish.left == null || finish.left <= 0) {
+    return "This month does not leave enough to name a cushion date yet. A date is viable once Left can cover the gap.";
+  }
+  const leftText = `+${formatPlain(finish.left)}`;
+  return `With Left ${leftText} and Now ${formatPlain(finish.now || 0)} toward ${formatPlain(finish.target)}, ${picked || "that date"} is too soon. Pick a date your month can reach.`;
+}
+
 function planScreens(state, base) {
   const id = state.screen;
   const quiet = { showLifeLink: false, showPlan: true };
+  if (id === "cd") {
+    const why = cushionWhy(state);
+    const rejected = state.dateRejected === true;
+    return {
+      ...base,
+      kind: "input",
+      chip: "Cushion",
+      title: "Change cushion date",
+      body: "That finish date does not fit your plan yet.",
+      frame: "CJ02-cushion-date",
+      showLifeLink: false,
+      showPlan: false,
+      info: why,
+      quiet: "Show why",
+      quietAct: "info",
+      primary: "Pick a new date",
+      showRequired: rejected || state.showRequired === true,
+      requiredHint: "Not viable yet. Pick a date your month can reach.",
+      callout: rejected ? { tone: "warn", title: "Not viable yet", body: why } : null,
+      input: {
+        key: "fundWhen",
+        mode: "date",
+        label: "Done by",
+        date: state.inputs.fundWhen.date,
+        note: "",
+      },
+    };
+  }
+  if (id === "cd2") {
+    const finish = cushionFinish(state);
+    return {
+      ...base,
+      kind: "confirm",
+      chip: "Cushion",
+      title: "Cushion date set",
+      body: "This finish date fits the month.",
+      frame: "CJ03-cushion-date-set",
+      showLifeLink: false,
+      showPlan: false,
+      primary: "Continue",
+      quiet: "Edit date",
+      quietAct: "edit-cushion-date",
+      callout: {
+        tone: "ok",
+        title: finish.doneByText || "Viable",
+        body: "Viable · locked in. Goals stay creatable. Start on this day or later.",
+      },
+    };
+  }
+  if (id === "gn") {
+    const finish = cushionFinish(state);
+    const picked = formatIsoDate(state.inputs.goalDate.date);
+    const name = cleanText(state.inputs.goalName.text).trim();
+    const price = parseAmount(state.inputs.goalAmount.amount);
+    return {
+      ...base,
+      kind: "picture",
+      chip: "Goal",
+      title: "Move your start date",
+      body: "Your cushion finishes first — then this goal plan can start.",
+      frame: "CJ05-date-nudge",
+      showLifeLink: false,
+      showPlan: false,
+      callout: {
+        tone: "warn",
+        title: "Start is before cushion-done",
+        body: `You picked ${picked}. Cushion Done by ${finish.label}. Move start to that day or later.`,
+      },
+      rows: [
+        { label: "Goal", value: `${name} · HK$ ${formatPlain(price)}` },
+        { label: "Plan start", value: picked },
+        { label: "Suggested", value: finish.label },
+      ],
+      primary: finish.label ? `Use ${finish.label}` : "Use cushion date",
+      primaryAct: "use-done-by",
+      quiet: "Pick a later date",
+      quietAct: "pick-later-date",
+    };
+  }
   if (id === "sv") {
     return {
       ...base,
@@ -2189,8 +2435,17 @@ function planScreens(state, base) {
       id: "goals",
       act: "open-goals",
       title: "Goals",
-      body: goal ? `Created · ${goalBody}` : "Name what you are saving toward",
+      body: goal ? `Created · ${goalBody}` : "Create anytime — name what you are saving toward",
     });
+    const building = cushionFinish(state);
+    if (building.incomplete) {
+      rest.push({
+        id: "cushion-date",
+        act: "edit-cushion-date",
+        title: "Cushion date",
+        body: building.doneByText || "Set a finish date your month can reach",
+      });
+    }
     if (boostAvailable(state)) {
       rest.push({
         id: "invest",
@@ -2202,7 +2457,11 @@ function planScreens(state, base) {
         id: "boost",
         act: "open-boost-mix",
         title: "Boost",
-        body: state.noDebt ? "Open — cushion ready · no debt" : "Open — cushion ready",
+        body: building.incomplete
+          ? "Open while your cushion is still building"
+          : state.noDebt
+            ? "Open — cushion ready · no debt"
+            : "Open — cushion ready",
       });
       rest.push({
         id: "open-boost",
@@ -2255,30 +2514,34 @@ function planScreens(state, base) {
     };
   }
   if (id === "gy") {
-    const name = cleanText(state.inputs.goalName.text).trim();
     const when = monthText(state.inputs.goalDate.date);
-    const amount = parseAmount(state.inputs.goalAmount.amount);
-    const bits = [name, when, amount == null ? "" : formatPlain(amount)].filter(Boolean);
+    const finish = cushionFinish(state);
+    const open = boostAvailable(state);
     return {
       ...base,
       kind: "goal",
-      chip: "Goal",
+      chip: "Goals",
       title: "Name a goal",
-      body: "Something you want to save toward.",
-      frame: "I15-goal",
+      body: "Create anytime — we will fit the start to your cushion date.",
+      frame: "CJ04-goals-unlocked",
       showLifeLink: false,
       showPlan: false,
       goalForm: {
         name: state.inputs.goalName.text,
         amount: state.inputs.goalAmount.amount,
         month: monthValue(state.inputs.goalDate.date),
+        monthText: when,
       },
-      callout: bits.length
-        ? { tone: "ok", title: bits.join(" · "), body: "Goal stays on plan. Boost stays reachable after you save this." }
-        : null,
-      primary: "Save goal",
-      quiet: "Not now",
-      quietAct: "back",
+      callout: {
+        tone: "ok",
+        title: "Unlocked to build",
+        body: finish.label
+          ? `Cushion Done by ${finish.label}. If your start is earlier, we will ask you to move it to that day or later.`
+          : "Create anytime. We only adjust the start when it falls before your cushion date.",
+      },
+      primary: "Continue",
+      quiet: open ? "Open Boost" : "Not now",
+      quietAct: open ? "open-boost-mix" : "back",
       showRequired: state.showRequired === true,
       requiredHint: "Enter a name, an amount, and a month.",
     };
@@ -2288,10 +2551,11 @@ function planScreens(state, base) {
 
 export function present(state) {
   const id = state.screen;
-  const ready = cushionReady(state);
+  const floor = cushionReady(state);
+  const open = boostAvailable(state);
   const base = {
     id,
-    frame: frameOf(id, ready),
+    frame: frameOf(id, open),
     brand: id === "w0" || id === "e0" || id === "e1",
     showBack: !["w0", "e0", "e1"].includes(id),
     chip: null,
@@ -2308,7 +2572,7 @@ export function present(state) {
     rdLater: false,
     showRequired: false,
     requiredHint: "",
-    lockedInvest: !ready,
+    lockedInvest: !open,
     skip: false,
     showLifeLink: !["e0", "e1"].includes(id) && !id.startsWith("l") && !INPUT_SCREENS[id],
     showPlan: false,
@@ -2327,7 +2591,7 @@ export function present(state) {
   if (id.startsWith("l")) {
     const life = buildLife(state);
     const surplus = life.today.net > 0 ? life.today.net : 0;
-    const offer = ready && surplus > 0;
+    const offer = open;
     const chosenId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : null;
     const mode = state.boostMode === "more" ? "more" : "sooner";
     const picked = chosenId ? forecastReturn(chosenId) : null;
@@ -2356,15 +2620,16 @@ export function present(state) {
       portfolios: portfolioReturns(),
       lifeText,
     };
-    life.journey = state.entry === "ok" && ready ? "comfortable" : state.entry === "stable" ? "stable" : "";
+    life.journey = state.entry === "ok" && floor ? "comfortable" : state.entry === "stable" ? "stable" : "";
     life.journeyLabel = life.journey === "comfortable" ? "Comfortable" : life.journey === "stable" ? "Stable" : "";
     return {
       ...base,
       kind: "life",
       chip: "Your life",
       showLifeLink: false,
-      offerSavings: id === "l0" && state.entry === "stable" && !ready,
+      offerSavings: id === "l0" && state.entry === "stable" && !floor,
       offerInvest: id === "l0" && offer,
+      offerDate: id === "l0" && cushionFinish(state).incomplete,
       offerDoor: id === "l0" && (!monthCovered(state) || !nothingOverdue(state)),
       life,
       lifeFocus: LIFE_FOCUS[id],
@@ -2522,8 +2787,8 @@ export function present(state) {
         }),
         choice("insurance", "Add insurance"),
         choice("invest", "Invest", {
-          locked: !ready,
-          sub: ready ? "" : "Opens when your cushion is ready",
+          locked: !open,
+          sub: open ? "" : "Opens when nothing is still due",
         }),
       ],
     };
@@ -2621,12 +2886,14 @@ export function present(state) {
   }
 
   if (id === "g3") {
-    if (ready) {
+    if (open) {
       return {
         ...base,
         kind: "confirm",
         title: "Invest",
-        body: "Your cushion is ready \u2014 this can open.",
+        body: floor
+          ? "Your cushion is ready \u2014 this can open."
+          : "Boost stays open while your cushion is still building.",
         chip: "Plan",
         showPlan: true,
         primary: "Continue",
@@ -2634,7 +2901,7 @@ export function present(state) {
         callout: {
           tone: "ok",
           title: "Unlocked",
-          body: "Cushion gate met. Continue opens the cards.",
+          body: floor ? "Cushion gate met. Continue opens the cards." : "Cushion still building. Continue opens the cards.",
         },
       };
     }
@@ -2665,7 +2932,7 @@ export function present(state) {
       chip: "Boost",
       showPlan: false,
       showLifeLink: false,
-      frame: "H11-boost-cards",
+      frame: floor ? "H11-boost-cards" : "CJ06-boost-open",
       investBoost: investBoost(state),
       callout: {
         tone: "ok",

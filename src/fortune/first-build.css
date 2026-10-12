@@ -627,6 +627,15 @@ a.ft-btn {
   color: #0f766e;
 }
 
+.ft-callout.is-warn {
+  background: #fff7ed;
+  border: 1.5px solid #fdba74;
+}
+
+.ft-callout.is-warn svg {
+  color: #c2410c;
+}
+
 .ft-callout.is-lock {
   border: 2px dashed #94a3b8;
 }

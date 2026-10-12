@@ -163,8 +163,9 @@ function goalBlock(view) {
     <div class="ft-input"><input id="ft-goal-name" name="text" data-field="text" data-key="goalName" type="text" autocomplete="off" enterkeyhint="done" maxlength="80" placeholder="Tap to enter" value="${escapeHtml(form.name)}" aria-label="Goal name" /></div>
     <label class="ft-label" for="ft-goal-amount">Target amount</label>
     <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-goal-amount" name="amount" data-field="amount" data-key="goalAmount" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(form.amount)}" aria-label="Target amount" /></div>
-    <label class="ft-label" for="ft-goal-when">When</label>
-    <div class="ft-input"><input id="ft-goal-when" name="date" data-field="date" data-key="goalDate" type="month" autocomplete="off" value="${escapeHtml(form.month)}" aria-label="When" /></div>
+    <label class="ft-label" for="ft-goal-when">When / plan start</label>
+    <div class="ft-input"><input id="ft-goal-when" name="date" data-field="date" data-key="goalDate" type="month" autocomplete="off" value="${escapeHtml(form.month)}" aria-label="When / plan start" /></div>
+    ${form.monthText ? `<p class="ft-hint">${escapeHtml(form.monthText)}</p>` : ""}
     ${alertLine(view)}`;
 }
 
@@ -212,7 +213,7 @@ function content(view) {
   if (view.kind === "fields") main = fieldsBlock(view);
   if (view.kind === "hub") main = `${hubCards(view.lead)}${rowsBlock(view)}${hubCards(view.rest)}`;
   if (view.kind === "goal") main = `${goalBlock(view)}${calloutBlock(view)}`;
-  if (view.kind === "input") main = inputBlock(view);
+  if (view.kind === "input") main = `${calloutBlock(view)}${inputBlock(view)}`;
   if (view.kind === "picture") main = `${rowsBlock(view)}${calloutBlock(view)}`;
   if (view.kind === "handoff") main = stepsBlock(view);
   if (view.kind === "confirm") main = `${calloutBlock(view)}${investCards(view)}`;
@@ -803,7 +804,8 @@ export function renderFirstBuild(state) {
         : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
     const invest = view.offerInvest ? `<button class="ft-btn quiet" type="button" data-act="open-invest">Invest</button>` : "";
-    const planBack = primary || erase || download || door || savings || invest ? `<div class="ft-actions">${primary}${invest}${savings}${download}${door}${erase}</div>` : "";
+    const cushionDate = view.offerDate ? `<button class="ft-btn quiet" type="button" data-act="edit-cushion-date">Edit cushion date</button>` : "";
+    const planBack = primary || erase || download || door || savings || invest || cushionDate ? `<div class="ft-actions">${primary}${invest}${cushionDate}${savings}${download}${door}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${future}${planBack}`);
   }
   return screenShell(view, screenHtml(view));

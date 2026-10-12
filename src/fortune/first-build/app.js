@@ -229,7 +229,7 @@ function onClick(event) {
     apply(reduce(state, { type: act, id: value, mode: value }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings" || act === "savings-later" || act === "open-me" || act === "open-rd" || act === "open-stabilize" || act === "open-goals" || act === "open-boost-mix" || act === "open-invest" || act === "edit-split" || act === "open-now") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings" || act === "savings-later" || act === "open-me" || act === "open-rd" || act === "open-stabilize" || act === "open-goals" || act === "open-boost-mix" || act === "open-invest" || act === "edit-split" || act === "open-now" || act === "edit-cushion-date" || act === "use-done-by" || act === "pick-later-date") {
     apply(reduce(state, { type: act }));
     return;
   }
