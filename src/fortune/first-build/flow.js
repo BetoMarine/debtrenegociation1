@@ -45,6 +45,7 @@ export const SCREEN_IDS = [
   "gd",
   "gd2",
   "g3",
+  "bx",
   "e0",
   "e1",
   "l0",
@@ -301,8 +302,9 @@ export function freshState() {
   };
 }
 
-export const PRIVACY_STRIP = "Stays on this phone. Erase any time.";
-export const PRIVACY_INFO = "Erase clears Fortune Teller on this phone. Your other Plan Your Life apps keep their data.";
+export const PRIVACY_STRIP = "This plan stays on this phone. Erase any time.";
+export const PRIVACY_INFO =
+  "Not advice. Not a guarantee. We do not email a bank or a lender. Erase clears Fortune Teller on this phone. Your other Plan Your Life apps keep their data.";
 export const LIFE_DISCLAIMER = "Not advice. Not a guarantee.";
 
 export function parseAmount(raw) {
@@ -692,6 +694,7 @@ function advance(state) {
       return projectLife(withSpan, "lenders");
     }
     case "g3":
+      if (boostAvailable(state)) return { ...state, screen: "bx", showRequired: false, infoOpen: false };
       return { ...state, screen: "g0" };
     default:
       return state;
@@ -792,6 +795,8 @@ function backTo(state) {
     case "g2":
     case "g3":
       return "g0";
+    case "bx":
+      return "g3";
     case "l1":
     case "l2":
     case "l3":
@@ -1226,14 +1231,14 @@ function step(state, action) {
       return { ...state, boostFor: state.boostFor === id ? null : id };
     }
     case "pick-boost": {
-      const onInvest = state.screen === "g3" && cushionReady(state);
+      const onInvest = state.screen === "bx" && boostAvailable(state);
       if ((state.screen !== "l0" || !boostAvailable(state)) && !onInvest) return state;
       const id = oneOf(action.id, BOOST_IDS);
       if (!id) return state;
       return { ...state, boostPick: id };
     }
     case "boost-mode": {
-      const onInvest = state.screen === "g3" && cushionReady(state);
+      const onInvest = state.screen === "bx" && boostAvailable(state);
       if ((state.screen !== "l0" || !boostAvailable(state)) && !onInvest) return state;
       const mode = action.mode === "more" || action.mode === "sooner" ? action.mode : oneOf(action.id, ["more", "sooner"]);
       if (!mode) return state;
@@ -2252,9 +2257,8 @@ export function present(state) {
         callout: {
           tone: "ok",
           title: "Unlocked",
-          body: "Cushion gate met. Pick a card. None is chosen until you do.",
+          body: "Cushion gate met. Continue opens the cards.",
         },
-        investBoost: investBoost(state),
       };
     }
     return {
@@ -2271,6 +2275,20 @@ export function present(state) {
         title: "Cushion not ready",
         body: "Build your emergency floor first (Stabilize). Then Invest can open on Plan what\u2019s next.",
       },
+    };
+  }
+
+  if (id === "bx") {
+    return {
+      ...base,
+      kind: "confirm",
+      title: "Boost",
+      body: "Pick a card. None is chosen until you do.",
+      chip: "Plan",
+      showPlan: true,
+      showLifeLink: false,
+      frame: "H11-boost-cards",
+      investBoost: investBoost(state),
     };
   }
 

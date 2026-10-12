@@ -285,9 +285,13 @@ describe("Slice A first-build flow", () => {
     const open = go(state, { type: "pick-grow", pick: "invest" });
     expect(present(open).callout.title).toBe("Unlocked");
     expect(present(open).body).toBe("Your cushion is ready — this can open.");
-    const cards = renderFirstBuild(open);
-    expect(cards).not.toMatch(/Cushion not ready/);
-    expect(cards).not.toMatch(/Still locked/);
+    const door = renderFirstBuild(open);
+    expect(door).not.toMatch(/Cushion not ready/);
+    expect(door).not.toMatch(/Still locked/);
+    expect(door).not.toMatch(/pick-boost/);
+    const cardsState = go(open, { type: "continue" });
+    expect(cardsState.screen).toBe("bx");
+    const cards = renderFirstBuild(cardsState);
     expect(cards).toMatch(/Bad year about 10%/);
     expect(cards).toMatch(/Bad year about 15%/);
     expect(cards).toMatch(/Bad year about 20%/);
@@ -299,11 +303,11 @@ describe("Slice A first-build flow", () => {
       "false",
       "false",
     ]);
-    const picked = go(open, { type: "pick-boost", id: "growth" });
-    expect(picked.screen).toBe("g3");
+    const picked = go(cardsState, { type: "pick-boost", id: "growth" });
+    expect(picked.screen).toBe("bx");
     expect(picked.boostPick).toBe("growth");
     expect(renderFirstBuild(picked)).toMatch(/data-value="growth" aria-pressed="true"/);
-    expect(go(picked, { type: "continue" }).screen).toBe("g0");
+    expect(go(picked, { type: "back" }).screen).toBe("g3");
   });
 
   it("erase wipes Fortune only and returns to an empty Where are you", () => {
@@ -907,12 +911,15 @@ describe("Slice C costs and deeper flows", () => {
 describe("Slice D privacy, disclaimer, and wipe", () => {
   it("keeps the privacy strip on Where are you only", () => {
     const home = renderFirstBuild(freshState());
-    expect(home).toMatch(/Stays on this phone\. Erase any time\./);
+    expect(home).toMatch(/This plan stays on this phone\. Erase any time\./);
     expect(home).toContain(PRIVACY_STRIP);
     expect(home).not.toMatch(/Nothing leaves/i);
     const opened = renderFirstBuild(go(freshState(), { type: "privacy-info" }));
+    expect(opened).toMatch(/Not advice\. Not a guarantee\./);
+    expect(opened).toMatch(/We do not email a bank or a lender/);
     expect(opened).toMatch(/Erase clears Fortune Teller on this phone/);
     expect(opened).toMatch(/other Plan Your Life apps keep their data/);
+    expect(renderFirstBuild(go(freshState(), { type: "open-life" }))).not.toMatch(/We do not email/);
 
     const takeHome = go(freshState(), { type: "pick-entry", entry: "stressed" });
     const card = renderFirstBuild(takeHome);
