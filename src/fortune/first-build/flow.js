@@ -281,6 +281,7 @@ export function freshState() {
     noDebt: false,
     rdTaken: false,
     boostFrom: null,
+    investFrom: null,
     goals: [],
     goalIndex: null,
     action: null,
@@ -873,7 +874,9 @@ function backTo(state) {
       return "ic";
     case "g1":
     case "g2":
+      return "g0";
     case "g3":
+      if (state.investFrom === "ml" || state.investFrom === "l0") return state.investFrom;
       return "g0";
     case "bx":
       return state.boostFrom === "ml" ? "ml" : "g3";
@@ -1166,7 +1169,7 @@ function step(state, action) {
         return state;
       }
       if (action.pick === "insurance") return { ...state, screen: "g2" };
-      if (action.pick === "invest") return { ...state, screen: "g3" };
+      if (action.pick === "invest") return { ...state, screen: "g3", investFrom: "g0" };
       return state;
     case "pick-next":
       if (state.screen !== "fd2") return state;
@@ -1385,6 +1388,9 @@ function step(state, action) {
     case "open-boost-mix":
       if (state.screen !== "ml" || !boostAvailable(state)) return state;
       return { ...state, screen: "bx", boostFrom: "ml", showRequired: false, infoOpen: false };
+    case "open-invest":
+      if ((state.screen !== "ml" && state.screen !== "l0") || !boostAvailable(state)) return state;
+      return { ...state, screen: "g3", investFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
     case "edit-split":
       if (state.screen !== "ml" && state.screen !== "mt") return state;
       return { ...state, screen: state.noDebt || state.planFrom === "ex" ? "ex" : "d4", showRequired: false, infoOpen: false };
@@ -1554,6 +1560,7 @@ export function hydrate(raw) {
     noDebt: raw.noDebt === true,
     rdTaken: raw.rdTaken === true,
     boostFrom: raw.boostFrom === "ml" ? "ml" : raw.boostFrom === "g3" ? "g3" : null,
+    investFrom: raw.investFrom === "ml" || raw.investFrom === "l0" || raw.investFrom === "g0" ? raw.investFrom : null,
   };
 }
 
@@ -2186,6 +2193,12 @@ function planScreens(state, base) {
     });
     if (boostAvailable(state)) {
       rest.push({
+        id: "invest",
+        act: "open-invest",
+        title: "Invest",
+        body: "Still open after a goal. Continue on this door opens the cards.",
+      });
+      rest.push({
         id: "boost",
         act: "open-boost-mix",
         title: "Boost",
@@ -2351,6 +2364,7 @@ export function present(state) {
       chip: "Your life",
       showLifeLink: false,
       offerSavings: id === "l0" && state.entry === "stable" && !ready,
+      offerInvest: id === "l0" && offer,
       offerDoor: id === "l0" && (!monthCovered(state) || !nothingOverdue(state)),
       life,
       lifeFocus: LIFE_FOCUS[id],

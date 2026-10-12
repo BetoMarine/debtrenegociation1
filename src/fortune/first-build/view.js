@@ -802,7 +802,8 @@ export function renderFirstBuild(state) {
         ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`
         : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
-    const planBack = primary || erase || download || door || savings ? `<div class="ft-actions">${primary}${savings}${download}${door}${erase}</div>` : "";
+    const invest = view.offerInvest ? `<button class="ft-btn quiet" type="button" data-act="open-invest">Invest</button>` : "";
+    const planBack = primary || erase || download || door || savings || invest ? `<div class="ft-actions">${primary}${invest}${savings}${download}${door}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${future}${planBack}`);
   }
   return screenShell(view, screenHtml(view));
