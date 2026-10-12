@@ -189,7 +189,7 @@ function content(view) {
   if (view.kind === "input") main = inputBlock(view);
   if (view.kind === "picture") main = `${rowsBlock(view)}${calloutBlock(view)}`;
   if (view.kind === "handoff") main = stepsBlock(view);
-  if (view.kind === "confirm") main = calloutBlock(view);
+  if (view.kind === "confirm") main = `${calloutBlock(view)}${investCards(view)}`;
   if (view.kind === "locked" && view.lockTitle) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
@@ -470,6 +470,21 @@ function msRow({ n, tone, stub, testId, button, act, value, body, extra = "" }) 
     ? `<button class="${cardClass}" type="button" data-act="${act}"${value ? ` data-value="${escapeHtml(value)}"` : ""}>${inner}</button>`
     : `<div class="${cardClass}">${inner}</div>`;
   return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}" data-n="${escapeHtml(String(n))}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div><div class="ft-ms-main">${card}${extra}</div></div>`;
+}
+
+function investCards(view) {
+  const boost = view.investBoost;
+  if (!boost?.portfolios?.length) return "";
+  const picks = boost.portfolios
+    .map((row) => {
+      const on = row.id === boost.pick;
+      return `<button class="ft-boost-pick${on ? " is-on" : ""}" type="button" data-act="pick-boost" data-value="${escapeHtml(row.id)}" aria-pressed="${on ? "true" : "false"}">${escapeHtml(row.line)}</button>`;
+    })
+    .join("");
+  const more = boost.mode === "more";
+  const toggle = `<div class="ft-boost-toggle" data-boost-mode="${more ? "more" : "sooner"}"><button type="button" data-act="boost-mode" data-value="more" aria-pressed="${more ? "true" : "false"}">More money</button><button type="button" data-act="boost-mode" data-value="sooner" aria-pressed="${more ? "false" : "true"}">Earlier</button></div>`;
+  const line = boost.line ? `<p class="ft-boost-result">${escapeHtml(boost.line)}</p>` : "";
+  return `<div class="ft-boost-slot is-open" data-boost-for="invest"><div class="ft-boost-panel"><p class="ft-boost-kicker">Model portfolios</p>${picks}${toggle}${line}</div></div>`;
 }
 
 function boostSlot(scope, boost, result) {

@@ -227,6 +227,7 @@ describe("Slice A first-build flow", () => {
     expect(present(locked).primary).toBe("Continue");
     expect(present(locked).showPlan).toBe(true);
     expect(present(locked).body).toBe("Still locked until your cushion is ready.");
+    expect(renderFirstBuild(locked)).not.toMatch(/pick-boost|Bad year about/);
     expect(go(locked, { type: "continue" }).screen).toBe("g0");
     expect(go(locked, { type: "back" }).screen).toBe("g0");
     expect(go(state, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
@@ -284,8 +285,25 @@ describe("Slice A first-build flow", () => {
     const open = go(state, { type: "pick-grow", pick: "invest" });
     expect(present(open).callout.title).toBe("Unlocked");
     expect(present(open).body).toBe("Your cushion is ready — this can open.");
-    expect(renderFirstBuild(open)).not.toMatch(/Cushion not ready/);
-    expect(renderFirstBuild(open)).not.toMatch(/Still locked/);
+    const cards = renderFirstBuild(open);
+    expect(cards).not.toMatch(/Cushion not ready/);
+    expect(cards).not.toMatch(/Still locked/);
+    expect(cards).toMatch(/Bad year about 10%/);
+    expect(cards).toMatch(/Bad year about 15%/);
+    expect(cards).toMatch(/Bad year about 20%/);
+    expect(cards).toMatch(/Bad year about 25%/);
+    expect(cards).toMatch(/data-boost-for="invest"/);
+    expect([...cards.matchAll(/data-act="pick-boost"[^>]*aria-pressed="(true|false)"/g)].map((match) => match[1])).toEqual([
+      "false",
+      "false",
+      "false",
+      "false",
+    ]);
+    const picked = go(open, { type: "pick-boost", id: "growth" });
+    expect(picked.screen).toBe("g3");
+    expect(picked.boostPick).toBe("growth");
+    expect(renderFirstBuild(picked)).toMatch(/data-value="growth" aria-pressed="true"/);
+    expect(go(picked, { type: "continue" }).screen).toBe("g0");
   });
 
   it("erase wipes Fortune only and returns to an empty Where are you", () => {

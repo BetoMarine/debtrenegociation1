@@ -1226,13 +1226,15 @@ function step(state, action) {
       return { ...state, boostFor: state.boostFor === id ? null : id };
     }
     case "pick-boost": {
-      if (state.screen !== "l0" || !boostAvailable(state)) return state;
+      const onInvest = state.screen === "g3" && cushionReady(state);
+      if ((state.screen !== "l0" || !boostAvailable(state)) && !onInvest) return state;
       const id = oneOf(action.id, BOOST_IDS);
       if (!id) return state;
       return { ...state, boostPick: id };
     }
     case "boost-mode": {
-      if (state.screen !== "l0" || !boostAvailable(state)) return state;
+      const onInvest = state.screen === "g3" && cushionReady(state);
+      if ((state.screen !== "l0" || !boostAvailable(state)) && !onInvest) return state;
       const mode = action.mode === "more" || action.mode === "sooner" ? action.mode : oneOf(action.id, ["more", "sooner"]);
       if (!mode) return state;
       return { ...state, boostMode: mode };
@@ -1681,6 +1683,24 @@ export function futureSnapshot(state) {
 }
 
 const BOOST_IDS = ["firm", "balanced", "growth", "frontier"];
+
+/** Cards on the unlocked Invest door. None is chosen until she picks. */
+function investBoost(state) {
+  const chosenId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : null;
+  const mode = state.boostMode === "more" ? "more" : "sooner";
+  const picked = chosenId ? forecastReturn(chosenId) : null;
+  const life = buildLife(state);
+  const surplus = life.today.net > 0 ? life.today.net : 0;
+  let line = "";
+  if (picked && surplus > 0) {
+    if (mode === "more") line = moreMoneyText(picked.label, surplus, 12, picked.mu);
+    else {
+      const goal = (life.goals || []).find((item) => item.funding?.target > 0);
+      if (goal) line = earlierText(picked.label, surplus, goal.funding.target, picked.mu);
+    }
+  }
+  return { pick: chosenId, mode, portfolios: portfolioReturns(), line };
+}
 
 /** Fund saved, nothing due, and cash left over after the month. */
 export function boostAvailable(state) {
@@ -2232,8 +2252,9 @@ export function present(state) {
         callout: {
           tone: "ok",
           title: "Unlocked",
-          body: "Cushion gate met. You can plan how Help it grow fits your life.",
+          body: "Cushion gate met. Pick a card. None is chosen until you do.",
         },
+        investBoost: investBoost(state),
       };
     }
     return {
