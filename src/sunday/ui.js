@@ -2,7 +2,6 @@ import {
   CARITAS,
   CONSULATE_ID,
   CONSULATE_PH,
-  ENRICH,
   HELP,
   LABOUR_FDH,
   POLICE,
@@ -26,6 +25,13 @@ import {
   splitTotal,
   triageComplete,
 } from "./model.js";
+import {
+  PACK_BUILD,
+  PACK_SCREENS,
+  crisisSkipScreen,
+  privacyContinueScreen,
+  resolveSundayScreen,
+} from "./pack-build.js";
 
 export const SUNDAY_SCREENS = [
   "sunday-privacy",
@@ -38,6 +44,7 @@ export const SUNDAY_SCREENS = [
   "sunday-door",
   "sunday-review",
   "sunday-done",
+  ...PACK_SCREENS,
 ];
 
 export function nextSundayLang(lang) {
@@ -62,6 +69,11 @@ function telBtn(href, text) {
 }
 
 export function renderSunday(screen, host) {
+  const resolved = resolveSundayScreen(screen, host.sunday);
+  if (resolved !== screen) {
+    host.go(resolved);
+    return;
+  }
   const view = {
     "sunday-privacy": renderPrivacy,
     "sunday-language": renderLanguage,
@@ -74,6 +86,10 @@ export function renderSunday(screen, host) {
     "sunday-review": renderReview,
     "sunday-done": renderDone,
   }[screen];
+  if (!view) {
+    host.go(PACK_BUILD);
+    return;
+  }
   view(host);
 }
 
@@ -116,8 +132,9 @@ function renderPrivacy(host) {
       return;
     }
     host.setNotice("");
-    await host.persistSunday("sunday-language");
-    host.go("sunday-language");
+    const next = privacyContinueScreen(sunday);
+    await host.persistSunday(next);
+    host.go(next);
   });
 }
 
@@ -239,14 +256,14 @@ function renderCrisis(host) {
   body.append(box);
   host.shellSunday(body);
   next.addEventListener("click", async () => {
-    await host.persistSunday("sunday-situation");
-    host.go("sunday-situation");
+    const nextScreen = crisisSkipScreen();
+    await host.persistSunday(nextScreen);
+    host.go(nextScreen);
   });
   skip.addEventListener("click", async () => {
-    sunday.door = recommendSundayDoor(sunday.flags);
-    await host.persistSunday("sunday-door");
-    await host.log("sunday_door_chosen", sunday.door);
-    host.go("sunday-door");
+    const nextScreen = crisisSkipScreen();
+    await host.persistSunday(nextScreen);
+    host.go(nextScreen);
   });
 }
 
@@ -463,10 +480,9 @@ function renderSplit(host) {
       return;
     }
     host.setNotice("");
-    sunday.door = recommendSundayDoor(sunday.flags);
-    await host.persistSunday("sunday-door");
-    await host.log("sunday_door_chosen", sunday.door);
-    host.go("sunday-door");
+    const nextScreen = privacyContinueScreen(sunday);
+    await host.persistSunday(nextScreen);
+    host.go(nextScreen);
   });
 }
 
@@ -501,41 +517,24 @@ function renderDoor(host) {
   if (door === SUNDAY_DOORS.AGENCY) {
     body.append(el(telBtn(LABOUR_FDH.phoneHref, ex(t(host, "callLabour", { phone: LABOUR_FDH.phone })))));
   }
-  if (door === SUNDAY_DOORS.ENRICH || door === SUNDAY_DOORS.SHARK) {
-    const cta = el(`
-      <div class="card cta-box stack">
-        <strong>${ex(t(host, "doors.enrichTitle"))}</strong>
-        <a class="btn btn-primary ext" href="${ENRICH.booking}" target="_blank" rel="noopener">${ex(t(host, "openEnrich"))}</a>
-        <p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>
-        <a class="link" href="${ENRICH.whatsappEnTlHref}" target="_blank" rel="noopener">${ex(t(host, "enrichWaEn", { phone: ENRICH.whatsappEnTl }))}</a>
-        <a class="link" href="${ENRICH.whatsappIdHref}" target="_blank" rel="noopener">${ex(t(host, "enrichWaId", { phone: ENRICH.whatsappId }))}</a>
-        <p class="tiny">${ex(t(host, "enrichNoLend"))}</p>
-      </div>
-    `);
-    body.append(cta);
-  } else {
-    body.append(
-      el(
-        `<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`,
-      ),
-    );
-  }
+  body.append(
+    el(`<div class="card"><p>${ex("A helper is not named yet. Build the package before any booking.")}</p></div>`),
+    el(`<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`),
+  );
 
   body.append(
     el(
       `<p class="tiny">${ex(t(host, "alsoAvailable"))} <a class="link" href="${CARITAS.phoneHref}">${ex(t(host, "caritas", { phone: CARITAS.phone }))}</a> · <a class="link" href="${TWGH_FDCC.phoneHref}">${ex(t(host, "twgh", { phone: TWGH_FDCC.phone }))}</a></p>`,
     ),
   );
-  const next = el(`<button class="btn btn-accent" type="button">${ex(t(host, "generateSecondary"))}</button>`);
+  const next = el(`<button class="btn btn-primary" type="button">Build your package</button>`);
   const box = el(`<div class="nav"></div>`);
-  const back = sunday.split && (sunday.split.bills !== "" || hasCrisisFlags(sunday.flags)) ? "sunday-split" : "sunday-crisis";
-  box.append(next, el(`<button class="btn btn-ghost" data-go="${back}" type="button">${ex(t(host, "back"))}</button>`));
+  box.append(next, el(`<button class="btn btn-ghost" data-go="${PACK_BUILD}" type="button">${ex(t(host, "back"))}</button>`));
   body.append(box);
   host.shellSunday(body);
   next.addEventListener("click", async () => {
-    await host.persistSunday("sunday-review");
-    await host.log("sunday_pack_created");
-    host.go("sunday-review");
+    await host.persistSunday(PACK_BUILD);
+    host.go(PACK_BUILD);
   });
 }
 
@@ -561,7 +560,7 @@ function renderReview(host) {
   download.disabled = busy || blocked;
   const actions = el(`<div class="nav"></div>`);
   actions.append(make, share, download);
-  actions.append(el(`<button class="btn btn-ghost" data-go="sunday-door" type="button">${ex(t(host, "back"))}</button>`));
+  actions.append(el(`<button class="btn btn-ghost" data-go="${PACK_BUILD}" type="button">${ex(t(host, "back"))}</button>`));
   const done = el(`<button class="btn" type="button">${ex(t(host, "continue"))}</button>`);
   actions.append(done);
   if (host.fromFortune) {
@@ -587,8 +586,8 @@ function renderDone(host) {
     el(`<div class="card"><p>${ex(t(host, "doneCheck1"))}</p></div>`),
     el(`<div class="card"><p>${ex(t(host, "doneCheck2"))}</p></div>`),
     el(`<div class="card"><p>${ex(t(host, "doneCheck3"))}</p></div>`),
-    el(`<a class="btn btn-primary ext" href="${ENRICH.booking}" target="_blank" rel="noopener">${ex(t(host, "openEnrich"))}</a>`),
     el(`<p class="tiny">${ex(t(host, "weDoNotEmailEnrich"))}</p>`),
+    el(`<button class="btn btn-primary" type="button" data-go="${PACK_BUILD}">Build your package</button>`),
   );
   if (host.fromFortune) {
     body.append(el(host.fortuneReturnCta(t(host, "backToFortune"))));

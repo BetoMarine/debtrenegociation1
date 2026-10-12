@@ -5,6 +5,7 @@ import {
   getSundayLang,
   getSundayPack,
   listEvents,
+  putAttachment,
   saveSundayPack,
   saveFortuneHandoff,
   setSundayLang as persistSundayLang,
@@ -18,6 +19,8 @@ import { captureFortuneReferral, fortuneReturnBarHtml, fortuneReturnCtaHtml, isF
 import { makeFireHandoff } from "../handoff.js";
 import { emptyDraftLoan, migrateSundayPack, newSundayPack, normalizeLoan } from "./model.js";
 import { buildSundayPdf } from "./pdf.js";
+import { isPackScreen, privacyContinueScreen, resolveSundayScreen } from "./pack-build.js";
+import { renderPackScreen } from "./pack-build-view.js";
 
 const SUNDAY_EVENT_TYPES = [
   "sunday_started",
@@ -63,10 +66,11 @@ function onHash() {
 }
 
 function defaultSundayScreen() {
-  if (sunday?.privacyAccepted && sunday.screen && SUNDAY_SCREENS.includes(sunday.screen)) {
-    return sunday.screen;
+  if (!sunday?.privacyAccepted) return "sunday-privacy";
+  if (sunday.screen && SUNDAY_SCREENS.includes(sunday.screen)) {
+    return resolveSundayScreen(sunday.screen, sunday);
   }
-  return "sunday-privacy";
+  return privacyContinueScreen(sunday);
 }
 
 function syncScreenFromHash() {
@@ -76,8 +80,16 @@ function syncScreenFromHash() {
     screen = defaultSundayScreen();
     return;
   }
-  if (name === "counters" || SUNDAY_SCREENS.includes(name)) {
+  if (name === "counters") {
     screen = name;
+    return;
+  }
+  if (SUNDAY_SCREENS.includes(name)) {
+    const resolved = resolveSundayScreen(name, sunday);
+    screen = resolved;
+    if (resolved !== name && location.hash !== `#/${resolved}`) {
+      location.replace(`#/${resolved}`);
+    }
     return;
   }
   screen = "sunday-privacy";
@@ -163,6 +175,7 @@ function sundayHost() {
     removeSundayLoan,
     handleSundayPdf,
     clearSunday,
+    saveSundayDoc,
     isStandalone: isStandalone(),
     fromFortune: isFortuneReferral(),
     fortuneReturnCta: (label) => fortuneReturnCtaHtml(escapeHtml, label),
@@ -181,6 +194,19 @@ async function addSundayLoan() {
     }),
   );
   draftLoan = emptyDraftLoan();
+  sunday = await saveSundayPack(sunday);
+  render();
+}
+
+async function saveSundayDoc(slot, file) {
+  if (!file || !sunday) return;
+  await putAttachment(`sunday-doc-${slot}`, file);
+  sunday.docs = sunday.docs || { loan: null, pay: null, id: null };
+  sunday.docs[slot] = {
+    name: String(file.name || "photo").slice(0, 120),
+    type: String(file.type || "").slice(0, 80),
+    size: Number(file.size) || 0,
+  };
   sunday = await saveSundayPack(sunday);
   render();
 }
@@ -295,6 +321,10 @@ function render() {
   if (screen === "counters") {
     renderCounters();
     window.scrollTo(0, 0);
+    return;
+  }
+  if (isPackScreen(screen)) {
+    renderPackScreen(screen, sundayHost());
     return;
   }
   renderSunday(screen, sundayHost());
