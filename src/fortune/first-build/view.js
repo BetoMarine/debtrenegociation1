@@ -654,7 +654,7 @@ function lifeBlock(life, focus) {
   const journey = life.journey
     ? `<p class="ft-journey" data-journey="${escapeHtml(life.journey)}">${escapeHtml(life.journeyLabel)}</p>`
     : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {
@@ -682,7 +682,6 @@ function efDetail(life) {
   return `<div class="ft-ef-detail">
     <h1>Emergency fund</h1>
     <p class="ft-body">Cash flow and savings toward your cushion.</p>
-    <p class="ft-disclaimer">Not advice. Not a guarantee.</p>
     ${graph("ef", ef)}
     <div class="ft-ms-foot">
       <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>

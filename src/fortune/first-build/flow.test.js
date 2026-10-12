@@ -887,7 +887,7 @@ describe("Slice C costs and deeper flows", () => {
 });
 
 describe("Slice D privacy, disclaimer, and wipe", () => {
-  it("shows the locked privacy strip on Where are you and monthly take-home", () => {
+  it("keeps the privacy strip on Where are you only", () => {
     const home = renderFirstBuild(freshState());
     expect(home).toMatch(/Stays on this phone\. Erase any time\./);
     expect(home).toContain(PRIVACY_STRIP);
@@ -899,19 +899,22 @@ describe("Slice D privacy, disclaimer, and wipe", () => {
     const takeHome = go(freshState(), { type: "pick-entry", entry: "stressed" });
     const card = renderFirstBuild(takeHome);
     expect(card).toMatch(/Your take-home/);
-    expect(card).toContain(PRIVACY_STRIP);
+    expect(card).not.toContain(PRIVACY_STRIP);
     expect(card).toMatch(/Show my current plan/);
     expect(renderFirstBuild({ ...freshState(), screen: "ic", entry: "stressed" })).not.toContain(PRIVACY_STRIP);
+    expect(renderFirstBuild(go(freshState(), { type: "open-life" }))).not.toContain(PRIVACY_STRIP);
   });
 
-  it("shows the locked disclaimer on Your life home and TODAY detail", () => {
+  it("leaves the advice line off the journey and on the future-life download", () => {
     const home = renderFirstBuild(go(freshState(), { type: "open-life" }));
-    expect(home).toContain(LIFE_DISCLAIMER);
-    expect(home).toMatch(/Not advice\. Not a guarantee\./);
+    expect(home).not.toContain(LIFE_DISCLAIMER);
+    expect(home).not.toMatch(/Not advice\. Not a guarantee\./);
     const today = go(go(freshState(), { type: "open-life" }), { type: "open-milestone", id: "today" });
     expect(today.screen).toBe("l1");
-    expect(renderFirstBuild(today)).toContain(LIFE_DISCLAIMER);
+    expect(renderFirstBuild(today)).not.toContain(LIFE_DISCLAIMER);
     expect(renderFirstBuild(today)).not.toMatch(/Nothing leaves/i);
+    const lines = timelineLines(futureSnapshot(freshState()));
+    expect(lines.join("\n")).toContain(LIFE_DISCLAIMER);
   });
 
   it("erase clears a stressed plan so a later stable life is empty", () => {
@@ -944,7 +947,7 @@ describe("Slice D privacy, disclaimer, and wipe", () => {
     expect(life.today.income).toBeNull();
     const html = renderFirstBuild(go(stable, { type: "open-life" }));
     expect(html).toMatch(/Steady so far/);
-    expect(html).toContain(LIFE_DISCLAIMER);
+    expect(html).not.toContain(LIFE_DISCLAIMER);
     expect(html).not.toMatch(/If nothing changes/);
     expect(html).not.toMatch(/6,500/);
     expect(html).not.toMatch(/24,900/);
@@ -976,7 +979,7 @@ describe("Slice E dig-in fixes", () => {
     expect(today).not.toContain("#0d9488");
     expect(today).not.toContain("#5eead4");
     expect(html).toMatch(/Get through this month/);
-    expect(html).toContain(LIFE_DISCLAIMER);
+    expect(html).not.toContain(LIFE_DISCLAIMER);
     expect(milestoneIds(html)).toEqual(["today"]);
     expect(html).not.toMatch(/data-ms="ef"/);
     expect(html).not.toMatch(/Invest &amp; insurance/);
@@ -1115,7 +1118,7 @@ describe("Slice E dig-in fixes", () => {
     expect(hidden).toMatch(/This month/);
     expect(hidden).toContain("is-slate");
     expect(todayHtml(hidden)).not.toContain("#0d9488");
-    expect(hidden).toContain(LIFE_DISCLAIMER);
+    expect(hidden).not.toContain(LIFE_DISCLAIMER);
 
     const joined = renderFirstBuild({ ...state, rightDoorJoined: true });
     expect(joined).toMatch(/Right Door complete/);
@@ -1156,7 +1159,7 @@ describe("Slice E dig-in fixes", () => {
     expect(html).toMatch(/Net this month/);
     expect(html).toMatch(/\+5,000/);
     expect(html).toMatch(/Got it/);
-    expect(html).toContain(LIFE_DISCLAIMER);
+    expect(html).not.toContain(LIFE_DISCLAIMER);
     const detailYs = saveLineYs(html);
     expect(detailYs.every((y) => y <= 55)).toBe(true);
     expect(go(detail, { type: "back" }).screen).toBe("l0");
@@ -2013,7 +2016,7 @@ describe("Full journey", () => {
     expect(html).toMatch(/data-act="open-boost" data-value="life"/);
     expect(html).toMatch(/Download your future life/);
     expect(html).toMatch(/Today → age 70/);
-    expect(html).toContain(LIFE_DISCLAIMER);
+    expect(html).not.toContain(LIFE_DISCLAIMER);
 
     const lines = timelineLines(futureSnapshot({ ...state, asOf: new Date(2026, 9, 4) }));
     expect(lines[0]).toBe("Your future life");

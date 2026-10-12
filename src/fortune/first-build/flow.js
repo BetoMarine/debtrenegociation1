@@ -1976,7 +1976,6 @@ export function present(state) {
         state.projectNext !== true &&
         state.fromInput !== true &&
         (state.entry === "ok" || fundEntered(state)),
-      disclaimer: LIFE_DISCLAIMER,
       frame: LIFE_FRAME[id],
     };
   }
@@ -2037,10 +2036,6 @@ export function present(state) {
       requiredHint: copy.requiredHint,
       skip: false,
       primary: "Continue",
-      privacy: id === "i0",
-      privacyText: id === "i0" ? PRIVACY_STRIP : "",
-      privacyInfo: id === "i0" ? PRIVACY_INFO : "",
-      privacyOpen: id === "i0" && state.privacyOpen === true,
       input: {
         key,
         mode: copy.mode,
