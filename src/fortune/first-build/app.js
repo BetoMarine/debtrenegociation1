@@ -178,7 +178,15 @@ function onClick(event) {
     apply(reduce(state, { type: "back" }));
     return;
   }
-  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next") {
+  if (act === "toggle-debt") {
+    apply(reduce(state, { type: "toggle-debt", id: btn.getAttribute("data-value") }));
+    return;
+  }
+  if (act === "pack-opened") {
+    apply(reduce(state, { type: "pack-opened" }));
+    return;
+  }
+  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next" || act === "pick-debt-fork" || act === "pick-after") {
     const value = btn.getAttribute("data-value");
     const action =
       act === "pick-entry"
@@ -189,7 +197,11 @@ function onClick(event) {
             ? { type: "pick-cushion", situation: value }
             : act === "pick-next"
               ? { type: "pick-next", pick: value }
-              : { type: "pick-grow", pick: value };
+              : act === "pick-debt-fork"
+                ? { type: "pick-debt-fork", pick: value }
+                : act === "pick-after"
+                  ? { type: "pick-after", pick: value }
+                  : { type: "pick-grow", pick: value };
     apply(reduce(state, action));
     return;
   }

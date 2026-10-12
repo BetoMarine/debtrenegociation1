@@ -4,8 +4,10 @@ import {
   FRAME_IDS,
   LIFE_DISCLAIMER,
   PRIVACY_STRIP,
+  PACK_HANDOFF_URL,
   canContinue,
   cushionReady,
+  debtPicture,
   freshState,
   futureSnapshot,
   hydrate,
@@ -20,8 +22,45 @@ import { buildFutureLifePdf, moreMoneyFor, timelineLines } from "./timeline.js";
 import { buildLife, rightDoorJoined } from "./life.js";
 import { renderFirstBuild } from "./view.js";
 
-function go(state, action) {
+function step(state, action) {
   return reduce(state, action).state;
+}
+
+/** Journey tests enter the debt enquire with zeros, then land on monthly costs. */
+function walkDebtToCosts(state) {
+  const edit = (current, key, amount) => step(current, { type: "edit", key, amount, note: "" });
+  let next = step(state, { type: "toggle-debt", id: "cards" });
+  next = step(next, { type: "continue" });
+  next = edit(next, "debtOwed", "0");
+  next = edit(next, "debtInstallment", "0");
+  next = step(next, { type: "continue" });
+  next = edit(next, "spendBills", "0");
+  next = edit(next, "spendPersonal", "0");
+  next = step(next, { type: "continue" });
+  next = step(next, { type: "continue" });
+  next = step(next, { type: "continue" });
+  if (next.screen === "d8") {
+    next = step(next, { type: "continue" });
+    next = step(next, { type: "pack-opened" });
+  } else {
+    next = step(next, { type: "pick-debt-fork", pick: "later" });
+  }
+  return step(next, { type: "pick-after", pick: "stabilize" });
+}
+
+function go(state, action) {
+  const next = step(state, action);
+  if (action?.type === "continue" && state.screen === "i0" && next.screen === "dt") return walkDebtToCosts(next);
+  return next;
+}
+
+function backToDoor(state) {
+  let guard = 0;
+  while (state.screen !== "w0" && guard < 16) {
+    state = go(state, { type: "back" });
+    guard += 1;
+  }
+  return state;
 }
 
 function money(state, key, amount, note = "") {
@@ -32,11 +71,11 @@ describe("Slice A first-build flow", () => {
   it("cold start is Where are you, with the three doors and no dig-in", () => {
     const view = present(freshState());
     expect(view.frame).toBe("W0-where-are-you");
-    expect(view.title).toBe("Where are you?");
+    expect(view.title).toBe("Where are you right now?");
     expect(view.choices.map((c) => c.label)).toEqual([
-      "Under money stress",
-      "Stable — building a cushion",
-      "Ready to plan what’s next",
+      "Money is tight",
+      "Debt is concerning",
+      "I want a clearer picture",
     ]);
     const html = renderFirstBuild(freshState());
     expect(html).not.toMatch(/dig-in/i);
@@ -50,6 +89,7 @@ describe("Slice A first-build flow", () => {
     expect(stressed.screen).toBe("i0");
     expect(go(stressed, { type: "continue" }).screen).toBe("i0");
     stressed = money(stressed, "takeHome", "20000");
+    expect(step(stressed, { type: "continue" }).screen).toBe("dt");
     stressed = go(stressed, { type: "continue" });
     expect(stressed.screen).toBe("ic");
     expect(present(stressed).title).toBe("Monthly costs");
@@ -252,7 +292,7 @@ describe("Slice A first-build flow", () => {
     let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
     state = go(money(state, "takeHome", "1000"), { type: "continue" });
     expect(go(state, { type: "open-erase" }).screen).toBe("ic");
-    state = go(go(state, { type: "back" }), { type: "back" });
+    state = backToDoor(state);
     expect(state.screen).toBe("w0");
     state = go(state, { type: "open-erase" });
     expect(state.screen).toBe("e0");
@@ -294,7 +334,7 @@ describe("Slice A first-build flow", () => {
     expect(hydrate(state).screen).toBe("g1");
     const opened = landOnDoor(hydrate(state));
     expect(opened.screen).toBe("w0");
-    expect(present(opened).title).toBe("Where are you?");
+    expect(present(opened).title).toBe("Where are you right now?");
     expect(opened.inputs.takeHome.amount).toBe("22000");
     expect(opened.inputs.monthlyCosts.amount).toBe("8000");
     expect(opened.entry).toBe("ok");
@@ -424,7 +464,7 @@ describe("Slice B Your life", () => {
   it("keeps Where are you as the door and reaches Your life without a journey rewrite", () => {
     const home = renderFirstBuild(freshState());
     expect(home).toMatch(/Where are you/);
-    expect(home).toMatch(/Under money stress/);
+    expect(home).toMatch(/Money is tight/);
     expect(home).toMatch(/data-act="open-life"/);
     const life = go(freshState(), { type: "open-life" });
     expect(life.screen).toBe("l0");
@@ -483,7 +523,7 @@ describe("Slice B Your life", () => {
     state = money(state, "takeHome", "18400");
     expect(buildLife(state).today.net).toBe(-6500);
     const card = renderFirstBuild(state);
-    expect(card).toMatch(/Monthly take-home/);
+    expect(card).toMatch(/Your take-home/);
     expect(card).toMatch(/Show my current plan/);
     expect(card).not.toMatch(/data-ms="today"/);
     const plan = go(state, { type: "show-plan" });
@@ -493,7 +533,7 @@ describe("Slice B Your life", () => {
     expect(primary).toMatch(/Was –2,100 · take-home updated/);
     expect(primary).toMatch(/Income 18,400 · Expenses 24,900/);
     expect(primary).toMatch(/Back to input/);
-    expect(primary).not.toMatch(/Monthly take-home/);
+    expect(primary).not.toMatch(/Your take-home/);
     expect(todayHtml(primary)).not.toContain("#0d9488");
     const returned = go(plan, { type: "back-to-input" });
     expect(returned.screen).toBe("i0");
@@ -598,7 +638,7 @@ describe("Slice B Your life", () => {
     expect(clean.screen).toBe("w0");
     expect(clean.entry).toBeNull();
     expect(buildLife(clean).today.net).toBeNull();
-    expect(present(clean).title).toBe("Where are you?");
+    expect(present(clean).title).toBe("Where are you right now?");
     expect(rightDoorJoined(newPack("en"), null)).toBe(false);
     expect(rightDoorJoined({ fullName: "Ada", status: "draft" }, null)).toBe(true);
     expect(rightDoorJoined(null, { source: "right-door" })).toBe(true);
@@ -825,7 +865,7 @@ describe("Slice C costs and deeper flows", () => {
 
     const home = go(state, { type: "back" });
     expect(home.screen).toBe("w0");
-    expect(present(home).title).toBe("Where are you?");
+    expect(present(home).title).toBe("Where are you right now?");
     const menu = { ...state, screen: "g0" };
     expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
     expect(go(menu, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
@@ -858,7 +898,7 @@ describe("Slice D privacy, disclaimer, and wipe", () => {
 
     const takeHome = go(freshState(), { type: "pick-entry", entry: "stressed" });
     const card = renderFirstBuild(takeHome);
-    expect(card).toMatch(/Monthly take-home/);
+    expect(card).toMatch(/Your take-home/);
     expect(card).toContain(PRIVACY_STRIP);
     expect(card).toMatch(/Show my current plan/);
     expect(renderFirstBuild({ ...freshState(), screen: "ic", entry: "stressed" })).not.toContain(PRIVACY_STRIP);
@@ -878,8 +918,7 @@ describe("Slice D privacy, disclaimer, and wipe", () => {
     let state = go(freshState(), { type: "pick-entry", entry: "stressed" });
     state = go(money(state, "takeHome", "18400"), { type: "continue" });
     state = money(state, "monthlyCosts", "24900");
-    state = go(state, { type: "back" });
-    state = go(state, { type: "back" });
+    state = backToDoor(state);
     expect(state.screen).toBe("w0");
     expect(buildLife(state).today.net).toBe(-6500);
     expect(buildLife(state).today.graph).toBe("down-red");
@@ -1616,7 +1655,7 @@ describe("Unlock sequence", () => {
     expect(go(planning, { type: "back" }).screen).toBe("w0");
     const afterGoal = go(planning, { type: "back" });
     expect(afterGoal.screen).toBe("w0");
-    expect(present(afterGoal).title).toBe("Where are you?");
+    expect(present(afterGoal).title).toBe("Where are you right now?");
     expect(renderFirstBuild(afterGoal)).toContain(PRIVACY_STRIP);
     const again = { ...planning, screen: "g0" };
     expect(present(again).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
@@ -2211,5 +2250,144 @@ describe("Full journey", () => {
     expect(yearLine("20000", "10000", "firm")).toContain(
       "Over 12 months · Firm · 5% a year · 120,000 becomes 126,000",
     );
+  });
+});
+
+function editMoney(state, key, amount) {
+  return step(state, { type: "edit", key, amount, note: "" });
+}
+
+describe("Slice G debt enquire to Right Door", () => {
+  function toSplit(pay, owed, installment, types) {
+    let state = step(freshState(), { type: "pick-entry", entry: "stressed" });
+    state = editMoney(state, "takeHome", pay);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("dt");
+    for (const id of types) state = step(state, { type: "toggle-debt", id });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("d3");
+    state = editMoney(state, "debtOwed", owed);
+    state = editMoney(state, "debtInstallment", installment);
+    return step(state, { type: "continue" });
+  }
+
+  it("asks debt type, combined totals, and a split she enters", () => {
+    let state = step(freshState(), { type: "pick-entry", entry: "ok" });
+    state = editMoney(state, "takeHome", "18400");
+    state = step(state, { type: "continue" });
+    expect(step(state, { type: "continue" }).showRequired).toBe(true);
+    expect(step(state, { type: "continue" }).screen).toBe("dt");
+    state = step(state, { type: "toggle-debt", id: "cards" });
+    state = step(state, { type: "toggle-debt", id: "loans" });
+    state = step(state, { type: "toggle-debt", id: "mortgage" });
+    state = step(state, { type: "toggle-debt", id: "mortgage" });
+    expect(state.debtTypes).toEqual(["cards", "loans"]);
+    const types = renderFirstBuild(state);
+    expect(types).toMatch(/Credit cards/);
+    expect(types).toMatch(/Loans/);
+    expect(types).toMatch(/Mortgage/);
+    expect(types).toMatch(/aria-pressed="true"/);
+    expect(types).toMatch(/aria-pressed="false"/);
+
+    state = step(state, { type: "continue" });
+    const emptyTotals = renderFirstBuild(state);
+    expect(emptyTotals).toMatch(/Total you still owe/);
+    expect(emptyTotals).toMatch(/Monthly installment/);
+    expect(emptyTotals).not.toMatch(/value="4800"/);
+    expect(step(state, { type: "continue" }).screen).toBe("d3");
+
+    state = toSplit("18400", "50000", "4800", ["cards", "loans"]);
+    expect(state.screen).toBe("d4");
+    expect(state.inputs.spendDebt.amount).toBe("4800");
+    expect(state.inputs.spendBills.amount).toBe("");
+    expect(state.inputs.spendPersonal.amount).toBe("");
+    const split = renderFirstBuild(state);
+    expect(split).toMatch(/Debt repayment/);
+    expect(split).toMatch(/value="4800"/);
+    expect(split).toMatch(/Bills/);
+    expect(split).toMatch(/Personal/);
+    expect(split.match(/placeholder="Tap to enter"/g)).toHaveLength(3);
+    expect(step(state, { type: "continue" }).showRequired).toBe(true);
+  });
+
+  it("shows debt percent and Left from entered amounts, then the short or fitting door", () => {
+    let short = toSplit("18400", "90000", "4800", ["cards"]);
+    short = editMoney(short, "spendBills", "8200");
+    short = editMoney(short, "spendPersonal", "6200");
+    short = step(short, { type: "continue" });
+    expect(short.screen).toBe("d5");
+    expect(debtPicture(short)).toMatchObject({ pay: 18400, repay: 4800, bills: 8200, personal: 6200, left: -800, pct: 26 });
+    const now = renderFirstBuild(short);
+    expect(now).toMatch(/Your Now/);
+    expect(now).toMatch(/26%/);
+    expect(now).toMatch(/4,800/);
+    expect(now).toMatch(/8,200/);
+    expect(now).toMatch(/6,200/);
+    expect(now).toMatch(/–800/);
+    expect(now).toMatch(/See Right Door target/);
+    expect(now).not.toMatch(/Example data/);
+
+    short = step(short, { type: "continue" });
+    expect(short.screen).toBe("d6");
+    const target = renderFirstBuild(short);
+    expect(target).toMatch(/Your Right Door target follows debt as 26% of pay/);
+    expect(target).toMatch(/Debt repayment 4,800 is 26% of take-home 18,400/);
+
+    short = step(short, { type: "continue" });
+    expect(short.screen).toBe("d8");
+    const mandatory = renderFirstBuild(short);
+    expect(mandatory).toMatch(/Start Right Door package/);
+    expect(mandatory).toMatch(/is-warn/);
+    expect(mandatory).toMatch(/Show my current plan/);
+    const looked = step(short, { type: "show-plan" });
+    expect(looked.screen).toBe("l0");
+    expect(step(looked, { type: "back" }).screen).toBe("d8");
+    expect(step(short, { type: "show-plan" }).screen).not.toBe("d9");
+
+    short = step(short, { type: "continue" });
+    expect(short.screen).toBe("d9");
+    const handoff = renderFirstBuild(short);
+    const buildAt = handoff.indexOf("1 Build the package");
+    const uploadAt = handoff.indexOf("2 Upload your documents");
+    const bookAt = handoff.indexOf("3 Then book help");
+    expect(buildAt).toBeGreaterThan(-1);
+    expect(uploadAt).toBeGreaterThan(buildAt);
+    expect(bookAt).toBeGreaterThan(uploadAt);
+    expect(handoff).toContain(PACK_HANDOFF_URL);
+    expect(handoff).toMatch(/Open Right Door \/ Pack/);
+    expect(handoff).toMatch(/Do not open book-first/);
+    expect(handoff).not.toMatch(/book-first\.html|action=book/);
+
+    const after = step(short, { type: "pack-opened" });
+    expect(after.screen).toBe("d10");
+    expect(step(after, { type: "pick-after", pick: "stabilize" }).screen).toBe("ic");
+    expect(step(after, { type: "pick-after", pick: "plan" }).screen).toBe("g0");
+    expect(step(after, { type: "pick-after", pick: "now" }).screen).toBe("d5");
+
+    let fit = toSplit("18400", "20000", "2000", ["mortgage"]);
+    fit = editMoney(fit, "spendBills", "8000");
+    fit = editMoney(fit, "spendPersonal", "4000");
+    fit = step(fit, { type: "continue" });
+    fit = step(fit, { type: "continue" });
+    fit = step(fit, { type: "continue" });
+    expect(debtPicture(fit)).toMatchObject({ left: 4400, pct: 11 });
+    expect(fit.screen).toBe("d7");
+    const offer = renderFirstBuild(fit);
+    expect(offer).toMatch(/Improve with Right Door/);
+    expect(offer).toMatch(/Not now/);
+    expect(offer).not.toMatch(/Start Right Door package/);
+    expect(step(fit, { type: "pick-debt-fork", pick: "later" }).screen).toBe("d10");
+    expect(step(fit, { type: "pick-debt-fork", pick: "improve" }).screen).toBe("d9");
+  });
+
+  it("keeps an edited repayment when the installment changes", () => {
+    let state = toSplit("18400", "50000", "4800", ["loans"]);
+    expect(state.inputs.spendDebt.amount).toBe("4800");
+    state = editMoney(state, "spendDebt", "1000");
+    state = step(state, { type: "back" });
+    state = editMoney(state, "debtInstallment", "2000");
+    state = step(state, { type: "continue" });
+    expect(state.inputs.spendDebt.amount).toBe("1000");
+    expect(state.inputs.spendBills.amount).toBe("");
   });
 });

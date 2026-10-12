@@ -54,7 +54,27 @@ export const SCREEN_IDS = [
   "l4",
   "l5",
   "l6",
+  "dt",
+  "d3",
+  "d4",
+  "d5",
+  "d6",
+  "d7",
+  "d8",
+  "d9",
+  "d10",
 ];
+
+const DEBT_KINDS = [
+  { id: "cards", label: "Credit cards" },
+  { id: "loans", label: "Loans" },
+  { id: "mortgage", label: "Mortgage" },
+];
+
+/** Live Sunday Pack already runs build → upload → book. Bare /sunday/ 404s. */
+export const PACK_HANDOFF_URL = "https://betomarine.github.io/debtrenegociation1/sunday/?from=fortune";
+
+const DEBT_SHOW = new Set(["dt", "d3", "d4", "d5", "d6", "d8", "d9"]);
 
 const LIFE_FRAME = {
   l0: "L0-your-life-scroll",
@@ -127,9 +147,21 @@ export const SLICE_C_FRAMES = {
   tl4: "Tl4-duration",
 };
 
+const SLICE_G_FRAMES = {
+  dt: "FD02-debt-type",
+  d3: "FD03-debt-totals",
+  d4: "FD04-expense-split",
+  d5: "FD05-your-now",
+  d6: "FD06-right-door-target",
+  d7: "FD07-month-fits",
+  d8: "FD08-month-short",
+  d9: "FD09-pack-handoff",
+  d10: "FD10-after-package",
+};
+
 function frameOf(id, ready) {
   if (id === "g3") return ready ? "Gd4-invest-unlocked" : "Gd3-invest-still-locked";
-  return SLICE_C_FRAMES[id] || FRAME_IDS[id] || "";
+  return SLICE_G_FRAMES[id] || SLICE_C_FRAMES[id] || FRAME_IDS[id] || "";
 }
 
 const ENTRY_SCREEN = {
@@ -173,7 +205,7 @@ const INPUT_SCREENS = {
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -229,7 +261,17 @@ export function freshState() {
       fundTarget: blankMoney(),
       fundWhen: { date: "", note: "" },
       fundSave: blankMoney(),
+      debtOwed: blankMoney(),
+      debtInstallment: blankMoney(),
+      spendDebt: blankMoney(),
+      spendBills: blankMoney(),
+      spendPersonal: blankMoney(),
     },
+    debtTypes: [],
+    debtSuggest: "",
+    debtFork: null,
+    debtVia: null,
+    debtGate: false,
     goals: [],
     goalIndex: null,
     action: null,
@@ -352,6 +394,20 @@ export function canContinue(state) {
         parseIsoDate(state.inputs.fundWhen.date) !== null &&
         (parseAmount(state.inputs.fundSave.amount) || 0) > 0
       );
+    case "dt":
+      return state.debtTypes.length > 0;
+    case "d3":
+      return parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
+    case "d4":
+      return (
+        parseAmount(state.inputs.spendDebt.amount) !== null &&
+        parseAmount(state.inputs.spendBills.amount) !== null &&
+        parseAmount(state.inputs.spendPersonal.amount) !== null
+      );
+    case "d5":
+    case "d6":
+    case "d8":
+      return true;
     case "f1":
     case "f2":
     case "f3":
@@ -498,10 +554,53 @@ function placeDoor(state) {
   return { ...state, screen: "s0", planFrom: "i1", showRequired: false, infoOpen: false };
 }
 
+function applyDebtSuggest(state) {
+  const installment = state.inputs.debtInstallment.amount;
+  const current = state.inputs.spendDebt.amount;
+  const prior = state.debtSuggest || "";
+  if (current !== "" && current !== prior) return state;
+  return {
+    ...state,
+    debtSuggest: installment,
+    inputs: {
+      ...state.inputs,
+      spendDebt: { ...state.inputs.spendDebt, amount: installment },
+    },
+  };
+}
+
+/** Debt % is monthly debt repayment ÷ take-home. Left is pay minus the three buckets she entered. */
+export function debtPicture(state) {
+  const pay = parseAmount(state?.inputs?.takeHome?.amount);
+  const repay = parseAmount(state?.inputs?.spendDebt?.amount);
+  const bills = parseAmount(state?.inputs?.spendBills?.amount);
+  const personal = parseAmount(state?.inputs?.spendPersonal?.amount);
+  const complete = pay != null && repay != null && bills != null && personal != null;
+  const left = complete ? pay - repay - bills - personal : null;
+  const pct = complete && pay > 0 ? Math.round((repay / pay) * 100) : null;
+  return { pay, repay, bills, personal, left, pct };
+}
+
 function advance(state) {
   switch (state.screen) {
     case "i0":
-      return { ...state, screen: "ic", showRequired: false, infoOpen: false };
+      return { ...state, screen: "dt", showRequired: false, infoOpen: false };
+    case "dt":
+      return { ...state, screen: "d3", showRequired: false, infoOpen: false };
+    case "d3":
+      return { ...applyDebtSuggest(state), screen: "d4", showRequired: false, infoOpen: false };
+    case "d4":
+      return { ...state, screen: "d5", showRequired: false, infoOpen: false };
+    case "d5":
+      return { ...state, screen: "d6", showRequired: false, infoOpen: false };
+    case "d6": {
+      const left = debtPicture(state).left;
+      if (left == null) return { ...state, showRequired: true };
+      if (left < 0) return { ...state, screen: "d8", debtFork: "short", showRequired: false, infoOpen: false };
+      return { ...state, screen: "d7", debtFork: "fit", showRequired: false, infoOpen: false };
+    }
+    case "d8":
+      return { ...state, screen: "d9", showRequired: false, infoOpen: false };
     case "ic": {
       if (state.costsReturn === "fd3") {
         return { ...state, screen: "fd3", costsReturn: null, showRequired: false, infoOpen: false };
@@ -603,8 +702,28 @@ function backTo(state) {
   switch (state.screen) {
     case "i0":
       return "w0";
+    case "dt":
+      return "i0";
+    case "d3":
+      return "dt";
+    case "d4":
+      return "d3";
+    case "d5":
+      return "d4";
+    case "d6":
+      return "d5";
+    case "d7":
+      return "d6";
+    case "d8":
+      return "d6";
+    case "d9":
+      return state.debtFork === "short" ? "d8" : "d7";
+    case "d10":
+      return state.debtVia === "d9" ? "d9" : "d7";
     case "ic":
-      return state.costsReturn === "fd3" ? "fd2" : "i0";
+      if (state.costsReturn === "fd3") return "fd2";
+      if (state.debtGate) return "d10";
+      return "i0";
     case "f0":
       return "ic";
     case "fd":
@@ -664,6 +783,7 @@ function backTo(state) {
     case "i3b":
       return "i3";
     case "g0":
+      if (state.planFrom === "d10") return "d10";
       if (state.planFrom === "sd3") return "sd3";
       if (state.planFrom === "sd2") return "sd2";
       if (state.planFrom === "i3b") return "i3b";
@@ -889,6 +1009,33 @@ function step(state, action) {
         infoOpen: false,
         showRequired: false,
       };
+    case "toggle-debt": {
+      if (state.screen !== "dt") return state;
+      const id = action.id;
+      if (!DEBT_KINDS.some((kind) => kind.id === id)) return state;
+      const debtTypes = state.debtTypes.includes(id)
+        ? state.debtTypes.filter((kind) => kind !== id)
+        : [...state.debtTypes, id];
+      return { ...state, debtTypes, showRequired: false };
+    }
+    case "pick-debt-fork":
+      if (state.screen !== "d7") return state;
+      if (action.pick === "improve") return { ...state, screen: "d9", debtFork: "fit", showRequired: false, infoOpen: false };
+      if (action.pick === "later") return { ...state, screen: "d10", debtVia: "d7", debtFork: "fit", showRequired: false, infoOpen: false };
+      return state;
+    case "pick-after":
+      if (state.screen !== "d10") return state;
+      if (action.pick === "stabilize") {
+        return { ...state, screen: "ic", debtGate: true, showRequired: false, infoOpen: false };
+      }
+      if (action.pick === "plan") {
+        return { ...state, screen: "g0", planFrom: "d10", showRequired: false, infoOpen: false };
+      }
+      if (action.pick === "now") return { ...state, screen: "d5", showRequired: false, infoOpen: false };
+      return state;
+    case "pack-opened":
+      if (state.screen !== "d9") return state;
+      return { ...state, screen: "d10", debtVia: "d9", showRequired: false, infoOpen: false };
     case "pick-fix":
       if (!FIX_DETAIL[action.situation]) return state;
       return { ...state, fixSituation: action.situation, screen: "i1", showRequired: false };
@@ -1027,7 +1174,7 @@ function step(state, action) {
         infoOpen: false,
       };
     case "show-plan":
-      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen)) return state;
+      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen) && !DEBT_SHOW.has(state.screen)) return state;
       return {
         ...state,
         screen: "l0",
@@ -1194,7 +1341,8 @@ export function hydrate(raw) {
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
     if (!(entry === "ok" && (screen === "i3" || screen === "i3b"))) screen = entry ? "i0" : "w0";
   }
-  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const debtTypes = DEBT_KINDS.map((kind) => kind.id).filter((id) => Array.isArray(raw.debtTypes) && raw.debtTypes.includes(id));
   return {
     ...base,
     screen,
@@ -1244,18 +1392,23 @@ export function hydrate(raw) {
     boostPick: oneOf(raw.boostPick, ["firm", "balanced", "growth", "frontier"]),
     boostMode: raw.boostMode === "more" ? "more" : "sooner",
     boostFor: null,
+    debtTypes,
+    debtSuggest: cleanAmount(raw.debtSuggest),
+    debtFork: oneOf(raw.debtFork, ["fit", "short"]),
+    debtVia: oneOf(raw.debtVia, ["d7", "d9"]),
+    debtGate: raw.debtGate === true,
   };
 }
 
 const INPUT_COPY = {
   i0: {
-    title: "Monthly take-home",
-    body: "Your actual amount after tax.",
-    chip: "Start",
+    title: "Your take-home",
+    body: "What you get paid each month.",
+    chip: "Income",
     label: "Amount",
     prefix: "HK$",
     mode: "money",
-    info: "One actual number, after tax. Not a range.",
+    info: "One actual number you get paid each month. Not a range.",
     requiredHint: "Enter an amount to continue.",
   },
   ic: {
@@ -1536,6 +1689,204 @@ export function boostAvailable(state) {
   return net != null && net > 0;
 }
 
+function debtScreens(state, base) {
+  const id = state.screen;
+  const quietPlan = { showLifeLink: false, showPlan: true };
+  if (id === "dt") {
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "checks",
+      chip: "Debt",
+      title: "What kind of debt?",
+      body: "Pick all that fit. You can change later.",
+      checks: DEBT_KINDS.map((kind) => ({ ...kind, on: state.debtTypes.includes(kind.id) })),
+      primary: "Continue",
+      showRequired: state.showRequired === true,
+      requiredHint: "Pick at least one kind of debt.",
+    };
+  }
+  if (id === "d3") {
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "fields",
+      chip: "Debt",
+      title: "Debt totals",
+      body: "From the types you picked.",
+      info: "One total you still owe, and the installment across those debts.",
+      fields: [
+        { key: "debtOwed", label: "Total you still owe", amount: state.inputs.debtOwed.amount, hint: "" },
+        {
+          key: "debtInstallment",
+          label: "Monthly installment(s)",
+          amount: state.inputs.debtInstallment.amount,
+          hint: "Repayment you owe each month across those debts.",
+        },
+      ],
+      primary: "Continue",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter both totals to continue.",
+    };
+  }
+  if (id === "d4") {
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "fields",
+      chip: "Spend",
+      title: "Split this month’s spend",
+      body: "Three buckets from what you actually spend.",
+      fields: [
+        {
+          key: "spendDebt",
+          label: "Debt repayment",
+          amount: state.inputs.spendDebt.amount,
+          hint: "From your monthly installment. Edit if this month differs.",
+        },
+        { key: "spendBills", label: "Bills", amount: state.inputs.spendBills.amount, hint: "" },
+        { key: "spendPersonal", label: "Personal", amount: state.inputs.spendPersonal.amount, hint: "" },
+      ],
+      primary: "Continue",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter each bucket. A blank is not a number.",
+    };
+  }
+  if (id === "d5") {
+    const pic = debtPicture(state);
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "picture",
+      chip: "Your Now",
+      title: "Your Now",
+      body: "From amounts you entered.",
+      rows: [
+        { label: "Pay", value: formatPlain(pic.pay) },
+        { label: "Debt % of pay", value: pic.pct == null ? "\u2014" : `${pic.pct}%` },
+        { label: "Debt repayment", value: formatPlain(pic.repay) },
+        { label: "Bills", value: formatPlain(pic.bills) },
+        { label: "Personal", value: formatPlain(pic.personal) },
+        { label: "Left", value: signedAmount(pic.left), neg: pic.left < 0, pos: pic.left > 0 },
+      ],
+      note: "Nothing invented. Change any part next.",
+      primary: "See Right Door target",
+    };
+  }
+  if (id === "d6") {
+    const pic = debtPicture(state);
+    const share =
+      pic.pct == null
+        ? {
+            title: "Your Right Door target follows the debt share of your pay",
+            body: "Take-home is not above zero, so this share is not a percent yet.",
+          }
+        : {
+            title: `Your Right Door target follows debt as ${pic.pct}% of pay`,
+            body: `Debt repayment ${formatPlain(pic.repay)} is ${pic.pct}% of take-home ${formatPlain(pic.pay)}. That share guides the package aim — not a promise of a new amount.`,
+          };
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "picture",
+      chip: "Right Door",
+      title: "Your Right Door target",
+      body: "From the debt share of your pay.",
+      facts: [
+        share,
+        {
+          title: "Next step depends on this month",
+          body: "If the month fits, you can still improve with Right Door. If the month is short, starting a package is the path.",
+        },
+      ],
+      primary: "Continue",
+    };
+  }
+  if (id === "d7") {
+    const left = debtPicture(state).left;
+    return {
+      ...base,
+      kind: "choices",
+      choiceAct: "pick-debt-fork",
+      showLifeLink: false,
+      chip: "This month",
+      title: "This month fits",
+      body: "You still can improve the debt share.",
+      facts: [
+        {
+          title: left > 0 ? "Left is positive" : "Left is zero",
+          body:
+            left > 0
+              ? "Pay covers debt repayment, bills, and personal from what you entered."
+              : "Pay meets debt repayment, bills, and personal from what you entered.",
+        },
+      ],
+      choices: [
+        choice("improve", "Improve with Right Door", { sub: "Renegotiate / package — optional improve" }),
+        choice("later", "Not now", { sub: "Keep picture · plan when ready" }),
+      ],
+    };
+  }
+  if (id === "d8") {
+    const pic = debtPicture(state);
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "picture",
+      chip: "This month",
+      title: "This month is short",
+      body: "We will help you start a package first.",
+      rows: [{ label: "Left", value: signedAmount(pic.left), neg: true }],
+      facts: [
+        {
+          title: "Pay does not cover debt repayment, bills, and personal yet",
+          body: "Fix first — then stabilize and plan.",
+        },
+        {
+          title: "Start a Right Door package",
+          body: "Build the package from your picture, then upload docs, then book help. Order matters.",
+        },
+      ],
+      primary: "Start Right Door package",
+      primaryTone: "warn",
+    };
+  }
+  if (id === "d9") {
+    return {
+      ...base,
+      ...quietPlan,
+      kind: "handoff",
+      chip: "Package",
+      title: "Next: build your package",
+      body: "Fortune hands you to Right Door / Pack. Live screens stay as they are.",
+      steps: [
+        { title: "1 Build the package", body: "Use your debt picture and target" },
+        { title: "2 Upload your documents", body: "Papers that match the package" },
+        { title: "3 Then book help", body: "NGO / helper after build + upload — not before" },
+      ],
+      note: "Do not open book-first. Order is the product.",
+      handoff: { href: PACK_HANDOFF_URL, label: "Open Right Door / Pack" },
+    };
+  }
+  if (id === "d10") {
+    return {
+      ...base,
+      kind: "choices",
+      choiceAct: "pick-after",
+      showLifeLink: false,
+      chip: "Next",
+      title: "After your package",
+      body: "When you are ready, steady the month — then plan.",
+      choices: [
+        choice("stabilize", "Stabilize first", { sub: "Cushion · keep Left from going short again" }),
+        choice("plan", "Plan a goal", { sub: "When the month fits — better to save than to loan" }),
+        choice("now", "Back to Your Now", { sub: "Review the picture you entered" }),
+      ],
+    };
+  }
+  return null;
+}
+
 export function present(state) {
   const id = state.screen;
   const ready = cushionReady(state);
@@ -1633,13 +1984,13 @@ export function present(state) {
   if (id === "w0") {
     return {
       ...base,
-      title: "Where are you?",
-      body: "Pick what fits today.",
+      title: "Where are you right now?",
+      body: "Pick what fits today. We will help from there.",
       kind: "choices",
       choices: [
-        choice("stressed", "Under money stress"),
-        choice("stable", "Stable — building a cushion"),
-        choice("ok", "Ready to plan what’s next"),
+        choice("stressed", "Money is tight", { sub: "Hard to cover this month" }),
+        choice("stable", "Debt is concerning", { sub: "Payments ok for now, but debt weighs" }),
+        choice("ok", "I want a clearer picture", { sub: "See debt vs pay, then next steps" }),
       ],
       quiet: "Erase",
       privacy: true,
@@ -1648,6 +1999,9 @@ export function present(state) {
       privacyOpen: state.privacyOpen === true,
     };
   }
+
+  const debt = debtScreens(state, base);
+  if (debt) return debt;
 
   if (id === "e0") {
     return {

@@ -389,6 +389,45 @@ input {
   color: #fff;
 }
 
+a.ft-btn {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.ft-btn.primary.is-warn {
+  background: var(--ft-warn);
+  color: #fff;
+}
+
+.ft-choice.is-on {
+  box-shadow: inset 0 0 0 2px var(--ft-ink);
+}
+
+.ft-hint,
+.ft-note {
+  margin: 4px 0 12px;
+  color: var(--ft-muted);
+  font-size: 14px;
+}
+
+.ft-steps {
+  margin: 8px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ft-steps li {
+  margin: 0 0 10px;
+}
+
+.ft-steps b {
+  display: block;
+}
+
+.ft-steps span {
+  color: var(--ft-muted);
+}
+
 .ft-btn.danger {
   background: var(--ft-danger);
   color: #fff;

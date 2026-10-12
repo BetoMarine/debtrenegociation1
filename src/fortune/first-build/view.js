@@ -36,7 +36,8 @@ function choices(view) {
         ? `<span class="ft-lock-ico">${LOCK_ICON}</span>`
         : `<b aria-hidden="true">›</b>`;
       const act =
-        view.id === "w0"
+        view.choiceAct ||
+        (view.id === "w0"
           ? "pick-entry"
           : view.id === "f0"
             ? "pick-fix"
@@ -44,7 +45,7 @@ function choices(view) {
               ? "pick-cushion"
               : view.id === "fd2"
                 ? "pick-next"
-                : "pick-grow";
+                : "pick-grow");
       return `<button class="ft-choice${locked}" type="button" data-act="${act}" data-value="${escapeHtml(item.id)}"><span class="ft-choice-label">${escapeHtml(item.label)}${sub}</span>${tail}</button>`;
     })
     .join("");
@@ -128,6 +129,49 @@ function calloutBlock(view) {
   return `<div class="ft-callout is-${escapeHtml(callout.tone)}">${LOCK_ICON}<div><b>${escapeHtml(callout.title)}</b><span>${escapeHtml(callout.body)}</span></div></div>`;
 }
 
+function alertLine(view) {
+  if (!view.showRequired) return "";
+  return `<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`;
+}
+
+function checksBlock(view) {
+  return `<div class="ft-choices">${view.checks
+    .map((item) => {
+      const on = item.on ? " is-on" : "";
+      const mark = item.on ? "✓" : "";
+      return `<button class="ft-choice${on}" type="button" data-act="toggle-debt" data-value="${escapeHtml(item.id)}" aria-pressed="${item.on ? "true" : "false"}"><span class="ft-choice-label">${escapeHtml(item.label)}</span><b aria-hidden="true">${mark}</b></button>`;
+    })
+    .join("")}</div>${alertLine(view)}`;
+}
+
+function fieldsBlock(view) {
+  const fields = (view.fields || [])
+    .map((field) => {
+      const hint = field.hint ? `<p class="ft-hint">${escapeHtml(field.hint)}</p>` : "";
+      return `<label class="ft-label" for="ft-${escapeHtml(field.key)}">${escapeHtml(field.label)}</label>
+      <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-${escapeHtml(field.key)}" name="amount" data-field="amount" data-key="${escapeHtml(field.key)}" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" /></div>${hint}`;
+    })
+    .join("");
+  return `${fields}${alertLine(view)}`;
+}
+
+function factsBlock(view) {
+  if (!view.facts?.length) return "";
+  return view.facts
+    .map(
+      (fact) =>
+        `<div class="ft-callout is-ok"><div><b>${escapeHtml(fact.title)}</b><span>${escapeHtml(fact.body)}</span></div></div>`,
+    )
+    .join("");
+}
+
+function stepsBlock(view) {
+  if (!view.steps?.length) return "";
+  return `<ol class="ft-steps">${view.steps
+    .map((step) => `<li><b>${escapeHtml(step.title)}</b><span>${escapeHtml(step.body)}</span></li>`)
+    .join("")}</ol>`;
+}
+
 function content(view) {
   const infoBtn = view.info
     ? `<button class="ft-info" type="button" data-act="info" aria-label="Why?" aria-expanded="${view.infoOpen ? "true" : "false"}" aria-controls="ft-why">i</button>`
@@ -140,13 +184,18 @@ function content(view) {
         : "";
   let main = "";
   if (view.kind === "choices") main = `<div class="ft-choices">${choices(view)}</div>`;
+  if (view.kind === "checks") main = checksBlock(view);
+  if (view.kind === "fields") main = fieldsBlock(view);
   if (view.kind === "input") main = inputBlock(view);
-  if (view.kind === "picture") main = rowsBlock(view);
+  if (view.kind === "picture") main = `${rowsBlock(view)}${calloutBlock(view)}`;
+  if (view.kind === "handoff") main = stepsBlock(view);
   if (view.kind === "confirm") main = calloutBlock(view);
   if (view.kind === "locked" && view.lockTitle) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
-  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}</div>`;
+  const facts = factsBlock(view);
+  const note = view.note ? `<p class="ft-note">${escapeHtml(view.note)}</p>` : "";
+  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${facts}${note}</div>`;
 }
 
 function rdNote(view) {
@@ -157,9 +206,15 @@ function rdNote(view) {
 function actions(view) {
   const parts = [];
   if (view.rdLater) parts.push(rdNote(view));
-  if (view.primary && view.id !== "e1") {
+  if (view.handoff) {
     parts.push(
-      `<button class="ft-btn primary" type="button" data-act="continue">${escapeHtml(view.primary)}</button>`,
+      `<a class="ft-btn primary" data-act="pack-opened" target="_blank" rel="noopener" href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
+    );
+  }
+  if (view.primary && view.id !== "e1") {
+    const tone = view.primaryTone === "warn" ? " is-warn" : "";
+    parts.push(
+      `<button class="ft-btn primary${tone}" type="button" data-act="continue">${escapeHtml(view.primary)}</button>`,
     );
   }
   if (view.id === "e1" && view.primary) {
