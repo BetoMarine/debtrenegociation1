@@ -190,8 +190,13 @@ function onClick(event) {
     apply(reduce(state, { type: "pack-opened" }));
     return;
   }
-  if (act === "pick-helper") {
-    apply(reduce(state, { type: "pick-helper", pick: btn.getAttribute("data-value") }));
+  if (act === "pick-helper" || act === "pick-installment" || act === "pick-overdue") {
+    const type = act === "pick-helper" ? "pick-helper" : act === "pick-installment" ? "pick-installment" : "pick-overdue";
+    apply(reduce(state, { type, pick: btn.getAttribute("data-value") }));
+    return;
+  }
+  if (act === "choose-rd") {
+    apply(reduce(state, { type: "choose-rd" }));
     return;
   }
   if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next" || act === "pick-debt-fork" || act === "pick-after") {
@@ -233,7 +238,7 @@ function onClick(event) {
     apply(reduce(state, { type: act, id: value, mode: value }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings" || act === "savings-later" || act === "open-me" || act === "open-rd" || act === "open-stabilize" || act === "open-goals" || act === "open-boost-mix" || act === "open-invest" || act === "edit-split" || act === "edit-send-home" || act === "open-now" || act === "edit-cushion-date" || act === "use-done-by" || act === "pick-later-date") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings" || act === "savings-later" || act === "open-me" || act === "open-rd" || act === "open-stabilize" || act === "open-goals" || act === "open-boost-mix" || act === "open-invest" || act === "edit-split" || act === "edit-send-home" || act === "start-ef" || act === "open-monitor" || act === "open-now" || act === "edit-cushion-date" || act === "use-done-by" || act === "pick-later-date") {
     apply(reduce(state, { type: act }));
     return;
   }

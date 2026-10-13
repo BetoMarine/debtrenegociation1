@@ -75,16 +75,16 @@ function money(state, key, amount, note = "") {
 }
 
 describe("Slice A first-build flow", () => {
-  it("cold start is Where are you, with the three doors and no dig-in", () => {
+  it("cold start is the input journey, with no stage picker and no dig-in", () => {
     const view = present(freshState());
     expect(view.frame).toBe("W0-where-are-you");
-    expect(view.title).toBe("Where are you right now?");
-    expect(view.choices.map((c) => c.label)).toEqual([
-      "Money is tight",
-      "Debt is concerning",
-      "I want a clearer picture",
-    ]);
+    expect(view.title).toBe("Start with numbers");
+    expect(view.primary).toBe("Enter income");
+    expect(view.choices).toEqual([]);
     const html = renderFirstBuild(freshState());
+    expect(html).toMatch(/Enter income/);
+    expect(html).not.toMatch(/Money is tight/);
+    expect(html).not.toMatch(/Are you a helper/);
     expect(html).not.toMatch(/dig-in/i);
     expect(html).not.toMatch(/I need to rebuild/);
     expect(html).not.toMatch(/<img/i);
@@ -365,7 +365,7 @@ describe("Slice A first-build flow", () => {
     expect(hydrate(state).screen).toBe("g1");
     const opened = landOnDoor(hydrate(state));
     expect(opened.screen).toBe("w0");
-    expect(present(opened).title).toBe("Where are you right now?");
+    expect(present(opened).title).toBe("Start with numbers");
     expect(opened.inputs.takeHome.amount).toBe("22000");
     expect(opened.inputs.monthlyCosts.amount).toBe("8000");
     expect(opened.entry).toBe("ok");
@@ -494,8 +494,9 @@ function saveLineYs(html) {
 describe("Slice B Your life", () => {
   it("keeps Where are you as the door and reaches Your life without a journey rewrite", () => {
     const home = renderFirstBuild(freshState());
-    expect(home).toMatch(/Where are you/);
-    expect(home).toMatch(/Money is tight/);
+    expect(home).toMatch(/Start with numbers/);
+    expect(home).toMatch(/Enter income/);
+    expect(home).not.toMatch(/Money is tight/);
     expect(home).toMatch(/data-act="open-life"/);
     const life = go(freshState(), { type: "open-life" });
     expect(life.screen).toBe("l0");
@@ -669,7 +670,7 @@ describe("Slice B Your life", () => {
     expect(clean.screen).toBe("w0");
     expect(clean.entry).toBeNull();
     expect(buildLife(clean).today.net).toBeNull();
-    expect(present(clean).title).toBe("Where are you right now?");
+    expect(present(clean).title).toBe("Start with numbers");
     expect(rightDoorJoined(newPack("en"), null)).toBe(false);
     expect(rightDoorJoined({ fullName: "Ada", status: "draft" }, null)).toBe(true);
     expect(rightDoorJoined(null, { source: "right-door" })).toBe(true);
@@ -896,7 +897,7 @@ describe("Slice C costs and deeper flows", () => {
 
     const home = go(state, { type: "back" });
     expect(home.screen).toBe("w0");
-    expect(present(home).title).toBe("Where are you right now?");
+    expect(present(home).title).toBe("Start with numbers");
     const menu = { ...state, screen: "g0" };
     expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
     expect(go(menu, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
@@ -1693,7 +1694,7 @@ describe("Unlock sequence", () => {
     expect(go(planning, { type: "back" }).screen).toBe("w0");
     const afterGoal = go(planning, { type: "back" });
     expect(afterGoal.screen).toBe("w0");
-    expect(present(afterGoal).title).toBe("Where are you right now?");
+    expect(present(afterGoal).title).toBe("Start with numbers");
     expect(renderFirstBuild(afterGoal)).toContain(PRIVACY_STRIP);
     const again = { ...planning, screen: "g0" };
     expect(present(again).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
@@ -2845,5 +2846,190 @@ describe("Slice K helper ask and month net", () => {
     expect(today).not.toMatch(/See Right Door target/);
     expect(today).not.toMatch(/Improve with Right Door/);
     expect(buildLife(step(state, { type: "open-life" })).today.net).toBe(300);
+  });
+});
+
+describe("Slice M input journey", () => {
+  function begin(pay) {
+    let state = step(freshState(), { type: "continue" });
+    expect(state.screen).toBe("i0");
+    expect(state.planFrom).toBe("inputs");
+    state = editMoney(state, "takeHome", pay);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("xb");
+    expect(renderFirstBuild(state)).not.toMatch(/Are you a helper/);
+    expect(renderFirstBuild(state)).not.toMatch(/Offshore worker/);
+    return state;
+  }
+
+  function withExpenses(state, bills, personal) {
+    state = editMoney(state, "spendBills", bills);
+    state = editMoney(state, "spendPersonal", personal);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("dt");
+    return state;
+  }
+
+  function withDebt(state, owed, installment, late) {
+    state = step(state, { type: "toggle-debt", id: "loans" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("d3");
+    state = editMoney(state, "debtOwed", owed);
+    state = editMoney(state, "debtInstallment", installment);
+    expect(step(state, { type: "continue" }).screen).toBe("d3");
+    state = step(state, { type: "pick-overdue", pick: late ? "yes" : "no" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ix");
+    return state;
+  }
+
+  it("asks income, then expenses, then debt — not a stage picker or an early helper gate", () => {
+    const home = renderFirstBuild(freshState());
+    expect(home).toMatch(/Start with numbers/);
+    expect(home).toMatch(/Enter income/);
+    expect(home).not.toMatch(/Money is tight/);
+    expect(home).not.toMatch(/Debt is concerning/);
+    expect(home).not.toMatch(/Are you a helper/);
+    expect(home).toContain(PRIVACY_STRIP);
+    const asked = begin("5000");
+    expect(renderFirstBuild(asked)).toMatch(/Bills/);
+    expect(renderFirstBuild(asked)).toMatch(/Personal \/ self/);
+  });
+
+  it("asks whether the installment is already in expenses and counts it once for Left 2,300", () => {
+    let state = withDebt(withExpenses(begin("5000"), "500", "1000"), "10000", "1200", false);
+    const ask = renderFirstBuild(state);
+    expect(ask).toMatch(/Already in expenses/);
+    expect(ask).toMatch(/HK\$ 1,200/);
+    expect(ask).toMatch(/Yes · already in expenses/);
+    expect(ask).toMatch(/No · add it for cashflow/);
+    expect(ask).toMatch(/Why we ask/);
+
+    const counted = step(state, { type: "pick-installment", pick: "no" });
+    expect(counted.screen).toBe("mt");
+    expect(counted.installmentInExpenses).toBe(false);
+    expect(buildLife(counted).today.net).toBe(2300);
+    const today = renderFirstBuild(counted);
+    expect(today).toMatch(/You today/);
+    expect(today).toMatch(/Loan installment/);
+    expect(today).toMatch(/Bills/);
+    expect(today).toMatch(/Personal \/ self/);
+    expect(today).toMatch(/5,000 – 1,200 – 500 – 1,000 = 2,300/);
+    expect(today).toMatch(/Loan total 10,000 stays on the debt card/);
+    expect(today).not.toMatch(/Left this month<\/span><b[^>]*>\+?5,000/);
+    const life = renderFirstBuild(step(counted, { type: "open-life" }));
+    expect(life).toMatch(/Loan installment/);
+    expect(life).toMatch(/Bills/);
+    expect(life).toMatch(/Personal \/ self/);
+    expect(buildLife(step(counted, { type: "open-life" })).today.net).toBe(2300);
+
+    const inside = step(state, { type: "pick-installment", pick: "yes" });
+    expect(inside.installmentInExpenses).toBe(true);
+    expect(buildLife(inside).today.net).toBe(3500);
+    expect(renderFirstBuild(inside)).toMatch(/5,000 – 500 – 1,000 = 3,500/);
+    expect(renderFirstBuild(inside)).not.toMatch(/Loan installment/);
+  });
+
+  it("sends a 5,000 salary to Sunday Pack and a 3-month monitor, even under 30%", () => {
+    let state = step(withDebt(withExpenses(begin("5000"), "500", "1000"), "10000", "1200", false), {
+      type: "pick-installment",
+      pick: "no",
+    });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("pk");
+    const pack = renderFirstBuild(state);
+    expect(pack).toMatch(/Sunday Pack/);
+    expect(pack).toMatch(/not Right Door/);
+    expect(pack).toMatch(/Continue to Sunday Pack/);
+    expect(pack).toMatch(/build → upload → THEN book/);
+    expect(pack).toContain(PACK_HANDOFF_URL);
+    expect(pack).not.toMatch(/Open Right Door/);
+
+    state = { ...step(state, { type: "continue" }), asOf: new Date(2026, 9, 13) };
+    expect(state.screen).toBe("pm");
+    expect(state.packChosen).toBe(true);
+    const monitor = renderFirstBuild(state);
+    expect(monitor).toMatch(/Package monitoring/);
+    expect(monitor).toMatch(/Due in 3 months/);
+    expect(monitor).toMatch(/13 Jan 2027/);
+    expect(monitor).toContain(PACK_HANDOFF_URL);
+    expect(monitor).toMatch(/Open Pack/);
+
+    const stable = step(state, { type: "continue" });
+    expect(stable.screen).toBe("st");
+    const html = renderFirstBuild(stable);
+    expect(html).toMatch(/Start Emergency fund/);
+    expect(html).toMatch(/See goals/);
+    expect(html).not.toMatch(/data-act="open-boost-mix"/);
+    expect(html).not.toMatch(/data-act="open-invest"/);
+  });
+
+  it("opens Right Door when installment is over 30% and the salary is not 5,000", () => {
+    let state = step(withDebt(withExpenses(begin("8000"), "500", "1000"), "10000", "3000", false), {
+      type: "pick-installment",
+      pick: "no",
+    });
+    expect(buildLife(state).today.net).toBe(3500);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("rk");
+    const door = renderFirstBuild(state);
+    expect(door).toMatch(/Right Door/);
+    expect(door).toMatch(/37\.5%/);
+    expect(door).toMatch(/Open Right Door/);
+    expect(door).toMatch(/Not the 5k exception/);
+    expect(door).not.toMatch(/Continue to Sunday Pack/);
+    state = step(state, { type: "choose-rd" });
+    expect(state.screen).toBe("st");
+    expect(state.rdTaken).toBe(true);
+    expect(state.packChosen).toBe(false);
+  });
+
+  it("keeps a high installment on a 5,000 salary on Pack, and skips the door under 30% otherwise", () => {
+    const high = step(
+      step(withDebt(withExpenses(begin("5000"), "500", "1000"), "10000", "2000", false), {
+        type: "pick-installment",
+        pick: "no",
+      }),
+      { type: "continue" },
+    );
+    expect(high.screen).toBe("pk");
+
+    const light = step(
+      step(withDebt(withExpenses(begin("8000"), "500", "1000"), "10000", "1000", false), {
+        type: "pick-installment",
+        pick: "no",
+      }),
+      { type: "continue" },
+    );
+    expect(light.screen).toBe("st");
+    expect(renderFirstBuild(light)).not.toMatch(/data-act="open-boost-mix"/);
+  });
+
+  it("surfaces Boost only after the emergency fund is started, and keeps goals open", () => {
+    let state = step(
+      step(withDebt(withExpenses(begin("5000"), "500", "1000"), "10000", "1200", false), {
+        type: "pick-installment",
+        pick: "no",
+      }),
+      { type: "continue" },
+    );
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("st");
+    const goals = step(state, { type: "open-goals" });
+    expect(goals.screen).toBe("gy");
+    expect(renderFirstBuild(goals)).toMatch(/Create anytime/);
+    expect(renderFirstBuild(goals)).not.toMatch(/data-act="open-boost-mix"/);
+
+    const fund = step(state, { type: "start-ef" });
+    expect(fund.screen).toBe("sv");
+    state = editMoney(fund, "cushionNow", "1000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ml");
+    const plan = renderFirstBuild(state);
+    expect(plan).toMatch(/data-act="open-boost-mix"/);
+    expect(plan).toMatch(/Package monitoring/);
+    expect(plan).toMatch(/Me today/);
+    expect(buildLife(state).today.net).toBe(2300);
   });
 });

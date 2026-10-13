@@ -169,7 +169,22 @@ function goalBlock(view) {
     ${alertLine(view)}`;
 }
 
+function overdueBlock(view) {
+  if (!view.overdue) return "";
+  const late = view.overdue.value === true ? " is-on" : "";
+  const onTime = view.overdue.value === false ? " is-on" : "";
+  return `<p class="ft-label">Overdue?</p>
+    <p class="ft-hint">Yes · late · or No · on time — pick one</p>
+    <div class="ft-choices">
+      <button class="ft-choice${late}" type="button" data-act="pick-overdue" data-value="yes"><span class="ft-choice-label">Yes · late</span></button>
+      <button class="ft-choice${onTime}" type="button" data-act="pick-overdue" data-value="no"><span class="ft-choice-label">No · on time</span></button>
+    </div>`;
+}
+
 function fieldsBlock(view) {
+  const type = view.typeLabel
+    ? `<label class="ft-label">Type</label><div class="ft-input"><span>${escapeHtml(view.typeLabel)}</span></div>`
+    : "";
   const fields = (view.fields || [])
     .map((field) => {
       const hint = field.hint ? `<p class="ft-hint">${escapeHtml(field.hint)}</p>` : "";
@@ -177,7 +192,7 @@ function fieldsBlock(view) {
       <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-${escapeHtml(field.key)}" name="amount" data-field="amount" data-key="${escapeHtml(field.key)}" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" /></div>${hint}`;
     })
     .join("");
-  return `${fields}${alertLine(view)}`;
+  return `${type}${fields}${overdueBlock(view)}${alertLine(view)}`;
 }
 
 function factsBlock(view) {
@@ -185,7 +200,7 @@ function factsBlock(view) {
   return view.facts
     .map(
       (fact) =>
-        `<div class="ft-callout is-ok"><div><b>${escapeHtml(fact.title)}</b><span>${escapeHtml(fact.body)}</span></div></div>`,
+        `<div class="ft-callout is-${escapeHtml(fact.tone || "ok")}"><div><b>${escapeHtml(fact.title)}</b><span>${escapeHtml(fact.body)}</span></div></div>`,
     )
     .join("");
 }
@@ -221,9 +236,11 @@ function content(view) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
   const trailed = view.kind === "fields" ? `${calloutBlock(view)}${stepsBlock(view)}` : "";
+  const continued = view.kind === "continue" ? `${stepsBlock(view)}${calloutBlock(view)}` : "";
   const facts = factsBlock(view);
   const note = view.note ? `<p class="ft-note">${escapeHtml(view.note)}</p>` : "";
-  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${trailed}${facts}${note}</div>`;
+  const kicker = view.kicker ? `<p class="ft-kicker">${escapeHtml(view.kicker)}</p>` : "";
+  return `<div class="ft-content">${kicker}<h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${trailed}${continued}${facts}${note}</div>`;
 }
 
 function rdNote(view) {
@@ -236,11 +253,11 @@ function actions(view) {
   if (view.rdLater) parts.push(rdNote(view));
   if (view.handoff) {
     parts.push(
-      `<a class="ft-btn primary" data-act="pack-opened" target="_blank" rel="noopener" href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
+      `<a class="ft-btn primary" data-act="${escapeHtml(view.handoff.act || "pack-opened")}" target="_blank" rel="noopener" href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
     );
   }
   if (view.primary && view.id !== "e1") {
-    const tone = view.primaryTone === "warn" ? " is-warn" : "";
+    const tone = view.primaryTone === "warn" ? " is-warn" : view.primaryTone === "pack" ? " is-pack" : "";
     parts.push(
       `<button class="ft-btn primary${tone}" type="button" data-act="${escapeHtml(view.primaryAct || "continue")}">${escapeHtml(view.primary)}</button>`,
     );
@@ -545,6 +562,7 @@ function todayBody(today) {
       <b class="ft-net is-${today.netClass}${today.moved ? " is-moved" : ""}">${escapeHtml(today.netText)}</b>
       ${today.delta ? `<span class="ft-delta">${escapeHtml(today.delta)}</span>` : ""}
       <span class="ft-muted is-thin">${escapeHtml(today.meta)}</span>
+      ${(today.lines || []).map((line) => `<span class="ft-muted is-thin" data-line="${escapeHtml(line.label)}">${escapeHtml(line.label)} ${escapeHtml(line.value)}</span>`).join("")}
       ${today.daysText ? `<span class="ft-muted is-thin" data-days="${today.daysLate}">${escapeHtml(today.daysText)}</span>` : ""}
       ${today.daysDelta ? `<span class="ft-delta">${escapeHtml(today.daysDelta)}</span>` : ""}
       ${today.burdenText ? `<span class="ft-muted is-thin">${escapeHtml(today.burdenText)}</span>` : ""}

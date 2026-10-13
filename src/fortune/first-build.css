@@ -399,6 +399,20 @@ a.ft-btn {
   color: #fff;
 }
 
+.ft-btn.primary.is-pack {
+  background: #7e22ce;
+  color: #fff;
+}
+
+.ft-kicker {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .ft-choice.is-on {
   box-shadow: inset 0 0 0 2px var(--ft-ink);
 }

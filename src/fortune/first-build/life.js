@@ -94,10 +94,41 @@ function declaredSplit(state) {
   const bills = amount(inputs.spendBills?.amount);
   const personal = amount(inputs.spendPersonal?.amount);
   const sendHome = state?.helper === true ? amount(inputs.sendHome?.amount) : null;
-  const loan = repay != null ? repay : installment;
+  const loan =
+    state?.installmentInExpenses === true
+      ? repay != null && repay > 0
+        ? repay
+        : null
+      : repay != null
+        ? repay
+        : installment;
   const parts = [loan, bills, personal, sendHome];
   if (!parts.some((part) => part != null && part > 0)) return null;
   return (loan || 0) + (bills || 0) + (personal || 0) + (sendHome || 0);
+}
+
+/** Rows for the current-life card. A zero split stays off. Installment stays off when it is already inside expenses. */
+export function expenseLines(state) {
+  const inputs = state?.inputs || {};
+  const repay = amount(inputs.spendDebt?.amount);
+  const installment = amount(inputs.debtInstallment?.amount);
+  const bills = amount(inputs.spendBills?.amount);
+  const personal = amount(inputs.spendPersonal?.amount);
+  const sendHome = state?.helper === true ? amount(inputs.sendHome?.amount) : null;
+  const loan =
+    state?.installmentInExpenses === true
+      ? repay != null && repay > 0
+        ? repay
+        : null
+      : repay != null
+        ? repay
+        : installment;
+  const lines = [];
+  if (loan != null && loan > 0) lines.push({ label: "Loan installment", value: `\u2013${formatPlain(loan)}` });
+  if (bills != null && bills > 0) lines.push({ label: "Bills", value: `\u2013${formatPlain(bills)}` });
+  if (personal != null && personal > 0) lines.push({ label: "Personal / self", value: `\u2013${formatPlain(personal)}` });
+  if (sendHome != null && sendHome > 0) lines.push({ label: "Send money home", value: `\u2013${formatPlain(sendHome)}` });
+  return lines;
 }
 
 /** Income minus this is the month. A declared split wins so expenses are not dropped. */
@@ -508,6 +539,7 @@ export function buildLife(state) {
       net,
       netText: `Net ${formatSigned(net)}`,
       meta: `Income ${formatPlain(money.income)} \u00b7 Expenses ${formatPlain(expenses)}`,
+      lines: expenseLines(state),
       delta: netMoved ? deltaLine(move, net, move.wasNet) : "",
       moved: netMoved,
       daysLate: money.daysLate,

@@ -6,6 +6,7 @@
  */
 
 import { buildLife, cushionDateViable, cushionFinish, formatIsoDate, formatPlain, parseIsoDate } from "./life.js";
+import { fortuneOutboundHref } from "../../refer.js";
 import { earlierText, forecastReturn, moreMoneyText, portfolioReturns } from "./timeline.js";
 
 export const SCREEN_IDS = [
@@ -76,6 +77,12 @@ export const SCREEN_IDS = [
   "cd",
   "cd2",
   "gn",
+  "xb",
+  "ix",
+  "pk",
+  "rk",
+  "pm",
+  "st",
 ];
 
 const DEBT_KINDS = [
@@ -218,7 +225,7 @@ const INPUT_SCREENS = {
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd", "hw"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd", "hw", "ix"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -322,6 +329,10 @@ export function freshState() {
     dateHeld: "",
     fundPending: false,
     dateRejected: false,
+    debtLate: null,
+    installmentInExpenses: null,
+    packChosen: false,
+    goalFrom: null,
   };
 }
 
@@ -428,7 +439,16 @@ export function canContinue(state) {
     case "sv":
       return parseAmount(state.inputs.cushionNow.amount) !== null;
     case "ex":
+    case "xb":
       return parseAmount(state.inputs.spendBills.amount) !== null && parseAmount(state.inputs.spendPersonal.amount) !== null;
+    case "w0":
+      return true;
+    case "mt":
+      return state.planFrom === "inputs";
+    case "pk":
+    case "rk":
+    case "pm":
+      return true;
     case "gy":
       return (
         cleanText(state.inputs.goalName.text).trim().length > 0 &&
@@ -440,8 +460,12 @@ export function canContinue(state) {
     case "cd2":
     case "gn":
       return true;
-    case "d3":
-      return parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
+    case "d3": {
+      const amounts =
+        parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
+      if (state.planFrom === "inputs") return amounts && state.debtLate != null;
+      return amounts;
+    }
     case "d4":
       return (
         parseAmount(state.inputs.spendDebt.amount) !== null &&
@@ -634,9 +658,123 @@ export function debtPicture(state) {
   return { pay, repay, bills, personal, left, pct };
 }
 
+function inputsJourney(state) {
+  return state?.planFrom === "inputs";
+}
+
+/** Salary of exactly 5,000 uses Sunday Pack. Any other salary opens Right Door only above 30% of income. */
+function debtDoor(state) {
+  if (state.noDebt) return "none";
+  const pay = parseAmount(state.inputs.takeHome.amount);
+  const installment = parseAmount(state.inputs.debtInstallment.amount) || 0;
+  if (!(pay > 0) || !(installment > 0)) return "none";
+  if (pay === 5000) return "pack";
+  if (installment / pay > 0.3) return "rd";
+  return "none";
+}
+
+function debtTypeLabel(state) {
+  const names = {
+    cards: "Credit cards",
+    loans: "Personal loan",
+    mortgage: "Mortgage",
+  };
+  const labels = (state.debtTypes || []).map((id) => names[id]).filter(Boolean);
+  return labels.join(" · ") || "Debt";
+}
+
+function shareText(pay, installment) {
+  if (!(pay > 0) || installment == null) return "";
+  const rounded = Math.round((installment / pay) * 1000) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function addCalendarMonths(date, count) {
+  const next = new Date(date.getTime());
+  const day = next.getDate();
+  next.setDate(1);
+  next.setMonth(next.getMonth() + count);
+  const last = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(day, last));
+  return next;
+}
+
+function monitorWhen(state) {
+  const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
+  const due = addCalendarMonths(asOf, 3);
+  const iso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
+  return formatIsoDate(iso);
+}
+
+function applyInstallmentChoice(state, pick) {
+  const bills = parseAmount(state.inputs.spendBills.amount) || 0;
+  const personal = parseAmount(state.inputs.spendPersonal.amount) || 0;
+  const loan = parseAmount(state.inputs.debtInstallment.amount) || 0;
+  if (pick === "yes") {
+    return {
+      ...state,
+      installmentInExpenses: true,
+      screen: "mt",
+      showRequired: false,
+      infoOpen: false,
+      inputs: {
+        ...state.inputs,
+        spendDebt: blankMoney(),
+        monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(bills + personal) },
+      },
+    };
+  }
+  if (pick === "no") {
+    return {
+      ...state,
+      installmentInExpenses: false,
+      screen: "mt",
+      showRequired: false,
+      infoOpen: false,
+      inputs: {
+        ...state.inputs,
+        spendDebt: { ...state.inputs.spendDebt, amount: String(loan) },
+        monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(bills + personal + loan) },
+      },
+    };
+  }
+  return state;
+}
+
+function derivedEntry(state) {
+  const net = buildLife(state).today.net;
+  if (net != null && net <= 0) return "stressed";
+  const installment = parseAmount(state.inputs.debtInstallment.amount) || 0;
+  if (!state.noDebt && installment > 0) return "stable";
+  if (net != null && net > 0) return "ok";
+  return state.entry;
+}
+
+/** She has opened the emergency fund: a savings figure, a target, a monthly save, or a Done-by date. */
+function efStarted(state) {
+  if (parseAmount(state?.inputs?.cushionNow?.amount) != null) return true;
+  const target = parseAmount(state?.inputs?.cushionTarget?.amount);
+  if (target != null && target > 0) return true;
+  const save = parseAmount(state?.inputs?.monthlySave?.amount);
+  if (save != null && save > 0) return true;
+  if (parseIsoDate(state?.inputs?.fundWhen?.date)) return true;
+  if (state?.cushionSituation) return true;
+  return false;
+}
+
+/** Boost stays hidden on the input journey until the emergency fund is started. An unfinished cushion does not hide it after that. */
+function showBoost(state) {
+  if (!boostAvailable(state)) return false;
+  if (inputsJourney(state) && !efStarted(state)) return false;
+  return true;
+}
+
 function advance(state) {
   switch (state.screen) {
+    case "w0":
+      return { ...state, screen: "i0", planFrom: "inputs", showRequired: false, infoOpen: false };
     case "i0":
+      if (inputsJourney(state)) return { ...state, screen: "xb", showRequired: false, infoOpen: false };
       return { ...state, screen: "hw", showRequired: false, infoOpen: false };
     case "hn":
       return { ...state, screen: "dt", showRequired: false, infoOpen: false };
@@ -664,6 +802,21 @@ function advance(state) {
         },
       };
     }
+    case "xb": {
+      const bills = parseAmount(state.inputs.spendBills.amount);
+      const personal = parseAmount(state.inputs.spendPersonal.amount);
+      if (bills == null || personal == null) return { ...state, showRequired: true };
+      return {
+        ...state,
+        screen: "dt",
+        showRequired: false,
+        infoOpen: false,
+        inputs: {
+          ...state.inputs,
+          monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(bills + personal) },
+        },
+      };
+    }
     case "dt":
       if (state.noDebt || state.debtTypes.length === 0) {
         return {
@@ -671,7 +824,7 @@ function advance(state) {
           noDebt: true,
           debtTypes: [],
           debtSuggest: "",
-          screen: "sv",
+          screen: inputsJourney(state) ? "mt" : "sv",
           showRequired: false,
           infoOpen: false,
           inputs: {
@@ -684,7 +837,26 @@ function advance(state) {
       }
       return { ...state, noDebt: false, screen: "d3", showRequired: false, infoOpen: false };
     case "d3":
+      if (inputsJourney(state)) {
+        if (state.debtLate == null) return { ...state, showRequired: true };
+        return { ...state, screen: "ix", showRequired: false, infoOpen: false };
+      }
       return { ...applyDebtSuggest(state), screen: "d4", showRequired: false, infoOpen: false };
+    case "mt":
+      if (!inputsJourney(state)) return state;
+      {
+        const door = debtDoor(state);
+        const entry = derivedEntry(state);
+        if (door === "pack") return { ...state, entry, screen: "pk", showRequired: false, infoOpen: false };
+        if (door === "rd") return { ...state, entry, screen: "rk", showRequired: false, infoOpen: false };
+        return { ...state, entry, screen: "st", showRequired: false, infoOpen: false };
+      }
+    case "pk":
+      return { ...state, packChosen: true, screen: "pm", showRequired: false, infoOpen: false };
+    case "rk":
+      return { ...state, rdTaken: true, screen: "st", showRequired: false, infoOpen: false };
+    case "pm":
+      return { ...state, screen: "st", showRequired: false, infoOpen: false };
     case "d4": {
       const repay = parseAmount(state.inputs.spendDebt.amount) || 0;
       const bills = parseAmount(state.inputs.spendBills.amount) || 0;
@@ -717,6 +889,7 @@ function advance(state) {
               cushionTarget: { ...state.inputs.cushionTarget, amount: state.inputs.cushionNow.amount },
             }
           : state.inputs;
+      if (inputsJourney(state)) return { ...state, inputs, screen: "ml", showRequired: false, infoOpen: false };
       return { ...state, inputs, screen: "ex", showRequired: false, infoOpen: false };
     }
     case "ex": {
@@ -856,7 +1029,19 @@ function backTo(state) {
     case "hx":
       return "hy";
     case "dt":
+      if (inputsJourney(state)) return "xb";
       return state.helper === false ? "hn" : "i0";
+    case "xb":
+      return "i0";
+    case "ix":
+      return "d3";
+    case "pk":
+    case "rk":
+      return "mt";
+    case "pm":
+      return "pk";
+    case "st":
+      return state.packChosen ? "pm" : state.rdTaken ? "rk" : "mt";
     case "d3":
       return "dt";
     case "d4":
@@ -874,15 +1059,17 @@ function backTo(state) {
     case "d10":
       return state.debtVia === "d9" ? "d9" : "d7";
     case "sv":
-      return "dt";
+      return inputsJourney(state) ? "st" : "dt";
     case "ex":
       return "sv";
     case "ml":
+      if (inputsJourney(state)) return "st";
       return state.planFrom === "d10" ? "d10" : "ex";
     case "mt":
+      if (inputsJourney(state)) return state.noDebt ? "dt" : "ix";
       return state.planFrom === "hx" ? "hx" : "ml";
     case "gy":
-      return "ml";
+      return state.goalFrom === "st" ? "st" : "ml";
     case "cd":
       return state.dateFrom === "ml" ? "ml" : state.dateFrom === "sf" ? "sf" : "l0";
     case "cd2":
@@ -1546,6 +1733,15 @@ function step(state, action) {
     }
     case "savings-later":
       if (state.screen !== "sv") return state;
+      if (inputsJourney(state)) {
+        return {
+          ...state,
+          screen: "st",
+          showRequired: false,
+          infoOpen: false,
+          inputs: { ...state.inputs, cushionNow: blankMoney() },
+        };
+      }
       return {
         ...state,
         screen: "ex",
@@ -1563,10 +1759,11 @@ function step(state, action) {
       if (state.screen !== "ml") return state;
       return { ...state, screen: "ic", debtGate: true, showRequired: false, infoOpen: false };
     case "open-goals":
-      if (state.screen !== "ml") return state;
+      if (state.screen !== "ml" && state.screen !== "st") return state;
       return {
         ...state,
         screen: "gy",
+        goalFrom: state.screen,
         goalEdit: false,
         showRequired: false,
         infoOpen: false,
@@ -1578,7 +1775,7 @@ function step(state, action) {
         },
       };
     case "open-boost-mix":
-      if (!["ml", "gy", "l0", "gn"].includes(state.screen) || !boostAvailable(state)) return state;
+      if (!["ml", "gy", "l0", "gn"].includes(state.screen) || !showBoost(state)) return state;
       return { ...state, screen: "bx", boostFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
     case "use-done-by": {
       if (state.screen !== "gn") return state;
@@ -1618,12 +1815,31 @@ function step(state, action) {
       };
     }
     case "open-invest":
-      if ((state.screen !== "ml" && state.screen !== "l0") || !boostAvailable(state)) return state;
+      if ((state.screen !== "ml" && state.screen !== "l0") || !showBoost(state)) return state;
       return { ...state, screen: "g3", investFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
     case "edit-split":
       if (state.screen !== "ml" && state.screen !== "mt") return state;
+      if (inputsJourney(state)) return { ...state, screen: "xb", showRequired: false, infoOpen: false };
       if (state.helper === true) return { ...state, screen: "hx", showRequired: false, infoOpen: false };
       return { ...state, screen: state.noDebt || state.planFrom === "ex" ? "ex" : "d4", showRequired: false, infoOpen: false };
+    case "pick-overdue":
+      if (state.screen !== "d3") return state;
+      if (action.pick === "yes") return { ...state, debtLate: true, showRequired: false };
+      if (action.pick === "no") return { ...state, debtLate: false, showRequired: false };
+      return state;
+    case "pick-installment":
+      if (state.screen !== "ix") return state;
+      return applyInstallmentChoice(state, action.pick);
+    case "start-ef":
+      if (!["st", "ml"].includes(state.screen)) return state;
+      return { ...state, screen: "sv", showRequired: false, infoOpen: false, lifeDetail: false };
+    case "choose-rd":
+      if (state.screen !== "rk") return state;
+      return { ...state, rdTaken: true, screen: "st", showRequired: false, infoOpen: false };
+    case "open-monitor":
+      if (state.screen !== "ml" && state.screen !== "st") return state;
+      if (!state.packChosen) return state;
+      return { ...state, screen: "pm", showRequired: false, infoOpen: false };
     case "edit-send-home":
       if (state.helper !== true || !["mt", "ml", "hx"].includes(state.screen)) return state;
       return { ...state, screen: "hy", showRequired: false, infoOpen: false };
@@ -1734,7 +1950,8 @@ export function hydrate(raw) {
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
     if (!(entry === "ok" && (screen === "i3" || screen === "i3b"))) screen = entry ? "i0" : "w0";
   }
-  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10", "ex", "hx"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10", "ex", "hx", "inputs"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  if (["xb", "ix", "pk", "rk", "pm", "st"].includes(screen) && planFrom !== "inputs") screen = "w0";
   const debtTypes = DEBT_KINDS.map((kind) => kind.id).filter((id) => Array.isArray(raw.debtTypes) && raw.debtTypes.includes(id));
   return {
     ...base,
@@ -1793,6 +2010,10 @@ export function hydrate(raw) {
     noDebt: raw.noDebt === true,
     helper: raw.helper === true ? true : raw.helper === false ? false : null,
     rdTaken: raw.rdTaken === true,
+    debtLate: raw.debtLate === true ? true : raw.debtLate === false ? false : null,
+    installmentInExpenses: raw.installmentInExpenses === true ? true : raw.installmentInExpenses === false ? false : null,
+    packChosen: raw.packChosen === true,
+    goalFrom: raw.goalFrom === "st" || raw.goalFrom === "ml" ? raw.goalFrom : null,
     boostFrom: ["ml", "g3", "gy", "l0", "gn"].includes(raw.boostFrom) ? raw.boostFrom : null,
     investFrom: raw.investFrom === "ml" || raw.investFrom === "l0" || raw.investFrom === "g0" ? raw.investFrom : null,
   };
@@ -2132,7 +2353,8 @@ function meTodayPicture(state) {
   const pic = debtPicture(state);
   const helper = state.helper === true;
   const send = helper ? parseAmount(state.inputs.sendHome.amount) : null;
-  const loan = pic.repay != null ? pic.repay : parseAmount(state.inputs.debtInstallment.amount);
+  const skipLoan = state.installmentInExpenses === true && !(pic.repay > 0);
+  const loan = skipLoan ? null : pic.repay != null ? pic.repay : parseAmount(state.inputs.debtInstallment.amount);
   const showLoan = loan != null && loan > 0;
   const showSend = send != null && send > 0;
   const splitDeclared = showLoan || (pic.bills != null && pic.bills > 0) || (pic.personal != null && pic.personal > 0) || showSend;
@@ -2141,7 +2363,7 @@ function meTodayPicture(state) {
   if (splitDeclared && pic.bills != null) rows.push({ label: "Bills", value: pic.bills > 0 ? outflow(pic.bills) : formatPlain(pic.bills), neg: pic.bills > 0 });
   if (splitDeclared && pic.personal != null) {
     rows.push({
-      label: "Self / personal",
+      label: inputsJourney(state) ? "Personal / self" : "Self / personal",
       value: pic.personal > 0 ? outflow(pic.personal) : formatPlain(pic.personal),
       neg: pic.personal > 0,
     });
@@ -2151,7 +2373,12 @@ function meTodayPicture(state) {
   const expense = splitDeclared ? splitSum : parseAmount(state.inputs.monthlyCosts.amount);
   if (!splitDeclared && expense != null) rows.push({ label: "Expenses", value: formatPlain(expense) });
   const left = pic.pay != null && expense != null ? pic.pay - expense : null;
-  rows.push({ label: "Left this month", value: plusAmount(left), neg: left < 0, pos: left > 0 });
+  rows.push({
+    label: "Left this month",
+    value: inputsJourney(state) && left > 0 ? formatPlain(left) : plusAmount(left),
+    neg: left < 0,
+    pos: left > 0,
+  });
   const parts = [];
   if (splitDeclared && showLoan) parts.push(loan);
   if (splitDeclared && pic.bills != null) parts.push(pic.bills);
@@ -2163,7 +2390,11 @@ function meTodayPicture(state) {
       : "";
   const owed = parseAmount(state.inputs.debtOwed.amount);
   const owedNote =
-    owed > 0 ? `Loan total ${formatPlain(owed)} still on the debt card \u2014 not in this month\u2019s net twice.` : "";
+    owed > 0
+      ? inputsJourney(state)
+        ? `Loan total ${formatPlain(owed)} stays on the debt card \u2014 not counted twice here.`
+        : `Loan total ${formatPlain(owed)} still on the debt card \u2014 not in this month\u2019s net twice.`
+      : "";
   const summary = equation || `Pay ${formatPlain(pic.pay)} \u00b7 Expenses ${formatPlain(expense)} \u00b7 Left ${plusAmount(left)}`;
   return { rows, summary, showLoan, left, equation, owedNote };
 }
@@ -2185,13 +2416,42 @@ function debtScreens(state, base) {
         label: "I don't have debt",
         sub: "Skip — continue without inventing debt",
       },
-      note: "Healthy month. You can skip. Next: savings on hand.",
+      note: inputsJourney(state) ? "You can skip. Next is You today, then your emergency fund." : "Healthy month. You can skip. Next: savings on hand.",
       primary: state.debtTypes.length > 0 && !state.noDebt ? "Continue" : "Continue without debt",
       showRequired: false,
       requiredHint: "",
     };
   }
   if (id === "d3") {
+    const pay = parseAmount(state.inputs.takeHome.amount);
+    const installment = parseAmount(state.inputs.debtInstallment.amount);
+    const share = shareText(pay, installment);
+    if (inputsJourney(state)) {
+      return {
+        ...base,
+        ...quietPlan,
+        kind: "fields",
+        chip: "Debt",
+        title: "Your debt",
+        body: "Type, totals, and whether it is overdue.",
+        frame: "M02-your-debt",
+        typeLabel: debtTypeLabel(state),
+        fields: [
+          { key: "debtOwed", label: "Amount owed", amount: state.inputs.debtOwed.amount, hint: "" },
+          {
+            key: "debtInstallment",
+            label: "Monthly installment",
+            amount: state.inputs.debtInstallment.amount,
+            hint: "What you repay each month. The loan total stays off this month until you say to add it.",
+          },
+        ],
+        overdue: { value: state.debtLate },
+        note: share ? `Installment is ${share}% of income.` : "",
+        primary: "Continue",
+        showRequired: state.showRequired === true,
+        requiredHint: "Enter the amount, the installment, and whether it is overdue.",
+      };
+    }
     return {
       ...base,
       ...quietPlan,
@@ -2635,11 +2895,31 @@ function planScreens(state, base) {
         title: "Right Door",
         body: "You chose Improve — package path stays on plan even while Left is positive.",
       });
+      if (!inputsJourney(state)) {
+        rest.push({
+          id: "stabilize",
+          act: "open-stabilize",
+          title: "Stabilize",
+          body: "Emergency fund / cushion",
+        });
+      }
+    }
+    if (inputsJourney(state) && state.packChosen) {
       rest.push({
-        id: "stabilize",
-        act: "open-stabilize",
-        title: "Stabilize",
-        body: "Emergency fund / cushion",
+        id: "monitor",
+        act: "open-monitor",
+        kicker: "Pack",
+        title: "Package monitoring",
+        body: `Sunday Pack check-in · due ${monitorWhen(state)}`,
+      });
+    }
+    if (inputsJourney(state) && !efStarted(state)) {
+      rest.push({
+        id: "start-ef",
+        act: "start-ef",
+        kicker: "Stable",
+        title: "Start Emergency fund",
+        body: "Emergency fund first — then goals — then Boost.",
       });
     }
     rest.push({
@@ -2657,7 +2937,7 @@ function planScreens(state, base) {
         body: building.doneByText || "Set a finish date your month can reach",
       });
     }
-    if (boostAvailable(state)) {
+    if (showBoost(state)) {
       rest.push({
         id: "invest",
         act: "open-invest",
@@ -2701,6 +2981,30 @@ function planScreens(state, base) {
   if (id === "mt") {
     const today = meTodayPicture(state);
     const helper = state.helper === true;
+    if (inputsJourney(state)) {
+      const already = state.installmentInExpenses === true;
+      return {
+        ...base,
+        kind: "picture",
+        chip: "Expenses counted",
+        title: "You today",
+        body: "What this month really leaves — current life.",
+        frame: "M04-you-today",
+        showLifeLink: false,
+        showPlan: false,
+        rows: today.rows,
+        callout: {
+          tone: "ok",
+          title: "Net uses expenses",
+          body: today.equation || "Income, installment, bills, and personal.",
+        },
+        note: already
+          ? "Installment was already in bills or personal, so it is not subtracted again."
+          : [today.equation, today.owedNote].filter(Boolean).join(" "),
+        primary: "Back to plan",
+        primaryAct: "continue",
+      };
+    }
     return {
       ...base,
       kind: "picture",
@@ -2733,7 +3037,7 @@ function planScreens(state, base) {
   if (id === "gy") {
     const when = monthText(state.inputs.goalDate.date);
     const finish = cushionFinish(state);
-    const open = boostAvailable(state);
+    const open = showBoost(state);
     return {
       ...base,
       kind: "goal",
@@ -2761,6 +3065,185 @@ function planScreens(state, base) {
       quietAct: open ? "open-boost-mix" : "back",
       showRequired: state.showRequired === true,
       requiredHint: "Enter a name, an amount, and a month.",
+    };
+  }
+  return null;
+}
+
+function journeyScreens(state, base) {
+  const id = state.screen;
+  const quiet = { showLifeLink: false, showPlan: false };
+  if (id === "xb") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "fields",
+      chip: "Expenses",
+      title: "Expenses",
+      body: "Bills and personal / self. Debt comes after this.",
+      frame: "M01-expenses",
+      fields: [
+        { key: "spendBills", label: "Bills", amount: state.inputs.spendBills.amount, hint: "" },
+        { key: "spendPersonal", label: "Personal / self", amount: state.inputs.spendPersonal.amount, hint: "" },
+      ],
+      note: "Nothing added for debt yet. A blank is not a number.",
+      primary: "Continue",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter bills and personal. A blank is not a number.",
+    };
+  }
+  if (id === "ix") {
+    const loan = parseAmount(state.inputs.debtInstallment.amount);
+    return {
+      ...base,
+      ...quiet,
+      kind: "choices",
+      choiceAct: "pick-installment",
+      chip: "Cashflow",
+      title: "Already in expenses?",
+      body: `Is your HK$ ${formatPlain(loan)} installment already counted in bills or personal?`,
+      frame: "M03-installment-in-expenses",
+      choices: [
+        choice("yes", "Yes \u00b7 already in expenses", { sub: "We will not add it again for cashflow" }),
+        choice("no", "No \u00b7 add it for cashflow", { sub: `Count \u2013${formatPlain(loan)} in You today so Left is honest` }),
+      ],
+      facts: [
+        {
+          tone: "warn",
+          title: "Why we ask",
+          body: "If installment is missing from expenses, Left looks too high. Add it before You today.",
+        },
+      ],
+      note: "Yes keeps the expenses you entered. No adds the installment once.",
+      quiet: "Why this matters",
+      quietAct: "info",
+      info: "Counting the installment twice makes Left too small. Leaving it out makes Left too high. One honest count.",
+    };
+  }
+  if (id === "pk") {
+    const pay = parseAmount(state.inputs.takeHome.amount);
+    const installment = parseAmount(state.inputs.debtInstallment.amount);
+    return {
+      ...base,
+      ...quiet,
+      kind: "picture",
+      chip: "Exception \u00b7 salary 5k",
+      title: "Sunday Pack",
+      body: "Salary is HK$ 5,000 — Pack path, not Right Door.",
+      frame: "M07-sunday-pack",
+      rows: [
+        { label: "Salary", value: formatPlain(pay) },
+        { label: "Installment", value: outflow(installment), neg: true },
+        { label: "% of income", value: `${shareText(pay, installment)}%` },
+      ],
+      facts: [
+        {
+          title: "5k salary \u2192 Pack (not RD)",
+          body: "This salary uses Sunday Pack even when the installment share is high. Other salaries use Right Door only above 30%.",
+        },
+        {
+          title: "Open Pack",
+          body: "build \u2192 upload \u2192 THEN book. Never book-first.",
+        },
+      ],
+      callout: {
+        tone: "ok",
+        title: "Exception lock",
+        body: `Salary 5,000 always \u2192 Sunday Pack \u2014 even if installment % is high. ${PACK_HANDOFF_URL}`,
+      },
+      primary: "Continue to Sunday Pack",
+      primaryTone: "pack",
+    };
+  }
+  if (id === "rk") {
+    const pay = parseAmount(state.inputs.takeHome.amount);
+    const installment = parseAmount(state.inputs.debtInstallment.amount);
+    const share = shareText(pay, installment);
+    return {
+      ...base,
+      ...quiet,
+      kind: "picture",
+      chip: "Rule \u00b7 >30%",
+      title: "Right Door",
+      body: "Installment is over 30% of income — open Right Door.",
+      frame: "M06-right-door",
+      rows: [
+        { label: "Salary", value: formatPlain(pay) },
+        { label: "Installment", value: outflow(installment), neg: true },
+        { label: "Installment % of income", value: `${share}%` },
+      ],
+      facts: [
+        {
+          title: "Right Door",
+          body: "Type \u2192 totals \u2192 split \u2192 Improve / package \u00b7 monitor and lessons",
+        },
+      ],
+      callout: {
+        tone: "warn",
+        title: "Not the 5k exception",
+        body: `Salary is ${formatPlain(pay)} \u2014 not 5,000. So above 30% goes to Right Door, not Sunday Pack.`,
+      },
+      handoff: { href: fortuneOutboundHref("right-door"), label: "Open Right Door", act: "choose-rd" },
+    };
+  }
+  if (id === "pm") {
+    const due = monitorWhen(state);
+    return {
+      ...base,
+      ...quiet,
+      kind: "picture",
+      chip: "Pack chosen",
+      title: "Package monitoring",
+      body: "We check in on your Pack — due in three months.",
+      frame: "M08-pack-monitor",
+      callout: {
+        tone: "ok",
+        title: "Sunday Pack check-in",
+        body: "Review progress \u00b7 keep build \u2192 upload \u2192 book order",
+      },
+      facts: [
+        { title: "Pack chosen", body: "Sunday Pack from the 5k salary path" },
+        { title: "Monitoring card on", body: "3-month due visible" },
+        { title: "Then stable", body: "Emergency fund, then goals, then Boost" },
+      ],
+      note: `Due in 3 months \u00b7 ${due}`,
+      primary: "Got it",
+      primaryTone: "pack",
+      quiet: "Open Pack",
+      quietHref: PACK_HANDOFF_URL,
+    };
+  }
+  if (id === "st") {
+    const finish = cushionFinish(state);
+    return {
+      ...base,
+      ...quiet,
+      kind: "continue",
+      chip: "Stable",
+      title: "Stable next",
+      body: "Emergency fund first — then goals — then Boost.",
+      frame: "M09-stable-order",
+      steps: [
+        { title: "Start Emergency fund", body: "EF Done-by date \u00b7 cushion floor" },
+        { title: "Goals", body: "Feasibility and dates \u00b7 unlocked to build" },
+        { title: "Then Boost", body: "Never before EF understood / started" },
+      ],
+      callout: {
+        tone: "ok",
+        title: "Start your cushion",
+        body: finish.doneByText ? finish.doneByText : "Plan the floor first. Boost waits until this fund is started.",
+      },
+      facts: [
+        {
+          title: "Boost waits here",
+          body: "Open Boost after the emergency fund is understood and started. Goals stay unlocked. Boost is not locked forever for a cushion that is still building.",
+        },
+      ],
+      note: state.packChosen ? `Pack check-in due ${monitorWhen(state)}.` : state.rdTaken ? "Right Door stays on the plan." : "",
+      primary: "Start Emergency fund",
+      primaryAct: "start-ef",
+      quiet: "See goals",
+      quietAct: "open-goals",
     };
   }
   return null;
@@ -2808,7 +3291,7 @@ export function present(state) {
   if (id.startsWith("l")) {
     const life = buildLife(state);
     const surplus = life.today.net > 0 ? life.today.net : 0;
-    const offer = open;
+    const offer = showBoost(state);
     const chosenId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : null;
     const mode = state.boostMode === "more" ? "more" : "sooner";
     const picked = chosenId ? forecastReturn(chosenId) : null;
@@ -2865,14 +3348,24 @@ export function present(state) {
   if (id === "w0") {
     return {
       ...base,
-      title: "Where are you right now?",
-      body: "Pick what fits today. We will help from there.",
-      kind: "choices",
-      choices: [
-        choice("stressed", "Money is tight", { sub: "Hard to cover this month" }),
-        choice("stable", "Debt is concerning", { sub: "Payments ok for now, but debt weighs" }),
-        choice("ok", "I want a clearer picture", { sub: "See debt vs pay, then next steps" }),
+      chip: "Your plan",
+      kicker: "From inputs",
+      title: "Start with numbers",
+      body: "We read Fix / Stable / Invest from what you enter — no separate \u201cwhere are you today\u201d.",
+      kind: "continue",
+      steps: [
+        { title: "1 Income", body: "Take-home / salary" },
+        { title: "2 Expenses", body: "Bills + personal / self" },
+        { title: "3 Then debt", body: "Only after expenses — type, amount, installment, overdue" },
       ],
+      facts: [
+        {
+          title: "No early stage picker",
+          body: "Path comes from cashflow and debt load — not a \u201cwhere are you today\u201d screen.",
+        },
+      ],
+      note: "ODW early-gate optional \u00b7 not required as the gate.",
+      primary: "Enter income",
       quiet: "Erase",
       privacy: true,
       privacyText: PRIVACY_STRIP,
@@ -2880,6 +3373,9 @@ export function present(state) {
       privacyOpen: state.privacyOpen === true,
     };
   }
+
+  const journey = journeyScreens(state, base);
+  if (journey) return journey;
 
   const helperView = helperScreens(state, base);
   if (helperView) return helperView;
