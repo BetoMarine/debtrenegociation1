@@ -86,6 +86,27 @@ function toIso(date) {
   return `${y}-${m}-${d}`;
 }
 
+/** Positive month split. Zeros do not replace a usual monthly-costs figure. Send-home counts only for a helper. */
+function declaredSplit(state) {
+  const inputs = state?.inputs || {};
+  const repay = amount(inputs.spendDebt?.amount);
+  const installment = amount(inputs.debtInstallment?.amount);
+  const bills = amount(inputs.spendBills?.amount);
+  const personal = amount(inputs.spendPersonal?.amount);
+  const sendHome = state?.helper === true ? amount(inputs.sendHome?.amount) : null;
+  const loan = repay != null ? repay : installment;
+  const parts = [loan, bills, personal, sendHome];
+  if (!parts.some((part) => part != null && part > 0)) return null;
+  return (loan || 0) + (bills || 0) + (personal || 0) + (sendHome || 0);
+}
+
+/** Income minus this is the month. A declared split wins so expenses are not dropped. */
+export function monthOutflow(state) {
+  const split = declaredSplit(state);
+  if (split != null) return split;
+  return amount(state?.inputs?.monthlyCosts?.amount);
+}
+
 /**
  * Completion date for a cushion that is still short.
  * Earliest day is as-of plus the whole months Left can cover the gap.
@@ -99,7 +120,7 @@ export function cushionFinish(state) {
   const pending = state?.fundPending === true;
   const target = pending ? amount(inputs.fundTarget?.amount) : amount(inputs.cushionTarget?.amount);
   const income = amount(inputs.takeHome?.amount);
-  const costs = amount(inputs.monthlyCosts?.amount);
+  const costs = monthOutflow(state);
   const stillRaw = amount(inputs.stillDue?.amount);
   const overdueRaw = amount(inputs.overdue?.amount);
   const still = stillRaw || 0;
@@ -197,7 +218,7 @@ function moneyInputs(state) {
     daysLate: days(inputs.daysLate?.days),
     now: amount(inputs.cushionNow?.amount),
     target: amount(inputs.cushionTarget?.amount),
-    costs: amount(inputs.monthlyCosts?.amount),
+    costs: monthOutflow(state),
     save: amount(inputs.monthlySave?.amount),
     goal: amount(inputs.goalAmount?.amount),
     goalName: String(inputs.goalName?.text ?? "").trim(),

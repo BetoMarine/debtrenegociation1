@@ -220,9 +220,10 @@ function content(view) {
   if (view.kind === "locked" && view.lockTitle) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
+  const trailed = view.kind === "fields" ? `${calloutBlock(view)}${stepsBlock(view)}` : "";
   const facts = factsBlock(view);
   const note = view.note ? `<p class="ft-note">${escapeHtml(view.note)}</p>` : "";
-  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${facts}${note}</div>`;
+  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${trailed}${facts}${note}</div>`;
 }
 
 function rdNote(view) {
@@ -252,6 +253,10 @@ function actions(view) {
   if (view.quiet && view.id === "w0") {
     parts.push(
       `<button class="ft-btn quiet" type="button" data-act="open-erase">${escapeHtml(view.quiet)}</button>`,
+    );
+  } else if (view.quietHref) {
+    parts.push(
+      `<a class="ft-btn quiet" target="_blank" rel="noopener" href="${escapeHtml(view.quietHref)}">${escapeHtml(view.quiet)}</a>`,
     );
   } else if (view.quiet) {
     parts.push(

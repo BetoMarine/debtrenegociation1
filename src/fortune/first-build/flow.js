@@ -11,6 +11,10 @@ import { earlierText, forecastReturn, moreMoneyText, portfolioReturns } from "./
 export const SCREEN_IDS = [
   "w0",
   "i0",
+  "hw",
+  "hn",
+  "hy",
+  "hx",
   "ic",
   "f0",
   "i1",
@@ -214,7 +218,7 @@ const INPUT_SCREENS = {
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
 
-const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd"]);
+const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd", "hw"]);
 
 function blankMoney() {
   return { amount: "", note: "" };
@@ -275,7 +279,9 @@ export function freshState() {
       spendDebt: blankMoney(),
       spendBills: blankMoney(),
       spendPersonal: blankMoney(),
+      sendHome: blankMoney(),
     },
+    helper: null,
     debtTypes: [],
     debtSuggest: "",
     debtFork: null,
@@ -445,7 +451,16 @@ export function canContinue(state) {
     case "d5":
     case "d6":
     case "d8":
+    case "hn":
       return true;
+    case "hy":
+      return parseAmount(state.inputs.sendHome.amount) !== null;
+    case "hx":
+      return (
+        parseAmount(state.inputs.debtInstallment.amount) !== null &&
+        parseAmount(state.inputs.spendBills.amount) !== null &&
+        parseAmount(state.inputs.spendPersonal.amount) !== null
+      );
     case "f1":
     case "f2":
     case "f3":
@@ -622,7 +637,33 @@ export function debtPicture(state) {
 function advance(state) {
   switch (state.screen) {
     case "i0":
+      return { ...state, screen: "hw", showRequired: false, infoOpen: false };
+    case "hn":
       return { ...state, screen: "dt", showRequired: false, infoOpen: false };
+    case "hy":
+      if (parseAmount(state.inputs.sendHome.amount) == null) return { ...state, showRequired: true };
+      return { ...state, helper: true, screen: "hx", showRequired: false, infoOpen: false };
+    case "hx": {
+      const loan = parseAmount(state.inputs.debtInstallment.amount);
+      const bills = parseAmount(state.inputs.spendBills.amount);
+      const personal = parseAmount(state.inputs.spendPersonal.amount);
+      const send = parseAmount(state.inputs.sendHome.amount);
+      if (loan == null || bills == null || personal == null || send == null) return { ...state, showRequired: true };
+      const costs = loan + bills + personal + send;
+      return {
+        ...state,
+        helper: true,
+        planFrom: "hx",
+        screen: "mt",
+        showRequired: false,
+        infoOpen: false,
+        inputs: {
+          ...state.inputs,
+          spendDebt: { ...state.inputs.spendDebt, amount: String(loan) },
+          monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(costs) },
+        },
+      };
+    }
     case "dt":
       if (state.noDebt || state.debtTypes.length === 0) {
         return {
@@ -644,8 +685,17 @@ function advance(state) {
       return { ...state, noDebt: false, screen: "d3", showRequired: false, infoOpen: false };
     case "d3":
       return { ...applyDebtSuggest(state), screen: "d4", showRequired: false, infoOpen: false };
-    case "d4":
-      return { ...state, screen: "d5", showRequired: false, infoOpen: false };
+    case "d4": {
+      const repay = parseAmount(state.inputs.spendDebt.amount) || 0;
+      const bills = parseAmount(state.inputs.spendBills.amount) || 0;
+      const personal = parseAmount(state.inputs.spendPersonal.amount) || 0;
+      const sum = repay + bills + personal;
+      const inputs =
+        sum > 0
+          ? { ...state.inputs, monthlyCosts: { ...state.inputs.monthlyCosts, amount: String(sum) } }
+          : state.inputs;
+      return { ...state, inputs, screen: "d5", showRequired: false, infoOpen: false };
+    }
     case "d5":
       return { ...state, screen: "d6", showRequired: false, infoOpen: false };
     case "d6": {
@@ -798,8 +848,15 @@ function backTo(state) {
   switch (state.screen) {
     case "i0":
       return "w0";
-    case "dt":
+    case "hw":
       return "i0";
+    case "hn":
+    case "hy":
+      return "hw";
+    case "hx":
+      return "hy";
+    case "dt":
+      return state.helper === false ? "hn" : "i0";
     case "d3":
       return "dt";
     case "d4":
@@ -823,6 +880,7 @@ function backTo(state) {
     case "ml":
       return state.planFrom === "d10" ? "d10" : "ex";
     case "mt":
+      return state.planFrom === "hx" ? "hx" : "ml";
     case "gy":
       return "ml";
     case "cd":
@@ -1217,6 +1275,22 @@ function step(state, action) {
     case "no-debt":
       if (state.screen !== "dt") return state;
       return { ...state, noDebt: state.noDebt !== true, debtTypes: [], showRequired: false };
+    case "pick-helper":
+      if (state.screen !== "hw") return state;
+      if (action.pick === "yes") {
+        return { ...state, helper: true, screen: "hy", showRequired: false, infoOpen: false };
+      }
+      if (action.pick === "no") {
+        return {
+          ...state,
+          helper: false,
+          screen: "hn",
+          showRequired: false,
+          infoOpen: false,
+          inputs: { ...state.inputs, sendHome: blankMoney() },
+        };
+      }
+      return state;
     case "pick-debt-fork":
       if (state.screen !== "d7") return state;
       if (action.pick === "improve") return { ...state, screen: "d9", debtFork: "fit", rdTaken: true, showRequired: false, infoOpen: false };
@@ -1548,7 +1622,11 @@ function step(state, action) {
       return { ...state, screen: "g3", investFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
     case "edit-split":
       if (state.screen !== "ml" && state.screen !== "mt") return state;
+      if (state.helper === true) return { ...state, screen: "hx", showRequired: false, infoOpen: false };
       return { ...state, screen: state.noDebt || state.planFrom === "ex" ? "ex" : "d4", showRequired: false, infoOpen: false };
+    case "edit-send-home":
+      if (state.helper !== true || !["mt", "ml", "hx"].includes(state.screen)) return state;
+      return { ...state, screen: "hy", showRequired: false, infoOpen: false };
     case "open-now":
       if (state.screen !== "ml") return state;
       return { ...state, screen: "d5", showRequired: false, infoOpen: false };
@@ -1656,7 +1734,7 @@ export function hydrate(raw) {
   if (["s0", "s1", "s2", "s3", "i3", "i3b"].includes(screen) && entry !== "stable" && raw.planFrom !== "i3b") {
     if (!(entry === "ok" && (screen === "i3" || screen === "i3b"))) screen = entry ? "i0" : "w0";
   }
-  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10", "ex"].includes(raw.planFrom) ? raw.planFrom : "i0";
+  const planFrom = ["i1", "i3b", "sd2", "sd3", "ic", "d10", "ex", "hx"].includes(raw.planFrom) ? raw.planFrom : "i0";
   const debtTypes = DEBT_KINDS.map((kind) => kind.id).filter((id) => Array.isArray(raw.debtTypes) && raw.debtTypes.includes(id));
   return {
     ...base,
@@ -1713,6 +1791,7 @@ export function hydrate(raw) {
     debtVia: oneOf(raw.debtVia, ["d7", "d9"]),
     debtGate: raw.debtGate === true,
     noDebt: raw.noDebt === true,
+    helper: raw.helper === true ? true : raw.helper === false ? false : null,
     rdTaken: raw.rdTaken === true,
     boostFrom: ["ml", "g3", "gy", "l0", "gn"].includes(raw.boostFrom) ? raw.boostFrom : null,
     investFrom: raw.investFrom === "ml" || raw.investFrom === "l0" || raw.investFrom === "g0" ? raw.investFrom : null,
@@ -2048,24 +2127,45 @@ function plusAmount(n) {
   return signedAmount(n);
 }
 
-/** Declared split for Me today. Debt repayment stays off the row when she has none. */
+/** Declared split for Me today. A loan row stays off when she has no installment. */
 function meTodayPicture(state) {
   const pic = debtPicture(state);
-  const showRepay = pic.repay != null && pic.repay > 0;
-  const rows = [{ label: "Pay", value: formatPlain(pic.pay) }];
-  if (showRepay) rows.push({ label: "Debt repayment", value: formatPlain(pic.repay) });
-  if (pic.bills != null) rows.push({ label: "Bills", value: formatPlain(pic.bills) });
-  if (pic.personal != null) rows.push({ label: "Personal", value: formatPlain(pic.personal) });
-  const expense = showRepay || pic.bills != null || pic.personal != null
-    ? (showRepay ? pic.repay : 0) + (pic.bills || 0) + (pic.personal || 0)
-    : parseAmount(state.inputs.monthlyCosts.amount);
-  if (pic.bills == null && pic.personal == null && !showRepay && expense != null) {
-    rows.push({ label: "Expenses", value: formatPlain(expense) });
+  const helper = state.helper === true;
+  const send = helper ? parseAmount(state.inputs.sendHome.amount) : null;
+  const loan = pic.repay != null ? pic.repay : parseAmount(state.inputs.debtInstallment.amount);
+  const showLoan = loan != null && loan > 0;
+  const showSend = send != null && send > 0;
+  const splitDeclared = showLoan || (pic.bills != null && pic.bills > 0) || (pic.personal != null && pic.personal > 0) || showSend;
+  const rows = [{ label: "Pay / income", value: formatPlain(pic.pay) }];
+  if (splitDeclared && showLoan) rows.push({ label: "Loan installment", value: outflow(loan), neg: true });
+  if (splitDeclared && pic.bills != null) rows.push({ label: "Bills", value: pic.bills > 0 ? outflow(pic.bills) : formatPlain(pic.bills), neg: pic.bills > 0 });
+  if (splitDeclared && pic.personal != null) {
+    rows.push({
+      label: "Self / personal",
+      value: pic.personal > 0 ? outflow(pic.personal) : formatPlain(pic.personal),
+      neg: pic.personal > 0,
+    });
   }
-  const left = pic.left != null ? pic.left : pic.pay != null && expense != null ? pic.pay - expense : null;
-  rows.push({ label: "Left", value: plusAmount(left), neg: left < 0, pos: left > 0 });
-  const summary = `Pay ${formatPlain(pic.pay)} · Expenses ${formatPlain(expense)} · Left ${plusAmount(left)}`;
-  return { rows, summary, showRepay, left };
+  if (showSend) rows.push({ label: "Send money home", value: outflow(send), neg: true });
+  const splitSum = (showLoan ? loan : 0) + (pic.bills || 0) + (pic.personal || 0) + (showSend ? send : 0);
+  const expense = splitDeclared ? splitSum : parseAmount(state.inputs.monthlyCosts.amount);
+  if (!splitDeclared && expense != null) rows.push({ label: "Expenses", value: formatPlain(expense) });
+  const left = pic.pay != null && expense != null ? pic.pay - expense : null;
+  rows.push({ label: "Left this month", value: plusAmount(left), neg: left < 0, pos: left > 0 });
+  const parts = [];
+  if (splitDeclared && showLoan) parts.push(loan);
+  if (splitDeclared && pic.bills != null) parts.push(pic.bills);
+  if (splitDeclared && pic.personal != null) parts.push(pic.personal);
+  if (showSend) parts.push(send);
+  const equation =
+    pic.pay != null && parts.length && left != null
+      ? `${[pic.pay, ...parts].map((n) => formatPlain(n)).join(" \u2013 ")} = ${formatPlain(left)}`
+      : "";
+  const owed = parseAmount(state.inputs.debtOwed.amount);
+  const owedNote =
+    owed > 0 ? `Loan total ${formatPlain(owed)} still on the debt card \u2014 not in this month\u2019s net twice.` : "";
+  const summary = equation || `Pay ${formatPlain(pic.pay)} \u00b7 Expenses ${formatPlain(expense)} \u00b7 Left ${plusAmount(left)}`;
+  return { rows, summary, showLoan, left, equation, owedNote };
 }
 
 function debtScreens(state, base) {
@@ -2282,6 +2382,117 @@ function cushionWhy(state) {
   return `With Left ${leftText} and Now ${formatPlain(finish.now || 0)} toward ${formatPlain(finish.target)}, ${picked || "that date"} is too soon. Pick a date your month can reach.`;
 }
 
+function helperScreens(state, base) {
+  const id = state.screen;
+  const quiet = { showLifeLink: false, showPlan: false };
+  if (id === "hw") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "choices",
+      choiceAct: "pick-helper",
+      chip: "About you",
+      title: "Are you a helper?",
+      body: "Overseas domestic worker / helper in Hong Kong \u2014 so we pick the right path for you.",
+      frame: "K01-early-ask",
+      choices: [
+        choice("yes", "Yes \u00b7 I am a helper", { sub: "Send money home \u00b7 Sunday Pack debt route" }),
+        choice("no", "No \u00b7 not a helper", { sub: "Fortune plan \u00b7 Right Door when you have debt" }),
+      ],
+      note: "One ask early. Paths do not mix mid-journey.",
+      info: "Helpers send money home, and debt help opens Sunday Pack. If you are not a helper, the plan stays in Fortune and debt uses Right Door.",
+      quiet: "Why we ask",
+      quietAct: "info",
+    };
+  }
+  if (id === "hn") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "continue",
+      chip: "No \u00b7 not a helper",
+      title: "Fortune path",
+      body: "Your plan stays in Fortune. Debt uses Right Door when you have it.",
+      frame: "K03-fortune-path",
+      facts: [
+        {
+          title: "No send-home line",
+          body: "Net = income \u2013 installment \u2013 bills \u2013 self. Send-home only on the helper path.",
+        },
+        {
+          title: "When you have debt \u2014 Right Door",
+          body: "Type \u2192 totals \u2192 split \u2192 debt% \u2192 Improve / package",
+        },
+        {
+          title: "Your Life / Me today",
+          body: "Shows the full expense split \u2014 not income alone",
+        },
+      ],
+      note: "Debt lock unchanged. Cushion date kept.",
+      primary: "Continue in Fortune",
+    };
+  }
+  if (id === "hy") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "fields",
+      chip: "Yes \u00b7 ODW / helper",
+      title: "Helper path",
+      body: "We count money you send home \u2014 and open Sunday Pack for debt.",
+      frame: "K02-helper-path",
+      fields: [
+        {
+          key: "sendHome",
+          label: "Send money home each month",
+          amount: state.inputs.sendHome.amount,
+          hint: "Example amount \u2014 she enters her own.",
+        },
+      ],
+      callout: {
+        tone: "ok",
+        title: "Sunday Pack debt route",
+        body: "Debt support for helpers. Build, then upload, then book. Never book-first.",
+      },
+      steps: [
+        { title: "1 Send-home in Your Life math", body: "Counts in net every month" },
+        { title: "2 Sunday Pack for debt", body: "Not the Fortune Right Door letter path" },
+        { title: "3 Build \u2192 upload \u2192 book", body: "Never book-first" },
+      ],
+      primary: "Continue on helper path",
+      quiet: "Open Sunday Pack",
+      quietHref: PACK_HANDOFF_URL,
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter what you send home. A blank is not a number.",
+    };
+  }
+  if (id === "hx") {
+    return {
+      ...base,
+      ...quiet,
+      kind: "fields",
+      chip: "Yes \u00b7 ODW / helper",
+      title: "This month on the helper path",
+      body: "Loan installment, bills, and what you keep for yourself. Send-home is already in the math.",
+      frame: "K02-helper-spend",
+      fields: [
+        {
+          key: "debtInstallment",
+          label: "Loan installment",
+          amount: state.inputs.debtInstallment.amount,
+          hint: "What you repay each month. The loan total stays off this month.",
+        },
+        { key: "spendBills", label: "Bills", amount: state.inputs.spendBills.amount, hint: "" },
+        { key: "spendPersonal", label: "Self / personal", amount: state.inputs.spendPersonal.amount, hint: "" },
+      ],
+      primary: "See what\u2019s left",
+      showRequired: state.showRequired === true,
+      requiredHint: "Enter installment, bills, and self. A blank is not a number.",
+    };
+  }
+  return null;
+}
+
 function planScreens(state, base) {
   const id = state.screen;
   const quiet = { showLifeLink: false, showPlan: true };
@@ -2489,28 +2700,34 @@ function planScreens(state, base) {
   }
   if (id === "mt") {
     const today = meTodayPicture(state);
+    const helper = state.helper === true;
     return {
       ...base,
       kind: "picture",
-      chip: "Me today",
+      chip: helper ? "Yes · ODW · send-home counted" : "No-ODW · expenses counted",
       title: "Me today",
-      body: "From amounts you entered.",
-      frame: "I06-me-today",
-      showLifeLink: false,
+      body: helper ? "Helper month — money home included." : "What this month really leaves.",
+      frame: helper ? "K07-odw-me-today" : "K05-me-today-net",
+      showLifeLink: true,
       showPlan: false,
       rows: today.rows,
-      callout: {
-        tone: "ok",
-        title: "Expense split from your journey",
-        body: today.showRepay
-          ? "Debt repayment · Bills · Personal — not blank."
-          : "Bills · Personal — not blank.",
-      },
-      note: "Change any part anytime.",
-      primary: "Back to My Life",
-      primaryAct: "back",
-      quiet: "Edit split",
-      quietAct: "edit-split",
+      callout: helper
+        ? {
+            tone: "ok",
+            title: "Sunday Pack",
+            body: "Left is tight — open Pack · build → upload → book",
+          }
+        : {
+            tone: "ok",
+            title: "Net uses expenses",
+            body: today.equation || "Income, installment, bills, and self.",
+          },
+      note: helper ? today.equation : [today.equation, today.owedNote].filter(Boolean).join(" "),
+      primary: helper ? null : "Back to Your life",
+      primaryAct: helper ? "" : "back",
+      handoff: helper ? { href: PACK_HANDOFF_URL, label: "Open Sunday Pack" } : null,
+      quiet: helper ? "Edit send-home" : "Edit split",
+      quietAct: helper ? "edit-send-home" : "edit-split",
     };
   }
   if (id === "gy") {
@@ -2664,6 +2881,8 @@ export function present(state) {
     };
   }
 
+  const helperView = helperScreens(state, base);
+  if (helperView) return helperView;
   const debt = debtScreens(state, base);
   if (debt) return debt;
   const plan = planScreens(state, base);

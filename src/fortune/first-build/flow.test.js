@@ -48,8 +48,15 @@ function walkDebtToCosts(state) {
   return step(next, { type: "pick-after", pick: "stabilize" });
 }
 
+function notAHelper(state) {
+  return step(step(state, { type: "pick-helper", pick: "no" }), { type: "continue" });
+}
+
 function go(state, action) {
   const next = step(state, action);
+  if (action?.type === "continue" && state.screen === "i0" && next.screen === "hw") {
+    return walkDebtToCosts(notAHelper(next));
+  }
   if (action?.type === "continue" && state.screen === "i0" && next.screen === "dt") return walkDebtToCosts(next);
   return next;
 }
@@ -89,7 +96,8 @@ describe("Slice A first-build flow", () => {
     expect(stressed.screen).toBe("i0");
     expect(go(stressed, { type: "continue" }).screen).toBe("i0");
     stressed = money(stressed, "takeHome", "20000");
-    expect(step(stressed, { type: "continue" }).screen).toBe("dt");
+    expect(step(stressed, { type: "continue" }).screen).toBe("hw");
+    expect(renderFirstBuild(step(stressed, { type: "continue" }))).toMatch(/Are you a helper/);
     stressed = go(stressed, { type: "continue" });
     expect(stressed.screen).toBe("ic");
     expect(present(stressed).title).toBe("Monthly costs");
@@ -2297,6 +2305,8 @@ describe("Slice G debt enquire to Right Door", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "stressed" });
     state = editMoney(state, "takeHome", pay);
     state = step(state, { type: "continue" });
+    expect(state.screen).toBe("hw");
+    state = notAHelper(state);
     expect(state.screen).toBe("dt");
     for (const id of types) state = step(state, { type: "toggle-debt", id });
     state = step(state, { type: "continue" });
@@ -2310,6 +2320,7 @@ describe("Slice G debt enquire to Right Door", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = editMoney(state, "takeHome", "18400");
     state = step(state, { type: "continue" });
+    state = notAHelper(state);
     const door = renderFirstBuild(state);
     expect(door).toMatch(/I don't have debt/);
     expect(door).toMatch(/Continue without debt/);
@@ -2460,6 +2471,7 @@ describe("Slice I scenario positive", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = editMoney(state, "takeHome", "100000");
     state = step(state, { type: "continue" });
+    state = notAHelper(state);
     expect(state.screen).toBe("dt");
     const asked = renderFirstBuild(state);
     expect(asked).toMatch(/I don't have debt/);
@@ -2480,6 +2492,7 @@ describe("Slice I scenario positive", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = editMoney(state, "takeHome", "100000");
     state = step(state, { type: "continue" });
+    state = notAHelper(state);
     state = step(state, { type: "no-debt" });
     state = step(state, { type: "continue" });
     expect(state.screen).toBe("sv");
@@ -2552,6 +2565,7 @@ describe("Slice J cushion date", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = step(state, { type: "edit", key: "takeHome", amount: "100000" });
     state = step(state, { type: "continue" });
+    state = notAHelper(state);
     state = step(state, { type: "continue" });
     state = step(state, { type: "edit", key: "cushionNow", amount: "80000" });
     state = step(state, { type: "edit", key: "cushionTarget", amount: "150000" });
@@ -2719,5 +2733,117 @@ describe("Slice J cushion date", () => {
     expect(fund.inputs.cushionTarget.amount).toBe("90000");
     expect(fund.inputs.fundWhen.date).toBe("2030-08-01");
     expect(present(fund).callout.title).toBe("Done by 1 Aug 2030");
+  });
+});
+
+describe("Slice K helper ask and month net", () => {
+  function ask(pay) {
+    let state = step(freshState(), { type: "pick-entry", entry: "ok" });
+    state = editMoney(state, "takeHome", pay);
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("hw");
+    return state;
+  }
+
+  it("asks early, then keeps a non-helper on the Fortune debt path", () => {
+    const asked = renderFirstBuild(ask("5000"));
+    expect(asked).toMatch(/Are you a helper/);
+    expect(asked).toMatch(/Yes · I am a helper/);
+    expect(asked).toMatch(/No · not a helper/);
+    expect(asked).toMatch(/One ask early/);
+    expect(asked).not.toMatch(/sunday\/\?from=fortune/);
+
+    const no = step(ask("5000"), { type: "pick-helper", pick: "no" });
+    expect(no.screen).toBe("hn");
+    expect(no.helper).toBe(false);
+    expect(no.inputs.sendHome.amount).toBe("");
+    const path = renderFirstBuild(no);
+    expect(path).toMatch(/Fortune path/);
+    expect(path).toMatch(/No send-home line/);
+    expect(path).toMatch(/Continue in Fortune/);
+    expect(path).not.toMatch(/Open Sunday Pack/);
+
+    const debt = step(no, { type: "continue" });
+    expect(debt.screen).toBe("dt");
+    expect(renderFirstBuild(debt)).toMatch(/What kind of debt/);
+    expect(renderFirstBuild(debt)).not.toMatch(/Send money home/);
+  });
+
+  it("counts installment, bills, and self so Left is 2,300", () => {
+    let state = notAHelper(ask("5000"));
+    state = step(state, { type: "toggle-debt", id: "loans" });
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "debtOwed", "10000");
+    state = editMoney(state, "debtInstallment", "1200");
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "spendBills", "500");
+    state = editMoney(state, "spendPersonal", "1000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("d5");
+    expect(buildLife(state).today.net).toBe(2300);
+    expect(buildLife(state).today.net).not.toBe(5000);
+
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("d7");
+    state = step(state, { type: "pick-debt-fork", pick: "later" });
+    state = step(state, { type: "pick-after", pick: "plan" });
+    const plan = renderFirstBuild(state);
+    expect(plan).toMatch(/2,300/);
+    expect(plan).toMatch(/Loan installment/);
+    expect(plan).toMatch(/1,200/);
+    expect(plan).toMatch(/Self \/ personal/);
+    expect(plan).not.toMatch(/Send money home/);
+    expect(plan).not.toMatch(/Open Sunday Pack/);
+
+    const today = step(state, { type: "open-me" });
+    const html = renderFirstBuild(today);
+    expect(today.screen).toBe("mt");
+    expect(html).toMatch(/5,000 – 1,200 – 500 – 1,000 = 2,300/);
+    expect(html).toMatch(/Loan total 10,000 still on the debt card/);
+    expect(html).not.toMatch(/Left this month<\/span><b[^>]*>\+?5,000/);
+    expect(buildLife(step(today, { type: "open-life" })).today.net).toBe(2300);
+  });
+
+  it("sends a helper through send-home and Sunday Pack, with Left 300", () => {
+    let state = step(ask("5000"), { type: "pick-helper", pick: "yes" });
+    expect(state.screen).toBe("hy");
+    expect(state.helper).toBe(true);
+    const path = renderFirstBuild(state);
+    expect(path).toMatch(/Helper path/);
+    expect(path).toMatch(/Send money home each month/);
+    expect(path).toContain(PACK_HANDOFF_URL);
+    expect(path).toMatch(/Continue on helper path/);
+    expect(path).toMatch(/Open Sunday Pack/);
+    const buildAt = path.indexOf("1 Send-home in Your Life math");
+    const packAt = path.indexOf("2 Sunday Pack for debt");
+    const bookAt = path.indexOf("3 Build → upload → book");
+    expect(buildAt).toBeGreaterThan(-1);
+    expect(packAt).toBeGreaterThan(buildAt);
+    expect(bookAt).toBeGreaterThan(packAt);
+    expect(path).toMatch(/Never book-first/);
+    expect(path).not.toMatch(/value="2000"/);
+    expect(step(state, { type: "continue" }).screen).toBe("hy");
+
+    state = editMoney(state, "sendHome", "2000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("hx");
+    expect(renderFirstBuild(state)).not.toMatch(/See Right Door target/);
+    state = editMoney(state, "debtInstallment", "1200");
+    state = editMoney(state, "spendBills", "500");
+    state = editMoney(state, "spendPersonal", "1000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("mt");
+    expect(buildLife(state).today.net).toBe(300);
+    const today = renderFirstBuild(state);
+    expect(today).toMatch(/Send money home/);
+    expect(today).toMatch(/2,000/);
+    expect(today).toMatch(/5,000 – 1,200 – 500 – 1,000 – 2,000 = 300/);
+    expect(today).toMatch(/Open Sunday Pack/);
+    expect(today).toContain(PACK_HANDOFF_URL);
+    expect(today).toMatch(/build → upload → book/);
+    expect(today).not.toMatch(/See Right Door target/);
+    expect(today).not.toMatch(/Improve with Right Door/);
+    expect(buildLife(step(state, { type: "open-life" })).today.net).toBe(300);
   });
 });
