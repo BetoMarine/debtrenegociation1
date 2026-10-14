@@ -174,10 +174,9 @@ function overdueBlock(view) {
   const late = view.overdue.value === true ? " is-on" : "";
   const onTime = view.overdue.value === false ? " is-on" : "";
   return `<p class="ft-label">Overdue?</p>
-    <p class="ft-hint">Yes · late · or No · on time — pick one</p>
-    <div class="ft-choices">
-      <button class="ft-choice${late}" type="button" data-act="pick-overdue" data-value="yes"><span class="ft-choice-label">Yes · late</span></button>
+    <div class="ft-overdue">
       <button class="ft-choice${onTime}" type="button" data-act="pick-overdue" data-value="no"><span class="ft-choice-label">No · on time</span></button>
+      <button class="ft-choice${late}" type="button" data-act="pick-overdue" data-value="yes"><span class="ft-choice-label">Yes · late</span></button>
     </div>`;
 }
 
@@ -192,7 +191,7 @@ function fieldsBlock(view) {
       <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-${escapeHtml(field.key)}" name="amount" data-field="amount" data-key="${escapeHtml(field.key)}" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" /></div>${hint}`;
     })
     .join("");
-  return `${type}${fields}${overdueBlock(view)}${alertLine(view)}`;
+  return `${type}${fields}${alertLine(view)}`;
 }
 
 function factsBlock(view) {
@@ -250,6 +249,10 @@ function rdNote(view) {
 
 function actions(view) {
   const parts = [];
+  if (view.overdue) parts.push(overdueBlock(view));
+  if (view.showRequired && view.requiredHint) {
+    parts.push(`<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`);
+  }
   if (view.rdLater) parts.push(rdNote(view));
   if (view.handoff) {
     parts.push(

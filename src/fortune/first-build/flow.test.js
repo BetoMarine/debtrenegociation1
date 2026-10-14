@@ -2876,8 +2876,8 @@ describe("Slice M input journey", () => {
     expect(state.screen).toBe("d3");
     state = editMoney(state, "debtOwed", owed);
     state = editMoney(state, "debtInstallment", installment);
-    expect(step(state, { type: "continue" }).screen).toBe("d3");
     state = step(state, { type: "pick-overdue", pick: late ? "yes" : "no" });
+    expect(state.debtLate).toBe(late);
     state = step(state, { type: "continue" });
     expect(state.screen).toBe("ix");
     return state;
@@ -2894,6 +2894,37 @@ describe("Slice M input journey", () => {
     const asked = begin("5000");
     expect(renderFirstBuild(asked)).toMatch(/Bills/);
     expect(renderFirstBuild(asked)).toMatch(/Personal \/ self/);
+  });
+
+  it("continues from filled credit-card debt into the installment ask", () => {
+    let state = withExpenses(begin("8000"), "500", "1000");
+    state = step(state, { type: "toggle-debt", id: "cards" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("d3");
+    expect(state.debtTypes).toEqual(["cards"]);
+    const form = renderFirstBuild(state);
+    expect(form).toMatch(/Credit cards/);
+    expect(form).toMatch(/Amount owed/);
+    expect(form).toMatch(/Monthly installment/);
+    expect(form).toMatch(/Overdue/);
+    expect(form).toMatch(/Yes · late/);
+    expect(form).toMatch(/No · on time/);
+    state = editMoney(state, "debtOwed", "4000");
+    state = editMoney(state, "debtInstallment", "800");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ix");
+    expect(state.debtLate).toBe(false);
+    expect(renderFirstBuild(state)).toMatch(/Already in expenses/);
+
+    let late = withExpenses(begin("8000"), "500", "1000");
+    late = step(late, { type: "toggle-debt", id: "cards" });
+    late = step(late, { type: "continue" });
+    late = editMoney(late, "debtOwed", "4000");
+    late = editMoney(late, "debtInstallment", "800");
+    late = step(late, { type: "pick-overdue", pick: "yes" });
+    late = step(late, { type: "continue" });
+    expect(late.screen).toBe("ix");
+    expect(late.debtLate).toBe(true);
   });
 
   it("asks whether the installment is already in expenses and counts it once for Left 2,300", () => {

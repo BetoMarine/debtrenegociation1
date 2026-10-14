@@ -191,6 +191,7 @@ function onClick(event) {
     return;
   }
   if (act === "pick-helper" || act === "pick-installment" || act === "pick-overdue") {
+    if (act === "pick-overdue") commitDraft();
     const type = act === "pick-helper" ? "pick-helper" : act === "pick-installment" ? "pick-installment" : "pick-overdue";
     apply(reduce(state, { type, pick: btn.getAttribute("data-value") }));
     return;

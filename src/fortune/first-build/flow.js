@@ -463,7 +463,6 @@ export function canContinue(state) {
     case "d3": {
       const amounts =
         parseAmount(state.inputs.debtOwed.amount) !== null && parseAmount(state.inputs.debtInstallment.amount) !== null;
-      if (state.planFrom === "inputs") return amounts && state.debtLate != null;
       return amounts;
     }
     case "d4":
@@ -838,8 +837,13 @@ function advance(state) {
       return { ...state, noDebt: false, screen: "d3", showRequired: false, infoOpen: false };
     case "d3":
       if (inputsJourney(state)) {
-        if (state.debtLate == null) return { ...state, showRequired: true };
-        return { ...state, screen: "ix", showRequired: false, infoOpen: false };
+        return {
+          ...state,
+          debtLate: state.debtLate == null ? false : state.debtLate,
+          screen: "ix",
+          showRequired: false,
+          infoOpen: false,
+        };
       }
       return { ...applyDebtSuggest(state), screen: "d4", showRequired: false, infoOpen: false };
     case "mt":
@@ -2449,7 +2453,7 @@ function debtScreens(state, base) {
         note: share ? `Installment is ${share}% of income.` : "",
         primary: "Continue",
         showRequired: state.showRequired === true,
-        requiredHint: "Enter the amount, the installment, and whether it is overdue.",
+        requiredHint: "Enter the amount and the installment.",
       };
     }
     return {
