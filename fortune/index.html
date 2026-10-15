@@ -5,9 +5,26 @@
     <script>
       /* pyl-shell-guard */
       (function () {
-        var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
-        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        /* pyl-preview-clear: drop a worker that is still serving an older fortune-*.js */
+        if (path.indexOf("/preview/") !== -1 && "serviceWorker" in navigator) {
+          var stamp = "pyl-preview-clear";
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          }).then(function () {
+            if (!self.caches || !caches.keys) return;
+            return caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            });
+          }).then(function () {
+            if (navigator.serviceWorker.controller && !sessionStorage.getItem(stamp)) {
+              sessionStorage.setItem(stamp, "1");
+              location.reload();
+            }
+          }).catch(function () {});
+        }
+        var expected = document.documentElement.getAttribute("data-pyl-app");
+        var app = /\/offshore(?:\/|$)/.test(path) ? "offshore" : /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
         if (expected === app) return;
         document.documentElement.style.visibility = "hidden";
         function go() {
@@ -39,15 +56,16 @@
     <meta name="apple-mobile-web-app-title" content="Fortune Teller" />
     <meta
       name="description"
-      content="Living vs a security net. On this phone. Not advice. Not a product sale."
+      content="Where are you? Get through this month, build a cushion, or plan what’s next. On this phone."
     />
     <title>Fortune Teller</title>
     <link rel="manifest" href="../fortune/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="../fortune/icons/icon.svg" />
     <link rel="apple-touch-icon" href="../fortune/apple-touch-icon.png" />
-    <script type="module" crossorigin src="../assets/fortune-2wT7jE-9.js"></script>
-    <link rel="modulepreload" crossorigin href="../assets/register-sw-dX-boHKN.js">
-    <link rel="stylesheet" crossorigin href="../assets/fortune-B4kZLXfL.css">
+    <script type="module" crossorigin src="../assets/fortune-yXrvKc6p.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-GvF37ULM.js">
+    <link rel="stylesheet" crossorigin href="../assets/fortune-gpdOD486.css">
   </head>
   <body>
     <div id="app"></div>
