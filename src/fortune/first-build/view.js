@@ -17,6 +17,10 @@ function lifeLink() {
   return `<button class="ft-life-link" type="button" data-act="open-life">Your life</button>`;
 }
 
+function rightDoorHref() {
+  return `${fortuneOutboundHref("right-door")}#/reason`;
+}
+
 function bundleFile(moduleUrl = import.meta.url) {
   const name = decodeURIComponent(String(moduleUrl).split("?")[0].split("/").pop() || "");
   return name || "dev";
@@ -254,7 +258,7 @@ function content(view) {
 
 function rdNote(view) {
   if (!view.rdLater) return "";
-  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p><a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`;
+  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p><a class="ft-btn quiet" href="${escapeHtml(rightDoorHref())}">Open Right Door</a>`;
 }
 
 function actions(view) {
@@ -265,8 +269,9 @@ function actions(view) {
   }
   if (view.rdLater) parts.push(rdNote(view));
   if (view.handoff) {
+    const blank = view.handoff.sameTab ? "" : ` target="_blank" rel="noopener"`;
     parts.push(
-      `<a class="ft-btn primary" data-act="${escapeHtml(view.handoff.act || "pack-opened")}" target="_blank" rel="noopener" href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
+      `<a class="ft-btn primary" data-act="${escapeHtml(view.handoff.act || "pack-opened")}"${blank} href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
     );
   }
   if (view.primary && view.id !== "e1") {
@@ -840,7 +845,7 @@ export function renderFirstBuild(state) {
         : "";
     const door =
       view.id === "l0" && view.offerDoor
-        ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`
+        ? `<a class="ft-btn quiet" href="${escapeHtml(rightDoorHref())}">Open Right Door</a>`
         : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
     const invest = view.offerInvest ? `<button class="ft-btn quiet" type="button" data-act="open-invest">Invest</button>` : "";

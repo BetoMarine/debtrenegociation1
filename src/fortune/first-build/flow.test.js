@@ -23,6 +23,7 @@ import { buildFutureLifePdf, moreMoneyFor, timelineLines } from "./timeline.js";
 import { buildLife, cushionFinish, rightDoorJoined } from "./life.js";
 import { renderFirstBuild, bundleFileName } from "./view.js";
 import { keyboardOverlap } from "./app.js";
+import { fortuneDoorScreen } from "../../app.js";
 
 function step(state, action) {
   return reduce(state, action).state;
@@ -366,19 +367,20 @@ describe("Slice A first-build flow", () => {
     state = go(state, { type: "pick-grow", pick: "goals" });
     expect(hydrate(state).screen).toBe("g1");
     const opened = landOnDoor(hydrate(state));
-    expect(opened.screen).toBe("w0");
-    expect(present(opened).title).toBe("Start with numbers");
+    expect(opened.screen).toBe("g1");
+    expect(present(opened).title).toBe("Plan future goals");
     expect(opened.inputs.takeHome.amount).toBe("22000");
     expect(opened.inputs.monthlyCosts.amount).toBe("8000");
     expect(opened.entry).toBe("ok");
     const home = renderFirstBuild(opened);
-    expect(home).toMatch(/data-act="open-erase"/);
     expect(home).toMatch(/data-act="open-life"/);
-    expect(home).toContain(PRIVACY_STRIP);
+    expect(home).not.toMatch(/Start with numbers/);
     const life = go(opened, { type: "open-life" });
     expect(life.screen).toBe("l0");
     expect(buildLife(life).today.net).toBe(14000);
-    expect(go(life, { type: "back" }).screen).toBe("w0");
+    expect(go(life, { type: "back" }).screen).toBe("g1");
+    expect(landOnDoor(freshState()).screen).toBe("w0");
+    expect(landOnDoor(null).screen).toBe("w0");
     const again = go(opened, { type: "pick-entry", entry: "stable" });
     expect(again.screen).toBe("i0");
     expect(again.inputs.takeHome.amount).toBe("22000");
@@ -1875,7 +1877,7 @@ describe("Unlock sequence", () => {
     const saved = hydrate(plan);
     expect(saved.inputs.stillDue.amount).toBe("4000");
     expect(saved.inputs.cushionNow.amount).toBe("12000");
-    expect(landOnDoor(saved).screen).toBe("w0");
+    expect(landOnDoor(saved).screen).toBe("l0");
     expect(landOnDoor(saved).entry).toBe("ok");
   });
 
@@ -3055,6 +3057,8 @@ describe("Slice M input journey", () => {
     expect(door).toMatch(/Right Door/);
     expect(door).toMatch(/37\.5%/);
     expect(door).toMatch(/Open Right Door/);
+    expect(door).toMatch(/from=fortune#\/reason/);
+    expect(door).not.toMatch(/data-act="choose-rd"[^>]*target="_blank"/);
     expect(door).toMatch(/Not the 5k exception/);
     expect(door).not.toMatch(/Continue to Sunday Pack/);
     state = step(state, { type: "choose-rd" });
@@ -3110,5 +3114,86 @@ describe("Slice M input journey", () => {
     expect(plan).toMatch(/Package monitoring/);
     expect(plan).toMatch(/Me today/);
     expect(buildLife(state).today.net).toBe(2300);
+  });
+
+  it("resumes the last step instead of Start with numbers, and keeps fund, goal, and Boost cards on the plan", () => {
+    let state = step(
+      step(withDebt(withExpenses(begin("8000"), "500", "1000"), "15000", "4000", false), {
+        type: "pick-installment",
+        pick: "no",
+      }),
+      { type: "continue" },
+    );
+    expect(state.screen).toBe("rk");
+    state = step(state, { type: "choose-rd" });
+    expect(state.screen).toBe("st");
+    const stable = renderFirstBuild(state);
+    expect(stable).toMatch(/Show my current plan/);
+    expect(stable).toMatch(/Your life/);
+
+    state = step(state, { type: "start-ef" });
+    state = editMoney(state, "cushionNow", "2000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ml");
+    const started = renderFirstBuild(state);
+    expect(started).toMatch(/Emergency fund/);
+    expect(started).toMatch(/data-act="open-life"/);
+    expect(started).toMatch(/Show my current plan/);
+    expect(started).toMatch(/data-hub="ef"/);
+
+    const dating = step(state, { type: "open-goals" });
+    expect(dating.screen).toBe("gy");
+    const dateAsk = renderFirstBuild(dating);
+    expect(dateAsk).toMatch(/When \/ plan start/);
+    expect(dateAsk).toMatch(/Show my current plan/);
+    expect(dateAsk).toMatch(/Your life/);
+    const planFromDate = step(dating, { type: "show-plan" });
+    expect(planFromDate.screen).toBe("l0");
+    expect(renderFirstBuild(planFromDate)).toMatch(/data-ms="ef"/);
+
+    let named = step(dating, { type: "edit", key: "goalName", text: "Course" });
+    named = step(named, { type: "edit", key: "goalAmount", amount: "6000" });
+    named = step(named, { type: "edit", key: "goalDate", date: "2027-06" });
+    named = step(named, { type: "continue" });
+    expect(named.screen).toBe("ml");
+    expect(named.goals).toHaveLength(1);
+    const withGoal = renderFirstBuild(named);
+    expect(withGoal).toMatch(/data-hub="ef"/);
+    expect(withGoal).toMatch(/data-hub="goal-0"/);
+    expect(withGoal).toMatch(/Course/);
+    expect(withGoal).toMatch(/data-act="open-boost-mix"/);
+    expect(withGoal).toMatch(/data-act="open-invest"/);
+
+    const life = step(named, { type: "open-life" });
+    expect(life.screen).toBe("l0");
+    const lifeHtml = renderFirstBuild(life);
+    expect(lifeHtml).toMatch(/data-ms="ef"/);
+    expect(lifeHtml).toMatch(/data-ms="goal-0"/);
+    expect(lifeHtml).toMatch(/Course/);
+    expect(lifeHtml).toMatch(/data-act="open-invest"/);
+    expect(lifeHtml).toMatch(/data-act="open-boost"/);
+
+    const mix = step(named, { type: "open-boost-mix" });
+    expect(mix.screen).toBe("bx");
+    const mixHtml = renderFirstBuild(mix);
+    expect(mixHtml).toMatch(/data-act="open-life"/);
+    expect(mixHtml).toMatch(/Show my current plan/);
+    const afterMix = step(mix, { type: "open-life" });
+    expect(afterMix.screen).toBe("l0");
+    const afterHtml = renderFirstBuild(afterMix);
+    expect(afterHtml).toMatch(/data-ms="ef"/);
+    expect(afterHtml).toMatch(/data-ms="goal-0"/);
+    expect(afterHtml).toMatch(/data-act="open-invest"/);
+
+    expect(landOnDoor(hydrate(afterMix)).screen).toBe("l0");
+    expect(landOnDoor(hydrate({ ...named, screen: "ml" })).screen).toBe("ml");
+    expect(present(landOnDoor(hydrate(afterMix))).chip).toBe("Your life");
+
+    expect(fortuneDoorScreen("", { fromFortune: true, saved: "" })).toBe("reason");
+    expect(fortuneDoorScreen("", { fromFortune: true, saved: "creditors" })).toBe("creditors");
+    expect(fortuneDoorScreen("", { fromFortune: true, saved: "home" })).toBe("reason");
+    expect(fortuneDoorScreen("reason", { fromFortune: true, saved: "creditors" })).toBe("reason");
+    expect(fortuneDoorScreen("home", { fromFortune: true })).toBe("home");
+    expect(fortuneDoorScreen("", { fromFortune: false, saved: "creditors" })).toBe("home");
   });
 });

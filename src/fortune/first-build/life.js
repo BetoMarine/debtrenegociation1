@@ -342,6 +342,20 @@ function netOf(money, expenses) {
   return net;
 }
 
+/** Inputs journey: the fund card stays once savings, a target, a monthly save, or a start date exists. */
+function inputsFundStarted(state) {
+  if (state?.planFrom !== "inputs") return false;
+  const inputs = state.inputs || {};
+  if (amount(inputs.cushionNow?.amount) != null) return true;
+  const target = amount(inputs.cushionTarget?.amount);
+  if (target != null && target > 0) return true;
+  const save = amount(inputs.monthlySave?.amount);
+  if (save != null && save > 0) return true;
+  if (parseIsoDate(inputs.fundWhen?.date)) return true;
+  if (state.cushionSituation) return true;
+  return false;
+}
+
 function pctOf(now, target) {
   if (now == null || target == null || target <= 0) return null;
   return Math.round((now / target) * 100);
@@ -490,7 +504,7 @@ export function buildLife(state) {
     efDelta = `Was ${wasNow} \u00b7 ${wasPct} \u00b7 cushion input`;
   }
 
-  const showEf = money.target != null && money.target > 0;
+  const showEf = (money.target != null && money.target > 0) || inputsFundStarted(state);
   const finish = cushionFinish(state);
   const fundNow = showEf && money.now == null ? 0 : money.now;
   const fundPct = showEf ? pctOf(fundNow, money.target) ?? 0 : pct;

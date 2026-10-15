@@ -1,6 +1,7 @@
 /**
  * Fortune Teller first build.
  * Slice A: one continuous flow. Cold start and post-erase land on Where are you? (W0).
+ * A return visit resumes the last step.
  * Invest and Boost stay open while a cushion is still building. Still-due and overdue keep them shut.
  * Slice B: Your life timeline on these inputs. Live Right Door UI stays untouched.
  */
@@ -224,6 +225,7 @@ const INPUT_SCREENS = {
 };
 
 const SUMMARY_PLAN = new Set(["fd", "fd3", "sd2", "sd3", "g3"]);
+const PLAN_JUMP = new Set(["sv", "ex", "mt", "gy", "cd", "cd2", "gn", "st", "ml", "bx"]);
 
 const INFO_SCREENS = new Set(["i0", "ic", "sd", "gd", "gd2", "ig", "ig2", "d3", "sv", "cd", "hw", "ix"]);
 
@@ -236,14 +238,15 @@ function blankDays() {
 }
 
 /**
- * Every open, reload, and return visit starts on Where are you.
+ * A return visit opens the last step. A new plan, and a plan just erased, start at the door.
  * Saved answers, goals, and the fund stay until Erase.
  */
 export function landOnDoor(state) {
   const current = state || freshState();
+  const screen = SCREEN_IDS.includes(current.screen) && current.screen !== "e0" ? current.screen : "w0";
   return {
     ...current,
-    screen: "w0",
+    screen,
     infoOpen: false,
     showRequired: false,
     privacyOpen: false,
@@ -1667,7 +1670,7 @@ function step(state, action) {
         infoOpen: false,
       };
     case "show-plan":
-      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen) && !DEBT_SHOW.has(state.screen) && !["sv", "ex", "mt", "gy"].includes(state.screen)) return state;
+      if (!INPUT_SCREENS[state.screen] && !SUMMARY_PLAN.has(state.screen) && !DEBT_SHOW.has(state.screen) && !PLAN_JUMP.has(state.screen)) return state;
       return {
         ...state,
         screen: "l0",
@@ -2770,8 +2773,8 @@ function planScreens(state, base) {
       title: "Change cushion date",
       body: "That finish date does not fit your plan yet.",
       frame: "CJ02-cushion-date",
-      showLifeLink: false,
-      showPlan: false,
+      showLifeLink: true,
+      showPlan: true,
       info: why,
       quiet: "Show why",
       quietAct: "info",
@@ -2797,8 +2800,8 @@ function planScreens(state, base) {
       title: "Cushion date set",
       body: "This finish date fits the month.",
       frame: "CJ03-cushion-date-set",
-      showLifeLink: false,
-      showPlan: false,
+      showLifeLink: true,
+      showPlan: true,
       primary: "Continue",
       quiet: "Edit date",
       quietAct: "edit-cushion-date",
@@ -2821,8 +2824,8 @@ function planScreens(state, base) {
       title: "Move your start date",
       body: "Your cushion finishes first — then this goal plan can start.",
       frame: "CJ05-date-nudge",
-      showLifeLink: false,
-      showPlan: false,
+      showLifeLink: true,
+      showPlan: true,
       callout: {
         tone: "warn",
         title: "Start is before cushion-done",
@@ -2926,12 +2929,33 @@ function planScreens(state, base) {
         body: "Emergency fund first — then goals — then Boost.",
       });
     }
+    if (inputsJourney(state) && efStarted(state)) {
+      const fund = buildLife(state).ef;
+      rest.push({
+        id: "ef",
+        act: "open-life",
+        kicker: "On your plan",
+        title: "Emergency fund",
+        body: fund.byText || `Now ${fund.nowText} · Target ${fund.targetText}`,
+      });
+    }
     rest.push({
       id: "goals",
       act: "open-goals",
       title: "Goals",
       body: goal ? `Created · ${goalBody}` : "Create anytime — name what you are saving toward",
     });
+    if (inputsJourney(state)) {
+      (state.goals || []).forEach((item, index) => {
+        rest.push({
+          id: `goal-${index}`,
+          act: "open-life",
+          kicker: "Goal",
+          title: item.name,
+          body: monthText(item.date) || "On Your life",
+        });
+      });
+    }
     const building = cushionFinish(state);
     if (building.incomplete) {
       rest.push({
@@ -2972,8 +2996,8 @@ function planScreens(state, base) {
       title: "My Life",
       body: state.rdTaken ? "Plan · after she took Right Door" : "Me today · expenses visible",
       frame: state.rdTaken ? "I04-plan-rd-first" : "I14-my-life",
-      showLifeLink: false,
-      showPlan: false,
+      showLifeLink: inputsJourney(state),
+      showPlan: inputsJourney(state),
       lead,
       rows: today.rows,
       rest,
@@ -3049,8 +3073,8 @@ function planScreens(state, base) {
       title: "Name a goal",
       body: "Create anytime — we will fit the start to your cushion date.",
       frame: "CJ04-goals-unlocked",
-      showLifeLink: false,
-      showPlan: false,
+      showLifeLink: true,
+      showPlan: true,
       goalForm: {
         name: state.inputs.goalName.text,
         amount: state.inputs.goalAmount.amount,
@@ -3187,7 +3211,12 @@ function journeyScreens(state, base) {
         title: "Not the 5k exception",
         body: `Salary is ${formatPlain(pay)} \u2014 not 5,000. So above 30% goes to Right Door, not Sunday Pack.`,
       },
-      handoff: { href: fortuneOutboundHref("right-door"), label: "Open Right Door", act: "choose-rd" },
+      handoff: {
+        href: `${fortuneOutboundHref("right-door")}#/reason`,
+        label: "Open Right Door",
+        act: "choose-rd",
+        sameTab: true,
+      },
     };
   }
   if (id === "pm") {
@@ -3244,6 +3273,8 @@ function journeyScreens(state, base) {
         },
       ],
       note: state.packChosen ? `Pack check-in due ${monitorWhen(state)}.` : state.rdTaken ? "Right Door stays on the plan." : "",
+      showLifeLink: true,
+      showPlan: true,
       primary: "Start Emergency fund",
       primaryAct: "start-ef",
       quiet: "See goals",
@@ -3649,8 +3680,8 @@ export function present(state) {
       title: "Boost",
       body: "Investment benchmark · pick a mix",
       chip: "Boost",
-      showPlan: false,
-      showLifeLink: false,
+      showPlan: true,
+      showLifeLink: true,
       frame: floor ? "H11-boost-cards" : "CJ06-boost-open",
       investBoost: investBoost(state),
       callout: {
@@ -3661,7 +3692,7 @@ export function present(state) {
       primary: picked ? `Use ${picked.label}` : "Use this mix",
       primaryAct: "back",
       quiet: "Back to Your life",
-      quietAct: "back",
+      quietAct: "open-life",
     };
   }
 

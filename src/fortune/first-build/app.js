@@ -134,6 +134,17 @@ function keepDoor(next) {
   state = { ...next, rightDoorJoined: doorJoined };
 }
 
+async function openRightDoor(href) {
+  clearTimeout(saveTimer);
+  keepDoor(reduce(state, { type: "choose-rd" }).state);
+  await persist();
+  if (href) {
+    location.assign(href);
+    return;
+  }
+  draw();
+}
+
 async function apply(result) {
   clearTimeout(saveTimer);
   if (result.wipe) {
@@ -208,7 +219,9 @@ function onClick(event) {
     return;
   }
   if (act === "choose-rd") {
-    apply(reduce(state, { type: "choose-rd" }));
+    event.preventDefault();
+    const href = btn.getAttribute("href") || "";
+    void openRightDoor(href);
     return;
   }
   if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next" || act === "pick-debt-fork" || act === "pick-after") {
