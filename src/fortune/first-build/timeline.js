@@ -10,9 +10,9 @@ import { timeToGoal } from "../timeToGoal.js";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
- * Locked forecast returns. Firm's bad year is the one lock this build was given.
- * Balanced, Growth, and Frontier have no bad-year figure in this build, so their
- * lines do not invent one. The old 16 / 20 / 28 / 45 swings are not printed.
+ * Locked forecast returns 5 / 6 / 7 / 8, and the locked bad-year losses
+ * 10 / 15 / 20 / 25. Those losses are not returns. The old 12 / 15 / 20 / 35
+ * rates and the 16 / 20 / 28 / 45 swings are not printed.
  */
 export const FORECAST_RETURNS = [
   {
@@ -22,9 +22,9 @@ export const FORECAST_RETURNS = [
     badYear: "Bad year about 10%",
     mix: "30% stocks / 45% bonds / 10% REIT / 15% cash",
   },
-  { id: "balanced", label: "Balanced", mu: 0.06 },
-  { id: "growth", label: "Growth", mu: 0.07 },
-  { id: "frontier", label: "Frontier", mu: 0.08 },
+  { id: "balanced", label: "Balanced", mu: 0.06, badYear: "Bad year about 15%" },
+  { id: "growth", label: "Growth", mu: 0.07, badYear: "Bad year about 20%" },
+  { id: "frontier", label: "Frontier", mu: 0.08, badYear: "Bad year about 25%" },
 ];
 
 function forecastById(id) {
@@ -185,8 +185,8 @@ export function timelineBlocks(snap) {
     goalColor += 1;
   }
 
-  if (snap.boostOpen) {
-    const picked = forecastReturn(snap.boostPick);
+  if (snap.boostOpen && forecastById(snap.boostPick)) {
+    const picked = forecastById(snap.boostPick);
     const mode = snap.boostMode === "more" ? "more" : "sooner";
     for (const goal of snap.goals || []) {
       if (!goal?.name || !(goal.amount > 0)) continue;

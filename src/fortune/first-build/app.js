@@ -9,6 +9,16 @@ const EXIT_URL = "https://www.google.com/";
 let state = freshState();
 let saveTimer = 0;
 let doorJoined = false;
+let skipClickUntil = 0;
+
+/** Pixels of the layout viewport covered by the on-screen keyboard. */
+export function keyboardOverlap(innerHeight, viewportHeight, offsetTop = 0) {
+  const inner = Number(innerHeight);
+  const height = Number(viewportHeight);
+  const top = Number(offsetTop) || 0;
+  if (!Number.isFinite(inner) || !Number.isFinite(height)) return 0;
+  return Math.max(0, Math.round(inner - height - top));
+}
 
 /** One writer at a time. A late save of the old plan cannot land after Erase. */
 export function createPersistGate() {
@@ -124,6 +134,17 @@ function keepDoor(next) {
   state = { ...next, rightDoorJoined: doorJoined };
 }
 
+async function openRightDoor(href) {
+  clearTimeout(saveTimer);
+  keepDoor(reduce(state, { type: "choose-rd" }).state);
+  await persist();
+  if (href) {
+    location.assign(href);
+    return;
+  }
+  draw();
+}
+
 async function apply(result) {
   clearTimeout(saveTimer);
   if (result.wipe) {
@@ -152,6 +173,7 @@ async function exitApp() {
 }
 
 function onClick(event) {
+  if (!event.ftTouch && skipClickUntil && Date.now() < skipClickUntil) return;
   const dateInput = event.target.closest?.("input[type='date']");
   if (dateInput && root()?.contains(dateInput) && typeof dateInput.showPicker === "function") {
     try {
@@ -178,7 +200,31 @@ function onClick(event) {
     apply(reduce(state, { type: "back" }));
     return;
   }
-  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next") {
+  if (act === "toggle-debt") {
+    apply(reduce(state, { type: "toggle-debt", id: btn.getAttribute("data-value") }));
+    return;
+  }
+  if (act === "no-debt") {
+    apply(reduce(state, { type: "no-debt" }));
+    return;
+  }
+  if (act === "pack-opened") {
+    apply(reduce(state, { type: "pack-opened" }));
+    return;
+  }
+  if (act === "pick-helper" || act === "pick-installment" || act === "pick-overdue") {
+    if (act === "pick-overdue") commitDraft();
+    const type = act === "pick-helper" ? "pick-helper" : act === "pick-installment" ? "pick-installment" : "pick-overdue";
+    apply(reduce(state, { type, pick: btn.getAttribute("data-value") }));
+    return;
+  }
+  if (act === "choose-rd") {
+    event.preventDefault();
+    const href = btn.getAttribute("href") || "";
+    void openRightDoor(href);
+    return;
+  }
+  if (act === "pick-entry" || act === "pick-fix" || act === "pick-cushion" || act === "pick-grow" || act === "pick-next" || act === "pick-debt-fork" || act === "pick-after") {
     const value = btn.getAttribute("data-value");
     const action =
       act === "pick-entry"
@@ -189,7 +235,11 @@ function onClick(event) {
             ? { type: "pick-cushion", situation: value }
             : act === "pick-next"
               ? { type: "pick-next", pick: value }
-              : { type: "pick-grow", pick: value };
+              : act === "pick-debt-fork"
+                ? { type: "pick-debt-fork", pick: value }
+                : act === "pick-after"
+                  ? { type: "pick-after", pick: value }
+                  : { type: "pick-grow", pick: value };
     apply(reduce(state, action));
     return;
   }
@@ -213,7 +263,7 @@ function onClick(event) {
     apply(reduce(state, { type: act, id: value, mode: value }));
     return;
   }
-  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings") {
+  if (act === "open-life" || act === "open-net" || act === "close-net" || act === "show-plan" || act === "back-to-input" || act === "project-next" || act === "skip-fund" || act === "add-goal" || act === "open-savings" || act === "savings-later" || act === "open-me" || act === "open-rd" || act === "open-stabilize" || act === "open-goals" || act === "open-boost-mix" || act === "open-invest" || act === "edit-split" || act === "edit-send-home" || act === "start-ef" || act === "open-monitor" || act === "open-now" || act === "edit-cushion-date" || act === "use-done-by" || act === "pick-later-date") {
     apply(reduce(state, { type: act }));
     return;
   }
@@ -237,6 +287,50 @@ function onDateBlur(event) {
   paintDate(field);
   commitDraft();
   schedulePersist();
+}
+
+function onTouchStart(event) {
+  const btn = event.target.closest?.("button[data-act]");
+  if (!btn || !root()?.contains(btn)) return;
+  if (!document.activeElement?.matches?.("[data-field]")) return;
+  event.preventDefault();
+}
+
+function onTouchEnd(event) {
+  const btn = event.target.closest?.("button[data-act]");
+  if (!btn || !root()?.contains(btn)) return;
+  if (!document.activeElement?.matches?.("[data-field]")) return;
+  event.preventDefault();
+  skipClickUntil = Date.now() + 800;
+  onClick({
+    target: btn,
+    ftTouch: true,
+    preventDefault() {},
+  });
+}
+
+function pinKeyboard() {
+  const vv = window.visualViewport;
+  const inset = vv ? keyboardOverlap(window.innerHeight, vv.height, vv.offsetTop) : 0;
+  document.documentElement.style.setProperty("--ft-keyboard", `${inset}px`);
+  const active = document.activeElement;
+  if (inset > 0 && active?.matches?.("[data-field]")) {
+    active.scrollIntoView({ block: "center", inline: "nearest" });
+  }
+}
+
+function watchKeyboard() {
+  const kick = () => {
+    pinKeyboard();
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(pinKeyboard);
+  };
+  window.visualViewport?.addEventListener("resize", kick);
+  window.visualViewport?.addEventListener("scroll", kick);
+  window.addEventListener("focusin", kick);
+  window.addEventListener("focusout", () => {
+    setTimeout(pinKeyboard, 80);
+  });
+  pinKeyboard();
 }
 
 function onKeydown(event) {
@@ -270,10 +364,19 @@ export async function boot() {
   const host = root();
   if (!host) return;
   host.addEventListener("click", onClick);
+  host.addEventListener("touchstart", onTouchStart, { passive: false });
+  host.addEventListener("touchend", onTouchEnd, { passive: false });
   host.addEventListener("input", onInput);
   host.addEventListener("change", onInput);
-  host.addEventListener("focusout", onDateBlur);
+  host.addEventListener("focusout", (event) => {
+    onDateBlur(event);
+    const field = event.target?.closest?.("[data-field]");
+    if (!field || !root()?.contains(field) || field.getAttribute("data-field") === "date") return;
+    commitDraft();
+    schedulePersist();
+  });
   host.addEventListener("keydown", onKeydown);
+  watchKeyboard();
   draw();
   await persist();
   window.addEventListener("pageshow", (event) => {

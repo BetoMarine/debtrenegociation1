@@ -89,17 +89,56 @@ function onHash() {
 }
 
 const RD_SCREENS = new Set(["home", "reason", "creditors", "situation", "door", "documents", "pack", "counters"]);
+const RD_SCREEN_KEY = "pyl.rd.screen";
+
+/** Fortune opens on the assessment, and a reload stays on the last Right Door step. A bare home stays home. */
+export function fortuneDoorScreen(hashName, { fromFortune = false, saved = "" } = {}) {
+  const name = String(hashName || "");
+  if (fromFortune && name === "") {
+    return RD_SCREENS.has(saved) && saved !== "home" ? saved : "reason";
+  }
+  return RD_SCREENS.has(name) ? name : "home";
+}
+
+function readRdScreen() {
+  try {
+    return sessionStorage.getItem(RD_SCREEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeRdScreen(name) {
+  try {
+    if (name && name !== "home") sessionStorage.setItem(RD_SCREEN_KEY, name);
+  } catch {
+    /* private mode */
+  }
+}
+
+function clearRdScreen() {
+  try {
+    sessionStorage.removeItem(RD_SCREEN_KEY);
+  } catch {
+    /* private mode */
+  }
+}
 
 function syncScreenFromHash() {
-  const raw = (location.hash || "#/").replace(/^#\/?/, "");
-  const name = raw.split("?")[0] || "home";
+  const raw = (location.hash || "").replace(/^#\/?/, "");
+  const name = raw.split("?")[0] || "";
   if (name.startsWith(SUNDAY_HASH_PREFIX)) {
     let dest = productHref("sunday");
     if (isFortuneReferral()) dest = withFromFortune(dest);
     location.replace(`${dest}#/${name}`);
     return;
   }
-  screen = RD_SCREENS.has(name) ? name : "home";
+  const fromFortune = isFortuneReferral();
+  screen = fortuneDoorScreen(name, { fromFortune, saved: readRdScreen() });
+  if (fromFortune && screen !== "home") writeRdScreen(screen);
+  if (fromFortune && name === "" && screen !== "home" && location.hash !== `#/${screen}`) {
+    history.replaceState(null, "", `${location.pathname}${location.search}#/${screen}`);
+  }
 }
 
 function go(name) {
@@ -279,6 +318,7 @@ async function startAssessment() {
 async function onWipe() {
   if (!confirm(s("wipeConfirm"))) return;
   await wipeRightDoor();
+  clearRdScreen();
   pack = null;
   go("home");
 }

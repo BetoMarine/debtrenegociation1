@@ -5,11 +5,28 @@
     <script>
       /* pyl-shell-guard */
       (function () {
-        var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
+        /* pyl-preview-clear: drop a worker that is still serving an older fortune-*.js */
+        if (path.indexOf("/preview/") !== -1 && "serviceWorker" in navigator) {
+          var stamp = "pyl-preview-clear";
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          }).then(function () {
+            if (!self.caches || !caches.keys) return;
+            return caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            });
+          }).then(function () {
+            if (navigator.serviceWorker.controller && !sessionStorage.getItem(stamp)) {
+              sessionStorage.setItem(stamp, "1");
+              location.reload();
+            }
+          }).catch(function () {});
+        }
         if (/\/preview\/pack-build(?:\/|$)/.test(path)) {
           window.__PYL_STORAGE_NS__ = "pyl-preview-pack-build";
         }
+        var expected = document.documentElement.getAttribute("data-pyl-app");
         var app = /\/preview\/pack-build(?:\/|$)/.test(path)
           ? "sunday"
           : /\/offshore(?:\/|$)/.test(path) ? "offshore" : /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";

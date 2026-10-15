@@ -75,6 +75,132 @@ function addMonths(date, count) {
   return next;
 }
 
+function atMidnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function toIso(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Positive month split. Zeros do not replace a usual monthly-costs figure. Send-home counts only for a helper. */
+function declaredSplit(state) {
+  const inputs = state?.inputs || {};
+  const repay = amount(inputs.spendDebt?.amount);
+  const installment = amount(inputs.debtInstallment?.amount);
+  const bills = amount(inputs.spendBills?.amount);
+  const personal = amount(inputs.spendPersonal?.amount);
+  const sendHome = state?.helper === true ? amount(inputs.sendHome?.amount) : null;
+  const loan =
+    state?.installmentInExpenses === true
+      ? repay != null && repay > 0
+        ? repay
+        : null
+      : repay != null
+        ? repay
+        : installment;
+  const parts = [loan, bills, personal, sendHome];
+  if (!parts.some((part) => part != null && part > 0)) return null;
+  return (loan || 0) + (bills || 0) + (personal || 0) + (sendHome || 0);
+}
+
+/** Rows for the current-life card. A zero split stays off. Installment stays off when it is already inside expenses. */
+export function expenseLines(state) {
+  const inputs = state?.inputs || {};
+  const repay = amount(inputs.spendDebt?.amount);
+  const installment = amount(inputs.debtInstallment?.amount);
+  const bills = amount(inputs.spendBills?.amount);
+  const personal = amount(inputs.spendPersonal?.amount);
+  const sendHome = state?.helper === true ? amount(inputs.sendHome?.amount) : null;
+  const loan =
+    state?.installmentInExpenses === true
+      ? repay != null && repay > 0
+        ? repay
+        : null
+      : repay != null
+        ? repay
+        : installment;
+  const lines = [];
+  if (loan != null && loan > 0) lines.push({ label: "Loan installment", value: `\u2013${formatPlain(loan)}` });
+  if (bills != null && bills > 0) lines.push({ label: "Bills", value: `\u2013${formatPlain(bills)}` });
+  if (personal != null && personal > 0) lines.push({ label: "Personal / self", value: `\u2013${formatPlain(personal)}` });
+  if (sendHome != null && sendHome > 0) lines.push({ label: "Send money home", value: `\u2013${formatPlain(sendHome)}` });
+  return lines;
+}
+
+/** Income minus this is the month. A declared split wins so expenses are not dropped. */
+export function monthOutflow(state) {
+  const split = declaredSplit(state);
+  if (split != null) return split;
+  return amount(state?.inputs?.monthlyCosts?.amount);
+}
+
+/**
+ * Completion date for a cushion that is still short.
+ * Earliest day is as-of plus the whole months Left can cover the gap.
+ * A stored date counts only when it is on or after that day.
+ * The plan date is the stored viable day, otherwise the earliest day the month can reach.
+ */
+export function cushionFinish(state) {
+  const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
+  const inputs = state?.inputs || {};
+  const nowRaw = amount(inputs.cushionNow?.amount);
+  const pending = state?.fundPending === true;
+  const target = pending ? amount(inputs.fundTarget?.amount) : amount(inputs.cushionTarget?.amount);
+  const income = amount(inputs.takeHome?.amount);
+  const costs = monthOutflow(state);
+  const stillRaw = amount(inputs.stillDue?.amount);
+  const overdueRaw = amount(inputs.overdue?.amount);
+  const still = stillRaw || 0;
+  const overdue = overdueRaw || 0;
+  let left = null;
+  if (income != null) {
+    if (costs == null) left = stillRaw == null && overdueRaw == null ? income : income - still - overdue;
+    else left = income - costs - still - overdue;
+  }
+  const now = nowRaw == null ? 0 : nowRaw;
+  const incomplete = target != null && target > 0 && now < target;
+  const gap = incomplete ? target - now : 0;
+  let months = null;
+  let earliest = null;
+  if (incomplete && left != null && left > 0 && gap > 0) {
+    months = Math.ceil(gap / left);
+    earliest = atMidnight(addMonths(asOf, months));
+  }
+  const stored = parseIsoDate(inputs.fundWhen?.date);
+  const storedDay = stored ? atMidnight(stored) : null;
+  const viable = Boolean(incomplete && storedDay && earliest && storedDay.getTime() >= earliest.getTime());
+  const doneBy = incomplete ? (viable ? storedDay : earliest) : null;
+  const label = doneBy ? formatDate(doneBy) : "";
+  return {
+    incomplete,
+    gap,
+    left,
+    now: nowRaw,
+    target,
+    months,
+    earliest,
+    stored: storedDay,
+    viable,
+    doneBy,
+    doneByIso: doneBy ? toIso(doneBy) : "",
+    label,
+    doneByText: label ? `Done by ${label}` : "",
+  };
+}
+
+/** True when this calendar day can be the cushion finish. A complete cushion has nothing to prove. */
+export function cushionDateViable(state, date) {
+  if (!(date instanceof Date)) return false;
+  const finish = cushionFinish(state);
+  if (!finish.incomplete) return true;
+  if (!finish.earliest) return false;
+  return atMidnight(date).getTime() >= finish.earliest.getTime();
+}
+
 /** True once Right Door or a Fix handoff has actually joined. A blank draft pack does not count. */
 export function rightDoorJoined(pack, handoff) {
   if (handoff && (handoff.source === "right-door" || handoff.source === "sunday")) return true;
@@ -123,7 +249,7 @@ function moneyInputs(state) {
     daysLate: days(inputs.daysLate?.days),
     now: amount(inputs.cushionNow?.amount),
     target: amount(inputs.cushionTarget?.amount),
-    costs: amount(inputs.monthlyCosts?.amount),
+    costs: monthOutflow(state),
     save: amount(inputs.monthlySave?.amount),
     goal: amount(inputs.goalAmount?.amount),
     goalName: String(inputs.goalName?.text ?? "").trim(),
@@ -214,6 +340,20 @@ function netOf(money, expenses) {
     if (owed) net -= owed;
   }
   return net;
+}
+
+/** Inputs journey: the fund card stays once savings, a target, a monthly save, or a start date exists. */
+function inputsFundStarted(state) {
+  if (state?.planFrom !== "inputs") return false;
+  const inputs = state.inputs || {};
+  if (amount(inputs.cushionNow?.amount) != null) return true;
+  const target = amount(inputs.cushionTarget?.amount);
+  if (target != null && target > 0) return true;
+  const save = amount(inputs.monthlySave?.amount);
+  if (save != null && save > 0) return true;
+  if (parseIsoDate(inputs.fundWhen?.date)) return true;
+  if (state.cushionSituation) return true;
+  return false;
 }
 
 function pctOf(now, target) {
@@ -364,7 +504,8 @@ export function buildLife(state) {
     efDelta = `Was ${wasNow} \u00b7 ${wasPct} \u00b7 cushion input`;
   }
 
-  const showEf = money.target != null && money.target > 0;
+  const showEf = (money.target != null && money.target > 0) || inputsFundStarted(state);
+  const finish = cushionFinish(state);
   const fundNow = showEf && money.now == null ? 0 : money.now;
   const fundPct = showEf ? pctOf(fundNow, money.target) ?? 0 : pct;
   const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
@@ -412,6 +553,7 @@ export function buildLife(state) {
       net,
       netText: `Net ${formatSigned(net)}`,
       meta: `Income ${formatPlain(money.income)} \u00b7 Expenses ${formatPlain(expenses)}`,
+      lines: expenseLines(state),
       delta: netMoved ? deltaLine(move, net, move.wasNet) : "",
       moved: netMoved,
       daysLate: money.daysLate,
@@ -450,13 +592,19 @@ export function buildLife(state) {
     },
     ef: {
       title: money.fundLabel || "Emergency fund",
-      date: money.fundWhen ? formatDate(money.fundWhen) : place || formatDate(addMonths(asOf, 12)),
+      date:
+        finish.incomplete && finish.doneBy
+          ? formatDate(finish.doneBy)
+          : money.fundWhen
+            ? formatDate(money.fundWhen)
+            : place || formatDate(addMonths(asOf, 12)),
       whenIso: money.fundWhenIso,
       now: fundNow,
       target: money.target,
       pct: fundPct,
       rising: showEf,
       net,
+      incomplete: finish.incomplete,
       targetText: formatPlain(money.target),
       nowText: formatPlain(showEf ? fundNow : money.now),
       pctText: showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`,
@@ -467,7 +615,12 @@ export function buildLife(state) {
       netText: formatSigned(net),
       netClass: copy.netClass,
       foot: `Target ${formatPlain(money.target)} \u00b7 Now ${formatPlain(showEf ? fundNow : money.now)} \u00b7 ${showEf ? `${fundPct}%` : pct == null ? "\u2014" : `${pct}%`}`,
-      byText: money.fundWhen ? `By ${formatDate(money.fundWhen)}` : "",
+      byText:
+        finish.incomplete && finish.doneByText
+          ? finish.doneByText
+          : money.fundWhen
+            ? `By ${formatDate(money.fundWhen)}`
+            : "",
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,

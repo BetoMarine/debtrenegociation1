@@ -17,6 +17,20 @@ function lifeLink() {
   return `<button class="ft-life-link" type="button" data-act="open-life">Your life</button>`;
 }
 
+function rightDoorHref() {
+  return `${fortuneOutboundHref("right-door")}#/reason`;
+}
+
+function bundleFile(moduleUrl = import.meta.url) {
+  const name = decodeURIComponent(String(moduleUrl).split("?")[0].split("/").pop() || "");
+  return name || "dev";
+}
+
+function buildStamp() {
+  const file = bundleFile();
+  return `<p class="ft-build">${escapeHtml(file)}</p>`;
+}
+
 function topbar(view) {
   const left = view.brand
     ? `<span class="ft-brand">${ROUTE_ICON}<span>Fortune Teller</span></span>`
@@ -36,7 +50,8 @@ function choices(view) {
         ? `<span class="ft-lock-ico">${LOCK_ICON}</span>`
         : `<b aria-hidden="true">›</b>`;
       const act =
-        view.id === "w0"
+        view.choiceAct ||
+        (view.id === "w0"
           ? "pick-entry"
           : view.id === "f0"
             ? "pick-fix"
@@ -44,7 +59,7 @@ function choices(view) {
               ? "pick-cushion"
               : view.id === "fd2"
                 ? "pick-next"
-                : "pick-grow";
+                : "pick-grow");
       return `<button class="ft-choice${locked}" type="button" data-act="${act}" data-value="${escapeHtml(item.id)}"><span class="ft-choice-label">${escapeHtml(item.label)}${sub}</span>${tail}</button>`;
     })
     .join("");
@@ -128,6 +143,88 @@ function calloutBlock(view) {
   return `<div class="ft-callout is-${escapeHtml(callout.tone)}">${LOCK_ICON}<div><b>${escapeHtml(callout.title)}</b><span>${escapeHtml(callout.body)}</span></div></div>`;
 }
 
+function alertLine(view) {
+  if (!view.showRequired) return "";
+  return `<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`;
+}
+
+function checksBlock(view) {
+  const skip = view.debtSkip
+    ? `<button class="ft-choice${view.debtSkip.on ? " is-on" : ""}" type="button" data-act="no-debt" aria-pressed="${view.debtSkip.on ? "true" : "false"}"><span class="ft-choice-label">${escapeHtml(view.debtSkip.label)}<span class="ft-sub">${escapeHtml(view.debtSkip.sub)}</span></span></button>`
+    : "";
+  return `<div class="ft-choices">${view.checks
+    .map((item) => {
+      const on = item.on ? " is-on" : "";
+      const mark = item.on ? "✓" : "";
+      return `<button class="ft-choice${on}" type="button" data-act="toggle-debt" data-value="${escapeHtml(item.id)}" aria-pressed="${item.on ? "true" : "false"}"><span class="ft-choice-label">${escapeHtml(item.label)}</span><b aria-hidden="true">${mark}</b></button>`;
+    })
+    .join("")}${skip}</div>${alertLine(view)}`;
+}
+
+function hubCards(cards) {
+  return (cards || [])
+    .map((card) => {
+      const kicker = card.kicker ? `<span class="ft-hub-kicker">${escapeHtml(card.kicker)}</span>` : "";
+      return `<button class="ft-hub-card" type="button" data-act="${escapeHtml(card.act)}" data-hub="${escapeHtml(card.id)}"><span>${kicker}<b>${escapeHtml(card.title)}</b><span class="ft-sub">${escapeHtml(card.body)}</span></span></button>`;
+    })
+    .join("");
+}
+
+function goalBlock(view) {
+  const form = view.goalForm;
+  if (!form) return "";
+  return `<label class="ft-label" for="ft-goal-name">Goal name</label>
+    <div class="ft-input"><input id="ft-goal-name" name="text" data-field="text" data-key="goalName" type="text" autocomplete="off" enterkeyhint="done" maxlength="80" placeholder="Tap to enter" value="${escapeHtml(form.name)}" aria-label="Goal name" /></div>
+    <label class="ft-label" for="ft-goal-amount">Target amount</label>
+    <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-goal-amount" name="amount" data-field="amount" data-key="goalAmount" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(form.amount)}" aria-label="Target amount" /></div>
+    <label class="ft-label" for="ft-goal-when">When / plan start</label>
+    <div class="ft-input"><input id="ft-goal-when" name="date" data-field="date" data-key="goalDate" type="month" autocomplete="off" value="${escapeHtml(form.month)}" aria-label="When / plan start" /></div>
+    ${form.monthText ? `<p class="ft-hint">${escapeHtml(form.monthText)}</p>` : ""}
+    ${alertLine(view)}`;
+}
+
+function overdueBlock(view) {
+  if (!view.overdue) return "";
+  const late = view.overdue.value === true ? " is-on" : "";
+  const onTime = view.overdue.value === false ? " is-on" : "";
+  return `<p class="ft-label">Overdue?</p>
+    <div class="ft-overdue">
+      <button class="ft-choice${onTime}" type="button" data-act="pick-overdue" data-value="no"><span class="ft-choice-label">No · on time</span></button>
+      <button class="ft-choice${late}" type="button" data-act="pick-overdue" data-value="yes"><span class="ft-choice-label">Yes · late</span></button>
+    </div>`;
+}
+
+function fieldsBlock(view) {
+  const type = view.typeLabel
+    ? `<label class="ft-label">Type</label><div class="ft-input"><span>${escapeHtml(view.typeLabel)}</span></div>`
+    : "";
+  const fields = (view.fields || [])
+    .map((field) => {
+      const hint = field.hint ? `<p class="ft-hint">${escapeHtml(field.hint)}</p>` : "";
+      return `<label class="ft-label" for="ft-${escapeHtml(field.key)}">${escapeHtml(field.label)}</label>
+      <div class="ft-input"><span class="ft-cur">HK$</span><input id="ft-${escapeHtml(field.key)}" name="amount" data-field="amount" data-key="${escapeHtml(field.key)}" inputmode="decimal" autocomplete="off" enterkeyhint="done" maxlength="16" placeholder="Tap to enter" value="${escapeHtml(field.amount)}" aria-label="${escapeHtml(field.label)}" /></div>${hint}`;
+    })
+    .join("");
+  return `${type}${fields}${alertLine(view)}`;
+}
+
+function factsBlock(view) {
+  if (!view.facts?.length) return "";
+  return view.facts
+    .map(
+      (fact) =>
+        `<div class="ft-callout is-${escapeHtml(fact.tone || "ok")}"><div><b>${escapeHtml(fact.title)}</b><span>${escapeHtml(fact.body)}</span></div></div>`,
+    )
+    .join("");
+}
+
+function stepsBlock(view) {
+  if (!view.steps?.length) return "";
+  return `<ol class="ft-steps">${view.steps
+    .map((step) => `<li><b>${escapeHtml(step.title)}</b><span>${escapeHtml(step.body)}</span></li>`)
+    .join("")}</ol>`;
+}
+
 function content(view) {
   const infoBtn = view.info
     ? `<button class="ft-info" type="button" data-act="info" aria-label="Why?" aria-expanded="${view.infoOpen ? "true" : "false"}" aria-controls="ft-why">i</button>`
@@ -140,26 +237,47 @@ function content(view) {
         : "";
   let main = "";
   if (view.kind === "choices") main = `<div class="ft-choices">${choices(view)}</div>`;
-  if (view.kind === "input") main = inputBlock(view);
-  if (view.kind === "picture") main = rowsBlock(view);
-  if (view.kind === "confirm") main = calloutBlock(view);
+  if (view.kind === "checks") main = checksBlock(view);
+  if (view.kind === "fields") main = fieldsBlock(view);
+  if (view.kind === "hub") main = `${hubCards(view.lead)}${rowsBlock(view)}${hubCards(view.rest)}`;
+  if (view.kind === "goal") main = `${goalBlock(view)}${calloutBlock(view)}`;
+  if (view.kind === "input") main = `${calloutBlock(view)}${inputBlock(view)}`;
+  if (view.kind === "picture") main = `${rowsBlock(view)}${calloutBlock(view)}`;
+  if (view.kind === "handoff") main = stepsBlock(view);
+  if (view.kind === "confirm") main = `${calloutBlock(view)}${investCards(view)}`;
   if (view.kind === "locked" && view.lockTitle) {
     main = `<div class="ft-lockrow">${LOCK_ICON}<div><b>${escapeHtml(view.lockTitle)}</b><span>${escapeHtml(view.lockBody)}</span></div></div>`;
   }
-  return `<div class="ft-content"><h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}</div>`;
+  const trailed = view.kind === "fields" ? `${calloutBlock(view)}${stepsBlock(view)}` : "";
+  const continued = view.kind === "continue" ? `${stepsBlock(view)}${calloutBlock(view)}` : "";
+  const facts = factsBlock(view);
+  const note = view.note ? `<p class="ft-note">${escapeHtml(view.note)}</p>` : "";
+  const kicker = view.kicker ? `<p class="ft-kicker">${escapeHtml(view.kicker)}</p>` : "";
+  return `<div class="ft-content">${kicker}<h1>${escapeHtml(view.title)}${infoBtn}</h1><p class="ft-body">${escapeHtml(view.body)}</p>${why}${main}${trailed}${continued}${facts}${note}</div>`;
 }
 
 function rdNote(view) {
   if (!view.rdLater) return "";
-  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p><a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`;
+  return `<p class="ft-rd-note">Live Right Door handoff comes later.</p><a class="ft-btn quiet" href="${escapeHtml(rightDoorHref())}">Open Right Door</a>`;
 }
 
 function actions(view) {
   const parts = [];
+  if (view.overdue) parts.push(overdueBlock(view));
+  if (view.showRequired && view.requiredHint) {
+    parts.push(`<p class="ft-required" role="alert">${escapeHtml(view.requiredHint)}</p>`);
+  }
   if (view.rdLater) parts.push(rdNote(view));
-  if (view.primary && view.id !== "e1") {
+  if (view.handoff) {
+    const blank = view.handoff.sameTab ? "" : ` target="_blank" rel="noopener"`;
     parts.push(
-      `<button class="ft-btn primary" type="button" data-act="continue">${escapeHtml(view.primary)}</button>`,
+      `<a class="ft-btn primary" data-act="${escapeHtml(view.handoff.act || "pack-opened")}"${blank} href="${escapeHtml(view.handoff.href)}">${escapeHtml(view.handoff.label)}</a>`,
+    );
+  }
+  if (view.primary && view.id !== "e1") {
+    const tone = view.primaryTone === "warn" ? " is-warn" : view.primaryTone === "pack" ? " is-pack" : "";
+    parts.push(
+      `<button class="ft-btn primary${tone}" type="button" data-act="${escapeHtml(view.primaryAct || "continue")}">${escapeHtml(view.primary)}</button>`,
     );
   }
   if (view.id === "e1" && view.primary) {
@@ -170,6 +288,10 @@ function actions(view) {
   if (view.quiet && view.id === "w0") {
     parts.push(
       `<button class="ft-btn quiet" type="button" data-act="open-erase">${escapeHtml(view.quiet)}</button>`,
+    );
+  } else if (view.quietHref) {
+    parts.push(
+      `<a class="ft-btn quiet" target="_blank" rel="noopener" href="${escapeHtml(view.quietHref)}">${escapeHtml(view.quiet)}</a>`,
     );
   } else if (view.quiet) {
     parts.push(
@@ -417,6 +539,21 @@ function msRow({ n, tone, stub, testId, button, act, value, body, extra = "" }) 
   return `<div class="ft-ms-row" data-ms="${escapeHtml(testId)}" data-n="${escapeHtml(String(n))}"><div class="ft-ms-rail"><span class="${numClass}">${n}</span></div><div class="ft-ms-main">${card}${extra}</div></div>`;
 }
 
+function investCards(view) {
+  const boost = view.investBoost;
+  if (!boost?.portfolios?.length) return "";
+  const picks = boost.portfolios
+    .map((row) => {
+      const on = row.id === boost.pick;
+      return `<button class="ft-boost-pick${on ? " is-on" : ""}" type="button" data-act="pick-boost" data-value="${escapeHtml(row.id)}" aria-pressed="${on ? "true" : "false"}">${escapeHtml(row.line)}</button>`;
+    })
+    .join("");
+  const more = boost.mode === "more";
+  const toggle = `<div class="ft-boost-toggle" data-boost-mode="${more ? "more" : "sooner"}"><button type="button" data-act="boost-mode" data-value="more" aria-pressed="${more ? "true" : "false"}">More money</button><button type="button" data-act="boost-mode" data-value="sooner" aria-pressed="${more ? "false" : "true"}">Earlier</button></div>`;
+  const line = boost.line ? `<p class="ft-boost-result">${escapeHtml(boost.line)}</p>` : "";
+  return `<div class="ft-boost-slot is-open" data-boost-for="invest"><div class="ft-boost-panel"><p class="ft-boost-kicker">Model portfolios</p>${picks}${toggle}${line}</div></div>`;
+}
+
 function boostSlot(scope, boost, result) {
   if (!boost?.offer) return "";
   const open = boost.open === scope;
@@ -443,6 +580,7 @@ function todayBody(today) {
       <b class="ft-net is-${today.netClass}${today.moved ? " is-moved" : ""}">${escapeHtml(today.netText)}</b>
       ${today.delta ? `<span class="ft-delta">${escapeHtml(today.delta)}</span>` : ""}
       <span class="ft-muted is-thin">${escapeHtml(today.meta)}</span>
+      ${(today.lines || []).map((line) => `<span class="ft-muted is-thin" data-line="${escapeHtml(line.label)}">${escapeHtml(line.label)} ${escapeHtml(line.value)}</span>`).join("")}
       ${today.daysText ? `<span class="ft-muted is-thin" data-days="${today.daysLate}">${escapeHtml(today.daysText)}</span>` : ""}
       ${today.daysDelta ? `<span class="ft-delta">${escapeHtml(today.daysDelta)}</span>` : ""}
       ${today.burdenText ? `<span class="ft-muted is-thin">${escapeHtml(today.burdenText)}</span>` : ""}
@@ -599,7 +737,7 @@ function lifeBlock(life, focus) {
   const journey = life.journey
     ? `<p class="ft-journey" data-journey="${escapeHtml(life.journey)}">${escapeHtml(life.journeyLabel)}</p>`
     : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p><p class="ft-disclaimer">Not advice. Not a guarantee.</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {
@@ -627,7 +765,6 @@ function efDetail(life) {
   return `<div class="ft-ef-detail">
     <h1>Emergency fund</h1>
     <p class="ft-body">Cash flow and savings toward your cushion.</p>
-    <p class="ft-disclaimer">Not advice. Not a guarantee.</p>
     ${graph("ef", ef)}
     <div class="ft-ms-foot">
       <span class="ft-legend"><i class="ft-lg"></i> Cash flow <i class="ft-lg is-dash"></i> Emergency savings</span>
@@ -666,7 +803,11 @@ function netSheet(life) {
 }
 
 function screenShell(view, inner) {
-  return `<div class="ft-app"><div class="ft-screen${view.kind === "life" ? " is-life" : ""}${view.lifeOverlay ? " is-overlay" : ""}" data-screen="${escapeHtml(view.id)}" data-frame="${escapeHtml(view.frame)}">${inner}</div></div>`;
+  return `<div class="ft-app"><div class="ft-screen${view.kind === "life" ? " is-life" : ""}${view.lifeOverlay ? " is-overlay" : ""}" data-screen="${escapeHtml(view.id)}" data-frame="${escapeHtml(view.frame)}">${buildStamp()}${inner}</div></div>`;
+}
+
+export function bundleFileName(moduleUrl = import.meta.url) {
+  return bundleFile(moduleUrl);
 }
 
 export function renderFirstBuild(state) {
@@ -674,7 +815,7 @@ export function renderFirstBuild(state) {
   if (state.screen === "e0") {
     const underScreen = state.eraseFrom === "l0" ? "l0" : "w0";
     const under = present({ ...state, screen: underScreen, infoOpen: false });
-    return `<div class="ft-app"><div class="ft-screen" data-screen="e0" data-frame="${escapeHtml(view.frame)}">${topbar(view)}<div class="ft-under" inert>${content(under)}</div>${sheet(view)}</div></div>`;
+    return `<div class="ft-app"><div class="ft-screen" data-screen="e0" data-frame="${escapeHtml(view.frame)}">${buildStamp()}${topbar(view)}<div class="ft-under" inert>${content(under)}</div>${sheet(view)}</div></div>`;
   }
   if (view.lifeOverlay) {
     return screenShell(
@@ -704,10 +845,12 @@ export function renderFirstBuild(state) {
         : "";
     const door =
       view.id === "l0" && view.offerDoor
-        ? `<a class="ft-btn quiet" href="${escapeHtml(fortuneOutboundHref("right-door"))}">Open Right Door</a>`
+        ? `<a class="ft-btn quiet" href="${escapeHtml(rightDoorHref())}">Open Right Door</a>`
         : "";
     const savings = view.offerSavings ? `<button class="ft-btn quiet" type="button" data-act="open-savings">Current savings</button>` : "";
-    const planBack = primary || erase || download || door || savings ? `<div class="ft-actions">${primary}${savings}${download}${door}${erase}</div>` : "";
+    const invest = view.offerInvest ? `<button class="ft-btn quiet" type="button" data-act="open-invest">Invest</button>` : "";
+    const cushionDate = view.offerDate ? `<button class="ft-btn quiet" type="button" data-act="edit-cushion-date">Edit cushion date</button>` : "";
+    const planBack = primary || erase || download || door || savings || invest || cushionDate ? `<div class="ft-actions">${primary}${invest}${cushionDate}${savings}${download}${door}${erase}</div>` : "";
     return screenShell(view, `${topbar(view)}${stage}${future}${planBack}`);
   }
   return screenShell(view, screenHtml(view));

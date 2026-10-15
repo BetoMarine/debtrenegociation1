@@ -33,19 +33,23 @@ body {
 button,
 input {
   font-family: inherit;
+  touch-action: manipulation;
 }
 
 .ft-app {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: 16px 12px;
 }
 
 .ft-screen {
   width: min(390px, 100%);
-  min-height: min(780px, calc(100dvh - 32px));
-  height: min(780px, calc(100dvh - 32px));
+  flex: none;
+  min-height: 0;
+  height: calc(100dvh - 32px - var(--ft-keyboard, 0px));
+  max-height: min(780px, calc(100dvh - 32px - var(--ft-keyboard, 0px)));
   background: #fff;
   border-radius: 31px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
@@ -53,6 +57,18 @@ input {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+}
+
+.ft-build {
+  flex: none;
+  margin: 0;
+  padding: 6px 12px 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ft-soft);
 }
 
 .ft-top {
@@ -324,7 +340,11 @@ input {
 
 .ft-actions {
   flex: none;
-  padding: 0 24px 30px;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: #fff;
+  padding: 0 24px max(30px, env(safe-area-inset-bottom));
 }
 
 .ft-screen:has(.ft-privacy-foot) .ft-actions {
@@ -387,6 +407,81 @@ input {
 .ft-btn.primary {
   background: var(--ft-ink);
   color: #fff;
+}
+
+a.ft-btn {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.ft-btn.primary.is-warn {
+  background: var(--ft-warn);
+  color: #fff;
+}
+
+.ft-btn.primary.is-pack {
+  background: #7e22ce;
+  color: #fff;
+}
+
+.ft-kicker {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ft-choice.is-on {
+  box-shadow: inset 0 0 0 2px var(--ft-ink);
+}
+
+.ft-overdue {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.ft-overdue .ft-choice {
+  min-height: 48px;
+  margin: 0;
+  padding: 8px 12px;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.ft-actions .ft-label {
+  margin-top: 0;
+}
+
+.ft-actions .ft-required {
+  margin: 0 0 10px;
+}
+
+.ft-hint,
+.ft-note {
+  margin: 4px 0 12px;
+  color: var(--ft-muted);
+  font-size: 14px;
+}
+
+.ft-steps {
+  margin: 8px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ft-steps li {
+  margin: 0 0 10px;
+}
+
+.ft-steps b {
+  display: block;
+}
+
+.ft-steps span {
+  color: var(--ft-muted);
 }
 
 .ft-btn.danger {
@@ -586,6 +681,15 @@ input {
 
 .ft-callout.is-ok svg {
   color: #0f766e;
+}
+
+.ft-callout.is-warn {
+  background: #fff7ed;
+  border: 1.5px solid #fdba74;
+}
+
+.ft-callout.is-warn svg {
+  color: #c2410c;
 }
 
 .ft-callout.is-lock {
@@ -1184,9 +1288,38 @@ div.ft-ms-card {
 .ft-info:focus-visible,
 .ft-life-link:focus-visible,
 .ft-ms-card:focus-visible,
-.ft-input input:focus-visible {
+.ft-input input:focus-visible,
+.ft-hub-card:focus-visible {
   outline: 2px solid var(--ft-fix);
   outline-offset: 2px;
+}
+
+.ft-hub-card {
+  width: 100%;
+  display: block;
+  text-align: left;
+  border: 2px solid var(--ft-line);
+  border-radius: 18px;
+  background: #fff;
+  padding: 14px 16px;
+  margin: 0 0 12px;
+  color: var(--ft-ink);
+  cursor: pointer;
+}
+
+.ft-hub-card b {
+  display: block;
+  font-size: 18px;
+}
+
+.ft-hub-kicker {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ft-fix);
+  margin-bottom: 4px;
 }
 
 @media (max-width: 480px) {
@@ -1196,12 +1329,14 @@ div.ft-ms-card {
 
   .ft-app {
     padding: 0;
+    min-height: 0;
   }
 
   .ft-screen {
     width: 100%;
-    height: 100dvh;
-    min-height: 100dvh;
+    height: calc(100dvh - var(--ft-keyboard, 0px));
+    min-height: 0;
+    max-height: calc(100dvh - var(--ft-keyboard, 0px));
     border-radius: 0;
     box-shadow: none;
   }
