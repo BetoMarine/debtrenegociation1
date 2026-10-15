@@ -28,7 +28,7 @@ if (previewScope) {
   precacheAndRoute(self.__WB_MANIFEST);
   cleanupOutdatedCaches();
 
-  const SHELLS = ["index.html", "fortune/index.html", "sunday/index.html", "pyl/index.html"];
+  const SHELLS = ["index.html", "fortune/index.html", "sunday/index.html", "pyl/index.html", "offshore/index.html"];
   const handlers = {};
   for (const url of SHELLS) {
     try {
@@ -47,7 +47,7 @@ if (previewScope) {
         return handler(ctx);
       },
       {
-        denylist: [/\.[^/]+$/],
+        denylist: [/\.[^/]+$/, /\/offshore(?:\/|$)/],
       },
     ),
   );

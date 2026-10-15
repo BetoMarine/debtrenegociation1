@@ -23,8 +23,13 @@
             }
           }).catch(function () {});
         }
+        if (/\/preview\/pack-build(?:\/|$)/.test(path)) {
+          window.__PYL_STORAGE_NS__ = "pyl-preview-pack-build";
+        }
         var expected = document.documentElement.getAttribute("data-pyl-app");
-        var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
+        var app = /\/preview\/pack-build(?:\/|$)/.test(path)
+          ? "sunday"
+          : /\/offshore(?:\/|$)/.test(path) ? "offshore" : /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
         if (expected === app) return;
         document.documentElement.style.visibility = "hidden";
         function go() {

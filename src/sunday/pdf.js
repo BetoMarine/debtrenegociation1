@@ -10,6 +10,7 @@ import {
   languagePreferenceLabel,
   splitTotal,
 } from "./model.js";
+import { packageFactLine, packageIsReady } from "./pack-build.js";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -55,6 +56,8 @@ export function briefingRows(pack) {
   const extra = Math.max(0, loans.length - shown.length);
   const split = pack?.split || {};
   const total = splitTotal(split);
+  const built = !!(pack?.packageReady && packageIsReady(pack?.packageMath));
+  const packageFact = built ? packageFactLine(pack.packageMath) : "";
   return {
     title: sPdf("pdf.title"),
     subtitle: sPdf("pdf.subtitle"),
@@ -80,8 +83,11 @@ export function briefingRows(pack) {
     keep: total == null ? null : Number(split.keep),
     note: String(pack?.splitNote || "").trim(),
     door,
-    doorTitle: doorTitle(door),
-    doorLines: doorLines(door, pack?.nationality),
+    packageFact,
+    doorTitle: built ? "Helper not named yet" : doorTitle(door),
+    doorLines: built
+      ? ["A helper will be named later. This page does not include a phone number or a booking link."]
+      : doorLines(door, pack?.nationality),
     footerOrg: PDF_FOOTER_ORG,
     footerLegal: PDF_FOOTER_LEGAL,
     generated: sPdf("pdf.generated", { date: formatGeneratedDate(pack?.updatedAt || Date.now()) }),
@@ -326,6 +332,22 @@ export function buildSundayPdf(pack) {
     const note = doc.splitTextToSize(`${sPdf("pdf.notePrefix")} “${data.note}”`, CONTENT_W);
     doc.text(note, MARGIN, y);
     y += note.length * 4 + 3;
+  }
+
+  if (data.packageFact) {
+    y = sectionHead(doc, "Your package", y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    setText(doc, "#141414");
+    const factLines = doc.splitTextToSize(data.packageFact, CONTENT_W);
+    doc.text(factLines, MARGIN, y);
+    y += factLines.length * 4.4 + 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    setText(doc, "#5A5A56");
+    const helperLine = doc.splitTextToSize("A helper is not named yet.", CONTENT_W);
+    doc.text(helperLine, MARGIN, y);
+    y += helperLine.length * 4 + 4;
   }
 
   y = sectionHead(doc, sPdf("pdf.nextDoor"), y);
