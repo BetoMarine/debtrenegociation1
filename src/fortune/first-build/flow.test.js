@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FORTUNE_DATA_KEYS, newPack } from "../../db.js";
 import {
@@ -20,7 +21,8 @@ import {
 } from "./flow.js";
 import { buildFutureLifePdf, moreMoneyFor, timelineLines } from "./timeline.js";
 import { buildLife, cushionFinish, rightDoorJoined } from "./life.js";
-import { renderFirstBuild } from "./view.js";
+import { renderFirstBuild, bundleFileName } from "./view.js";
+import { keyboardOverlap } from "./app.js";
 
 function step(state, action) {
   return reduce(state, action).state;
@@ -2909,8 +2911,15 @@ describe("Slice M input journey", () => {
     expect(form).toMatch(/Overdue/);
     expect(form).toMatch(/Yes · late/);
     expect(form).toMatch(/No · on time/);
-    state = editMoney(state, "debtOwed", "4000");
-    state = editMoney(state, "debtInstallment", "800");
+    expect(form).toMatch(/class="ft-build"/);
+    const actionsAt = form.indexOf('class="ft-actions"');
+    expect(actionsAt).toBeGreaterThan(0);
+    const actions = form.slice(actionsAt);
+    expect(actions).toMatch(/data-act="pick-overdue"/);
+    expect(actions).toMatch(/data-act="continue"/);
+    expect(form.slice(0, actionsAt)).not.toMatch(/data-act="pick-overdue"/);
+    state = editMoney(state, "debtOwed", "15000");
+    state = editMoney(state, "debtInstallment", "4000");
     state = step(state, { type: "continue" });
     expect(state.screen).toBe("ix");
     expect(state.debtLate).toBe(false);
@@ -2919,9 +2928,48 @@ describe("Slice M input journey", () => {
     let late = withExpenses(begin("8000"), "500", "1000");
     late = step(late, { type: "toggle-debt", id: "cards" });
     late = step(late, { type: "continue" });
-    late = editMoney(late, "debtOwed", "4000");
-    late = editMoney(late, "debtInstallment", "800");
+    late = editMoney(late, "debtOwed", "15000");
+    late = editMoney(late, "debtInstallment", "4000");
     late = step(late, { type: "pick-overdue", pick: "yes" });
+    late = step(late, { type: "continue" });
+    expect(late.screen).toBe("ix");
+    expect(late.debtLate).toBe(true);
+  });
+
+  it("names the loaded script and measures the keyboard overlap that would cover Continue", () => {
+    expect(bundleFileName("https://betomarine.github.io/debtrenegociation1/preview/pr-35-full/assets/fortune-CCIpo25E.js")).toBe(
+      "fortune-CCIpo25E.js",
+    );
+    expect(bundleFileName("https://example.test/assets/fortune-NEW.js?v=1")).toBe("fortune-NEW.js");
+    expect(keyboardOverlap(800, 800, 0)).toBe(0);
+    expect(keyboardOverlap(800, 430, 0)).toBe(370);
+    expect(keyboardOverlap(800, 430, 20)).toBe(350);
+    expect(keyboardOverlap(800, 900, 0)).toBe(0);
+    const css = readFileSync(new URL("../first-build.css", import.meta.url), "utf8");
+    const phone = css.slice(css.indexOf("@media (max-width: 480px)"));
+    expect(phone).toMatch(/height: calc\(100dvh - var\(--ft-keyboard, 0px\)\)/);
+    expect(phone).toMatch(/min-height:\s*0/);
+    expect(phone).not.toMatch(/min-height:\s*100dvh/);
+  });
+
+  it("continues from filled loan debt the same way, with or without an overdue pick", () => {
+    let state = withExpenses(begin("8000"), "500", "1000");
+    state = step(state, { type: "toggle-debt", id: "loans" });
+    state = step(state, { type: "continue" });
+    expect(renderFirstBuild(state)).toMatch(/Personal loan/);
+    state = editMoney(state, "debtOwed", "15000");
+    state = editMoney(state, "debtInstallment", "4000");
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("ix");
+    expect(state.debtLate).toBe(false);
+
+    let late = withExpenses(begin("8000"), "500", "1000");
+    late = step(late, { type: "toggle-debt", id: "loans" });
+    late = step(late, { type: "continue" });
+    late = editMoney(late, "debtOwed", "15000");
+    late = editMoney(late, "debtInstallment", "4000");
+    late = step(late, { type: "pick-overdue", pick: "yes" });
+    expect(late.debtLate).toBe(true);
     late = step(late, { type: "continue" });
     expect(late.screen).toBe("ix");
     expect(late.debtLate).toBe(true);

@@ -17,6 +17,16 @@ function lifeLink() {
   return `<button class="ft-life-link" type="button" data-act="open-life">Your life</button>`;
 }
 
+function bundleFile(moduleUrl = import.meta.url) {
+  const name = decodeURIComponent(String(moduleUrl).split("?")[0].split("/").pop() || "");
+  return name || "dev";
+}
+
+function buildStamp() {
+  const file = bundleFile();
+  return `<p class="ft-build">${escapeHtml(file)}</p>`;
+}
+
 function topbar(view) {
   const left = view.brand
     ? `<span class="ft-brand">${ROUTE_ICON}<span>Fortune Teller</span></span>`
@@ -788,7 +798,11 @@ function netSheet(life) {
 }
 
 function screenShell(view, inner) {
-  return `<div class="ft-app"><div class="ft-screen${view.kind === "life" ? " is-life" : ""}${view.lifeOverlay ? " is-overlay" : ""}" data-screen="${escapeHtml(view.id)}" data-frame="${escapeHtml(view.frame)}">${inner}</div></div>`;
+  return `<div class="ft-app"><div class="ft-screen${view.kind === "life" ? " is-life" : ""}${view.lifeOverlay ? " is-overlay" : ""}" data-screen="${escapeHtml(view.id)}" data-frame="${escapeHtml(view.frame)}">${buildStamp()}${inner}</div></div>`;
+}
+
+export function bundleFileName(moduleUrl = import.meta.url) {
+  return bundleFile(moduleUrl);
 }
 
 export function renderFirstBuild(state) {
@@ -796,7 +810,7 @@ export function renderFirstBuild(state) {
   if (state.screen === "e0") {
     const underScreen = state.eraseFrom === "l0" ? "l0" : "w0";
     const under = present({ ...state, screen: underScreen, infoOpen: false });
-    return `<div class="ft-app"><div class="ft-screen" data-screen="e0" data-frame="${escapeHtml(view.frame)}">${topbar(view)}<div class="ft-under" inert>${content(under)}</div>${sheet(view)}</div></div>`;
+    return `<div class="ft-app"><div class="ft-screen" data-screen="e0" data-frame="${escapeHtml(view.frame)}">${buildStamp()}${topbar(view)}<div class="ft-under" inert>${content(under)}</div>${sheet(view)}</div></div>`;
   }
   if (view.lifeOverlay) {
     return screenShell(

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { htmlShellForPath, productIdForPath } from "./pwa-shell.js";
-import { siteRootFromPath } from "./register-sw.js";
+import { siteRootFromPath, shouldRegisterServiceWorker } from "./register-sw.js";
 import { APP_VERSION, FORTUNE_STRINGS } from "./fortune/copy.js";
 import { STRINGS } from "./i18n.js";
 import { SUNDAY_STRINGS } from "./sunday/copy.js";
@@ -36,6 +36,8 @@ describe("MPA HTML shell routing", () => {
     expect(swSrc).toMatch(/htmlShellForPath/);
     expect(swSrc).toMatch(/fortune\/index\.html/);
     expect(swSrc).toMatch(/sunday\/index\.html/);
+    expect(swSrc).toMatch(/pyl-preview-clear/);
+    expect(swSrc).toMatch(/caches\.delete/);
     expect(swSrc).not.toMatch(/createHandlerBoundToURL\("index\.html"\)\s*\)/);
   });
 });
@@ -61,6 +63,7 @@ describe("product HTML shell guard", () => {
     for (const [app, html] of Object.entries(htmlFiles)) {
       expect(html).toContain(`data-pyl-app="${app}"`);
       expect(html).toContain("pyl-shell-guard");
+      expect(html).toContain("pyl-preview-clear");
       expect(html).toMatch(/serviceWorker/);
     }
   });
@@ -73,5 +76,9 @@ describe("service worker registration", () => {
     expect(siteRootFromPath("/debtrenegociation1/sunday")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/")).toBe("/debtrenegociation1/");
     expect(siteRootFromPath("/debtrenegociation1/index.html")).toBe("/debtrenegociation1/");
+    expect(shouldRegisterServiceWorker("/debtrenegociation1/fortune/")).toBe(true);
+    expect(shouldRegisterServiceWorker("/debtrenegociation1/preview/pr-35-full/fortune/")).toBe(false);
+    expect(shouldRegisterServiceWorker("/debtrenegociation1/preview/pr-35-full/fortune/index.html")).toBe(false);
+    expect(shouldRegisterServiceWorker("/preview/pr-35-full/")).toBe(false);
   });
 });

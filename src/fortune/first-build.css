@@ -33,19 +33,23 @@ body {
 button,
 input {
   font-family: inherit;
+  touch-action: manipulation;
 }
 
 .ft-app {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: 16px 12px;
 }
 
 .ft-screen {
   width: min(390px, 100%);
-  min-height: min(780px, calc(100dvh - 32px));
-  height: min(780px, calc(100dvh - 32px));
+  flex: none;
+  min-height: 0;
+  height: calc(100dvh - 32px - var(--ft-keyboard, 0px));
+  max-height: min(780px, calc(100dvh - 32px - var(--ft-keyboard, 0px)));
   background: #fff;
   border-radius: 31px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
@@ -53,6 +57,18 @@ input {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+}
+
+.ft-build {
+  flex: none;
+  margin: 0;
+  padding: 6px 12px 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ft-soft);
 }
 
 .ft-top {
@@ -324,7 +340,11 @@ input {
 
 .ft-actions {
   flex: none;
-  padding: 0 24px 30px;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: #fff;
+  padding: 0 24px max(30px, env(safe-area-inset-bottom));
 }
 
 .ft-screen:has(.ft-privacy-foot) .ft-actions {
@@ -1309,12 +1329,14 @@ div.ft-ms-card {
 
   .ft-app {
     padding: 0;
+    min-height: 0;
   }
 
   .ft-screen {
     width: 100%;
-    height: 100dvh;
-    min-height: 100dvh;
+    height: calc(100dvh - var(--ft-keyboard, 0px));
+    min-height: 0;
+    max-height: calc(100dvh - var(--ft-keyboard, 0px));
     border-radius: 0;
     box-shadow: none;
   }

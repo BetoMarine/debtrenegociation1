@@ -9,6 +9,16 @@ const EXIT_URL = "https://www.google.com/";
 let state = freshState();
 let saveTimer = 0;
 let doorJoined = false;
+let skipClickUntil = 0;
+
+/** Pixels of the layout viewport covered by the on-screen keyboard. */
+export function keyboardOverlap(innerHeight, viewportHeight, offsetTop = 0) {
+  const inner = Number(innerHeight);
+  const height = Number(viewportHeight);
+  const top = Number(offsetTop) || 0;
+  if (!Number.isFinite(inner) || !Number.isFinite(height)) return 0;
+  return Math.max(0, Math.round(inner - height - top));
+}
 
 /** One writer at a time. A late save of the old plan cannot land after Erase. */
 export function createPersistGate() {
@@ -152,6 +162,7 @@ async function exitApp() {
 }
 
 function onClick(event) {
+  if (!event.ftTouch && skipClickUntil && Date.now() < skipClickUntil) return;
   const dateInput = event.target.closest?.("input[type='date']");
   if (dateInput && root()?.contains(dateInput) && typeof dateInput.showPicker === "function") {
     try {
@@ -265,6 +276,50 @@ function onDateBlur(event) {
   schedulePersist();
 }
 
+function onTouchStart(event) {
+  const btn = event.target.closest?.("button[data-act]");
+  if (!btn || !root()?.contains(btn)) return;
+  if (!document.activeElement?.matches?.("[data-field]")) return;
+  event.preventDefault();
+}
+
+function onTouchEnd(event) {
+  const btn = event.target.closest?.("button[data-act]");
+  if (!btn || !root()?.contains(btn)) return;
+  if (!document.activeElement?.matches?.("[data-field]")) return;
+  event.preventDefault();
+  skipClickUntil = Date.now() + 800;
+  onClick({
+    target: btn,
+    ftTouch: true,
+    preventDefault() {},
+  });
+}
+
+function pinKeyboard() {
+  const vv = window.visualViewport;
+  const inset = vv ? keyboardOverlap(window.innerHeight, vv.height, vv.offsetTop) : 0;
+  document.documentElement.style.setProperty("--ft-keyboard", `${inset}px`);
+  const active = document.activeElement;
+  if (inset > 0 && active?.matches?.("[data-field]")) {
+    active.scrollIntoView({ block: "center", inline: "nearest" });
+  }
+}
+
+function watchKeyboard() {
+  const kick = () => {
+    pinKeyboard();
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(pinKeyboard);
+  };
+  window.visualViewport?.addEventListener("resize", kick);
+  window.visualViewport?.addEventListener("scroll", kick);
+  window.addEventListener("focusin", kick);
+  window.addEventListener("focusout", () => {
+    setTimeout(pinKeyboard, 80);
+  });
+  pinKeyboard();
+}
+
 function onKeydown(event) {
   if (event.key !== "Enter") return;
   if (!event.target.matches?.("[data-field]")) return;
@@ -296,10 +351,19 @@ export async function boot() {
   const host = root();
   if (!host) return;
   host.addEventListener("click", onClick);
+  host.addEventListener("touchstart", onTouchStart, { passive: false });
+  host.addEventListener("touchend", onTouchEnd, { passive: false });
   host.addEventListener("input", onInput);
   host.addEventListener("change", onInput);
-  host.addEventListener("focusout", onDateBlur);
+  host.addEventListener("focusout", (event) => {
+    onDateBlur(event);
+    const field = event.target?.closest?.("[data-field]");
+    if (!field || !root()?.contains(field) || field.getAttribute("data-field") === "date") return;
+    commitDraft();
+    schedulePersist();
+  });
   host.addEventListener("keydown", onKeydown);
+  watchKeyboard();
   draw();
   await persist();
   window.addEventListener("pageshow", (event) => {
