@@ -2273,6 +2273,172 @@ function monthPicture(state) {
   return { income, costs, burden, left };
 }
 
+/** Record cards for the plan PDF. Dates stay off these rows; the rail carries them. */
+function planDossier(state, life, asOf) {
+  const picture = meTodayPicture(state);
+  const rows = [];
+  let net = null;
+  for (const row of picture.rows) {
+    if (!row.value || row.value === "\u2014") continue;
+    if (row.label === "Left this month") {
+      net = {
+        label: "Left / net this month",
+        value: String(row.value || "").replace(/^\+/, ""),
+        tone: row.neg ? "out" : "net",
+      };
+      continue;
+    }
+    let label = row.label;
+    if (label === "Pay / income") label = "Income / take-home";
+    if (label === "Loan installment") {
+      label =
+        state.installmentInExpenses === false
+          ? "Debt installment (added — was not in expenses)"
+          : "Debt installment";
+    }
+    const tone = row.neg ? "out" : label === "Income / take-home" || row.pos ? "in" : "note";
+    rows.push({ label, value: row.value, tone });
+  }
+  const rowRank = (label) => {
+    if (label.startsWith("Income")) return 0;
+    if (label === "Bills") return 1;
+    if (label.startsWith("Personal") || label.startsWith("Self")) return 2;
+    if (label.startsWith("Send money")) return 3;
+    if (label.startsWith("Debt installment") || label.startsWith("Loan")) return 4;
+    if (label === "Expenses") return 5;
+    return 6;
+  };
+  rows.sort((a, b) => rowRank(a.label) - rowRank(b.label));
+  if (state.installmentInExpenses === true) {
+    const loan = parseAmount(state.inputs.debtInstallment.amount);
+    if (loan > 0) rows.push({ label: "Debt installment (already in expenses)", value: formatPlain(loan), tone: "note" });
+  }
+  if (life.today.stillDue > 0) rows.push({ label: "Still due", value: `-${formatPlain(life.today.stillDue)}`, tone: "out" });
+  if (life.today.overdue > 0) rows.push({ label: "Overdue amount", value: `-${formatPlain(life.today.overdue)}`, tone: "out" });
+  if (life.today.daysLate != null) rows.push({ label: "Days late", value: String(life.today.daysLate), tone: "note" });
+
+  const owed = parseAmount(state.inputs.debtOwed.amount);
+  const installment = parseAmount(state.inputs.debtInstallment.amount);
+  const hasDebt = state.noDebt === true || (state.debtTypes || []).length > 0 || owed != null || installment != null || state.debtLate != null;
+  const debt = hasDebt
+    ? {
+        type: state.noDebt ? "No debt" : debtTypeLabel(state),
+        owed: owed != null ? formatPlain(owed) : "",
+        installment: installment != null ? formatPlain(installment) : "",
+        overdue: state.debtLate === true ? "Yes · late" : state.debtLate === false ? "No · on time" : "",
+      }
+    : null;
+
+  const door = state.packChosen ? "pack" : state.rdTaken ? "rd" : debtDoor(state);
+  const pay = parseAmount(state.inputs.takeHome.amount);
+  const share = shareText(pay, installment);
+  const path =
+    door === "pack"
+      ? {
+          kind: "pack",
+          title: "Path · Sunday Pack",
+          body: "Salary 5,000 to Pack (not Right Door). See timeline.",
+          monitorWhen: addCalendarMonths(asOf, 3),
+        }
+      : door === "rd"
+        ? {
+            kind: "rd",
+            title: "Path · Right Door",
+            body: share ? `Installment is ${share}% of income. See timeline.` : "Installment is over 30% of income. See timeline.",
+            monitorWhen: null,
+          }
+        : null;
+
+  const save = parseAmount(state.inputs.monthlySave.amount);
+  const months = timelineFundMonths(state);
+  const finish = cushionFinish({ ...state, asOf });
+  const open = showBoost(state);
+  const cards = [];
+  for (const span of state.stressedSpans || []) {
+    if (!span?.label || !(span.months > 0)) continue;
+    const word = span.months === 1 ? "month" : "months";
+    cards.push({
+      kicker: "THIS MONTH",
+      title: span.label,
+      rows: [{ label: "Before saving", value: `${span.months} ${word}` }],
+    });
+  }
+  if (path?.kind === "pack") {
+    cards.push({
+      kicker: "FIX · SUNDAY PACK",
+      title: "Sunday Pack",
+      rows: [
+        { label: "Status", value: state.packChosen ? "Started" : "Opens on this salary" },
+        { label: "Hand-off", value: "build, upload, then book" },
+        { label: "Monitor", value: "3-month package check" },
+      ],
+    });
+  }
+  if (path?.kind === "rd") {
+    cards.push({
+      kicker: "FIX · RIGHT DOOR",
+      title: "Right Door",
+      rows: [
+        { label: "Status", value: state.rdTaken ? "Opened" : "Opens above 30% of income" },
+        { label: "Installment share", value: share ? `${share}% of income` : "Over 30% of income" },
+        { label: "Next", value: "Reason screen, then back to this plan" },
+      ],
+    });
+  }
+  if (life.showEf) {
+    const fundRows = [];
+    if (life.ef.target != null) fundRows.push({ label: "Target", value: formatPlain(life.ef.target) });
+    if (life.ef.now != null) fundRows.push({ label: "Now", value: formatPlain(life.ef.now) });
+    if (life.ef.pct != null) fundRows.push({ label: "Funded", value: life.ef.pctText });
+    if (save > 0 && months > 0) fundRows.push({ label: "Monthly put-aside", value: `Save ${formatPlain(save)} x ${months} months` });
+    else if (save > 0) fundRows.push({ label: "Monthly put-aside", value: `${formatPlain(save)} a month` });
+    if (path?.kind === "pack" && life.today.net > 0) fundRows.push({ label: "Cash flow", value: "Positive after Pack" });
+    cards.push({ kicker: "STABLE · EMERGENCY FUND", title: life.ef.title || "Emergency fund", rows: fundRows });
+  }
+  const surplus = life.today.net > 0 ? life.today.net : 0;
+  const picked = BOOST_IDS.includes(state.boostPick) ? forecastReturn(state.boostPick) : null;
+  const mode = state.boostMode === "more" ? "more" : "sooner";
+  for (const goal of life.goals || []) {
+    const fund = goal.funding || {};
+    const goalRows = [
+      { label: "Amount", value: fund.targetText || formatPlain(fund.target) },
+      { label: "Could cover", value: `${fund.coverText || ""} of ${fund.targetText || ""} · ${fund.pct ?? 0}%` },
+      { label: "Feasibility", value: "Emergency fund left out" },
+    ];
+    if (picked && open) {
+      const text =
+        mode === "more"
+          ? moreMoneyText(picked.label, surplus, fund.months, picked.mu)
+          : earlierText(picked.label, surplus, fund.target, picked.mu);
+      if (text) goalRows.push({ label: "Boost", value: text });
+    }
+    cards.push({ kicker: "STABLE · GOALS", title: goal.title, rows: goalRows });
+  }
+  if (open) {
+    const boostRows = [
+      { label: "Unlock", value: "After the emergency fund is started" },
+      { label: "Choice", value: picked ? picked.label : "Not chosen yet" },
+      { label: "Mode", value: mode === "more" ? "More money" : "Earlier" },
+      { label: "Optional next", value: "Insure or invest? After the fund is in place" },
+    ];
+    const cover = parseAmount(state.inputs.cover?.amount);
+    if (cover != null) boostRows.push({ label: "Cover", value: `${formatPlain(cover)} a month` });
+    cards.push({ kicker: "INVEST · BOOST", title: "Boost / Invest", rows: boostRows, portfolios: true });
+  }
+
+  return {
+    title: `My plan · ${MONTH_NAMES[asOf.getMonth()]} ${asOf.getFullYear()}`,
+    privacy: PRIVACY_STRIP,
+    youToday: { rows, net, equation: picture.equation || "" },
+    debt,
+    path,
+    cards,
+    showEf: life.showEf === true,
+    showBoost: open,
+    efWhen: finish.doneBy instanceof Date ? finish.doneBy : null,
+  };
+}
+
 /** Plain numbers for the downloadable timeline. Omits a stretch that was never entered. */
 export function futureSnapshot(state) {
   const asOf = state?.asOf instanceof Date ? state.asOf : new Date();
@@ -2303,6 +2469,7 @@ export function futureSnapshot(state) {
     boostOpen: boostAvailable(state),
     boostPick: state?.boostPick || null,
     boostMode: state?.boostMode === "more" ? "more" : "sooner",
+    dossier: planDossier(state, life, asOf),
   };
 }
 
