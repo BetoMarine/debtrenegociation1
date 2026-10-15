@@ -152,6 +152,9 @@ export function timelineBlocks(snap) {
       lines: [`${formatDate(cursor)} - ${formatDate(end)}`, `${span.months} ${word} before saving starts`],
       months: span.months,
       rgb: BAR_COLORS.stress,
+      when: cursor,
+      end,
+      dateText: formatDate(cursor),
     });
     cursor = end;
   }
@@ -167,6 +170,9 @@ export function timelineBlocks(snap) {
       lines,
       months: fund.months,
       rgb: BAR_COLORS.fund,
+      when: cursor,
+      end,
+      dateText: formatDate(end),
     });
     cursor = end;
   }
@@ -181,6 +187,9 @@ export function timelineBlocks(snap) {
       lines: [`Until ${goal.dateText}`, grouped(goal.amount)],
       months: span,
       rgb: BAR_COLORS.goal[goalColor % BAR_COLORS.goal.length],
+      when: when || asOf,
+      end: when || asOf,
+      dateText: goal.dateText,
     });
     goalColor += 1;
   }
@@ -201,6 +210,9 @@ export function timelineBlocks(snap) {
           lines: [text],
           months: Math.max(1, span),
           rgb: BAR_COLORS.boost,
+          when: when || asOf,
+          end: when || asOf,
+          dateText: when ? formatDate(when) : "",
         });
         continue;
       }
@@ -215,6 +227,9 @@ export function timelineBlocks(snap) {
         lines: [`${cut.monthsSooner} ${word} sooner`, `Ends ${formatDate(sooner)}`],
         months: cut.monthsSooner,
         rgb: BAR_COLORS.boost,
+        when: sooner,
+        end: sooner,
+        dateText: formatDate(sooner),
       });
     }
   }
@@ -246,103 +261,472 @@ export function timelineLines(snap) {
   return lines;
 }
 
-function fillPage(doc) {
-  doc.setFillColor(247, 241, 230);
-  doc.rect(0, 0, 210, 297, "F");
-}
+const PAPER = [255, 252, 247];
+const PURPLE = [91, 42, 134];
+const TEAL = [15, 122, 110];
+const RED = [176, 58, 46];
+const INK = [28, 24, 38];
+const MUTED = [92, 86, 104];
+const HAIR = [226, 220, 214];
+const LEFT = 16;
+const RIGHT = 194;
 
-function paintStrip(doc, y, blocks) {
-  const x0 = 16;
-  const totalW = 178;
-  const total = blocks.reduce((sum, block) => sum + Math.max(1, block.months), 0) || 1;
-  doc.setFillColor(228, 208, 194);
-  doc.roundedRect(x0, y, totalW, 10, 2, 2, "F");
-  let x = x0;
-  for (const block of blocks) {
-    const width = (Math.max(1, block.months) / total) * totalW;
-    const use = Math.min(width, x0 + totalW - x);
-    if (use <= 0.4) break;
-    doc.setFillColor(block.rgb[0], block.rgb[1], block.rgb[2]);
-    doc.rect(x, y, use, 10, "F");
-    x += use;
-  }
+function sameDay(a, b) {
+  return a instanceof Date && b instanceof Date && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 /**
- * Colored timeline graphic. Dates, the fund stretch, each goal, then the boost.
- * The page is cream with saturated bars, not a text-only sheet and not a black frame.
+ * One vertical rail. Dates live here. Boost is the same day as the emergency
+ * fund, or later — never earlier on this rail.
  */
-export function buildFutureLifePdf(snap) {
-  const doc = new jsPDF({ unit: "mm", format: "a4", compress: false });
-  const blocks = timelineBlocks(snap);
-  fillPage(doc);
-  let y = 16;
-  doc.setTextColor(27, 22, 51);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Your future life", 16, y);
-  y += 7;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.setTextColor(92, 86, 112);
-  doc.text(pdfSafe(snap.horizon || "Today → age 70"), 16, y);
-  y += 5;
-  doc.text(pdfSafe(snap.disclaimer || "Not advice. Not a guarantee."), 16, y);
-  y += 8;
+export function planRail(snap) {
+  const asOf = snap?.asOf instanceof Date ? snap.asOf : new Date();
+  const blocks = timelineBlocks(snap || {});
+  const dossier = snap?.dossier || {};
+  const events = [];
 
-  if (blocks.length) {
-    paintStrip(doc, y, blocks);
-    y += 16;
-  }
-
-  const maxMonths = Math.max(1, ...blocks.map((block) => block.months || 1));
-  for (const block of blocks) {
-    if (y > 248) {
-      doc.addPage();
-      fillPage(doc);
-      y = 16;
-    }
-    const width = 26 + (Math.max(1, block.months) / maxMonths) * 120;
-    doc.setFillColor(block.rgb[0], block.rgb[1], block.rgb[2]);
-    doc.roundedRect(16, y, width, 12, 2, 2, "F");
-    y += 17;
-    doc.setTextColor(27, 22, 51);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(pdfSafe(block.title), 16, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(92, 86, 112);
-    for (const line of block.lines) {
-      doc.text(pdfSafe(line), 16, y);
-      y += 5;
-    }
-    y += 4;
-  }
-
-  if (blocks.some((block) => block.kind === "boost")) {
-    if (y > 250) {
-      doc.addPage();
-      fillPage(doc);
-      y = 16;
-    }
-    doc.setTextColor(27, 22, 51);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("Model portfolios", 16, y);
-    y += 6;
-    portfolioReturns().forEach((row, index) => {
-      const swatch = [BAR_COLORS.stress, BAR_COLORS.fund, BAR_COLORS.goal[0], BAR_COLORS.boost][index] || BAR_COLORS.boost;
-      doc.setFillColor(swatch[0], swatch[1], swatch[2]);
-      doc.roundedRect(16, y - 3.5, 8, 5, 1, 1, "F");
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(27, 22, 51);
-      doc.text(pdfSafe(row.line), 28, y);
-      y += 7;
+  const path = dossier.path;
+  if (path?.kind === "pack") {
+    events.push({
+      kind: "pack",
+      rank: 1,
+      when: asOf,
+      dateText: formatDate(asOf),
+      title: "Plan start · Sunday Pack opens",
+      lines: ["Today · Pack build begins"],
+    });
+  } else if (path?.kind === "rd") {
+    events.push({
+      kind: "rd",
+      rank: 1,
+      when: asOf,
+      dateText: formatDate(asOf),
+      title: "Plan start · Right Door opens",
+      lines: ["Today · installment over 30% of income"],
+    });
+  } else {
+    events.push({
+      kind: "today",
+      rank: 0,
+      when: asOf,
+      dateText: formatDate(asOf),
+      title: "Today",
+      lines: ["Plan start"],
     });
   }
 
+  if (path?.monitorWhen instanceof Date) {
+    events.push({
+      kind: "monitor",
+      rank: 3,
+      when: path.monitorWhen,
+      dateText: formatDate(path.monitorWhen),
+      title: "Pack monitor due",
+      lines: ["Package monitoring · 3-month check"],
+    });
+  }
+
+  for (const block of blocks) {
+    if (block.kind !== "stress" || !(block.when instanceof Date)) continue;
+    events.push({
+      kind: "stress",
+      rank: 2,
+      when: block.when,
+      dateText: block.dateText || formatDate(block.when),
+      title: block.title,
+      lines: block.lines.slice(),
+    });
+  }
+
+  const fund = blocks.find((block) => block.kind === "fund");
+  let efWhen = dossier.efWhen instanceof Date ? dossier.efWhen : fund?.end instanceof Date ? fund.end : null;
+  if (!efWhen && dossier.showEf) efWhen = asOf;
+  if (efWhen) {
+    const lines = fund ? fund.lines.filter((line) => !/^By /.test(line)) : [];
+    if (!lines.length) lines.push("Emergency fund on this plan");
+    events.push({
+      kind: "ef",
+      rank: 4,
+      when: efWhen,
+      dateText: formatDate(efWhen),
+      title: "Emergency fund · Done-by",
+      lines,
+    });
+  }
+
+  for (const block of blocks) {
+    if (block.kind !== "goal") continue;
+    let when = block.when instanceof Date ? block.when : asOf;
+    if (efWhen && when.getTime() < efWhen.getTime()) when = efWhen;
+    events.push({
+      kind: "goal",
+      rank: 5,
+      when,
+      dateText: formatDate(when),
+      title: `Goal · ${block.title} · plan starts`,
+      lines: block.lines.filter((line) => !String(line).startsWith("Until ")),
+    });
+  }
+
+  const boostBlocks = blocks.filter((block) => block.kind === "boost");
+  if (dossier.showBoost || snap?.boostOpen || snap?.boostPick || boostBlocks.length) {
+    let when = efWhen || asOf;
+    const later = boostBlocks
+      .map((block) => block.when)
+      .filter((date) => date instanceof Date && (!efWhen || date.getTime() >= efWhen.getTime()));
+    if (later.length) when = later.reduce((soonest, date) => (date.getTime() < soonest.getTime() ? date : soonest));
+    if (efWhen && when.getTime() < efWhen.getTime()) when = efWhen;
+    const lines = ["After the emergency fund is started. Never before on this rail."];
+    for (const block of boostBlocks) {
+      for (const line of block.lines) {
+        if (String(line).startsWith("Ends ")) continue;
+        lines.push(line);
+      }
+    }
+    events.push({
+      kind: "boost",
+      rank: 6,
+      when,
+      dateText: formatDate(when),
+      title: "Boost / Invest unlock",
+      lines,
+    });
+  }
+
+  events.sort((a, b) => a.when - b.when || a.rank - b.rank);
+  return events.map((event) => ({ ...event, sameAsEf: Boolean(efWhen && sameDay(event.when, efWhen) && event.kind !== "ef") }));
+}
+
+function paintPaper(doc) {
+  doc.setFillColor(...PAPER);
+  doc.rect(0, 0, 210, 297, "F");
+}
+
+function masthead(doc, snap, continued) {
+  doc.setFillColor(...PURPLE);
+  doc.roundedRect(LEFT, 12, 10, 10, 2, 2, "F");
+  doc.setTextColor(255, 252, 247);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("FT", 18.2, 18.3);
+
+  doc.setTextColor(...PURPLE);
+  doc.setFontSize(8.5);
+  doc.text("PLAN YOUR LIFE  ·  FORTUNE TELLER", 30, 16.2);
+
+  const asOf = snap.asOf instanceof Date ? snap.asOf : new Date();
+  doc.setTextColor(...INK);
+  doc.setFontSize(10);
+  doc.text(`Generated ${formatDate(asOf)}`, RIGHT, 15, { align: "right" });
+
+  doc.setTextColor(...INK);
+  doc.setFontSize(18);
+  doc.text(pdfSafe(snap.dossier?.title || "My plan"), LEFT, 32);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...MUTED);
+  doc.text(continued ? "Single timeline · all dated events" : "Personal life plan · simulation for education", LEFT, 37.5);
+
+  doc.setDrawColor(...PURPLE);
+  doc.setLineWidth(0.7);
+  doc.line(LEFT, 42, RIGHT, 42);
+  return 48;
+}
+
+function sectionLabel(doc, y, text, color = PURPLE) {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...color);
+  doc.text(text, LEFT, y);
+  return y + 6;
+}
+
+function paintPrivacy(doc, y, text) {
+  doc.setFillColor(246, 242, 250);
+  doc.roundedRect(LEFT, y, RIGHT - LEFT, 8, 1.2, 1.2, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(70, 58, 88);
+  doc.text(pdfSafe(text), LEFT + 3, y + 5.2);
+  return y + 12;
+}
+
+function paintYouToday(doc, y, today) {
+  y = sectionLabel(doc, y, "YOU TODAY  ·  CURRENT LIFE");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...MUTED);
+  doc.text("ITEM", LEFT, y);
+  doc.text("HK$", RIGHT, y, { align: "right" });
+  y += 2;
+  doc.setDrawColor(...HAIR);
+  doc.setLineWidth(0.2);
+  doc.line(LEFT, y, RIGHT, y);
+  y += 5.5;
+
+  for (const row of today?.rows || []) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    doc.text(pdfSafe(row.label), LEFT, y);
+    const tone = row.tone === "out" ? RED : row.tone === "in" ? TEAL : INK;
+    doc.setTextColor(...tone);
+    doc.setFont("helvetica", "bold");
+    doc.text(pdfSafe(row.value), RIGHT, y, { align: "right" });
+    y += 2.2;
+    doc.setDrawColor(...HAIR);
+    doc.setLineWidth(0.15);
+    doc.line(LEFT, y, RIGHT, y);
+    y += 5.2;
+  }
+
+  if (today?.net) {
+    doc.setFillColor(232, 246, 242);
+    doc.roundedRect(LEFT, y - 3.6, RIGHT - LEFT, today.equation ? 12 : 8, 1.2, 1.2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...TEAL);
+    doc.text(pdfSafe(today.net.label), LEFT + 3, y + 1);
+    doc.text(pdfSafe(today.net.value), RIGHT - 3, y + 1, { align: "right" });
+    if (today.equation) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(50, 90, 84);
+      doc.text(pdfSafe(today.equation), LEFT + 3, y + 6);
+    }
+    y += today.equation ? 16 : 12;
+  }
+  return y;
+}
+
+function paintTile(doc, x, y, w, h, label, value) {
+  doc.setDrawColor(214, 206, 220);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, w, h, 1.4, 1.4, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...MUTED);
+  doc.text(pdfSafe(label), x + 3, y + 5);
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text(pdfSafe(value || "—"), x + 3, y + 11);
+}
+
+function paintDebt(doc, y, debt) {
+  if (!debt) return y;
+  const w = (RIGHT - LEFT - 4) / 2;
+  const h = 16;
+  const tiles = [
+    ["DEBT TYPE", debt.type],
+    ["TOTAL OWED", debt.owed],
+    ["INSTALLMENT / MO", debt.installment],
+    ["OVERDUE", debt.overdue],
+  ].filter((tile) => tile[1]);
+  for (let i = 0; i < tiles.length; i += 1) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    paintTile(doc, LEFT + col * (w + 4), y + row * (h + 3), w, h, tiles[i][0], tiles[i][1]);
+  }
+  const rows = Math.ceil(tiles.length / 2);
+  return y + rows * (h + 3) + 2;
+}
+
+function paintPath(doc, y, path) {
+  if (!path) return y;
+  doc.setFillColor(243, 236, 248);
+  doc.roundedRect(LEFT, y, RIGHT - LEFT, 10, 1.5, 1.5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...PURPLE);
+  const title = pdfSafe(path.title);
+  doc.text(title, LEFT + 3, y + 6.2);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(58, 48, 72);
+  const gap = doc.getTextWidth(title) + 6;
+  const body = doc.splitTextToSize(pdfSafe(path.body), RIGHT - LEFT - gap - 6);
+  doc.text(body[0] || "", LEFT + 3 + gap, y + 6.2);
+  return y + 14;
+}
+
+function paintRail(doc, y, events) {
+  y = sectionLabel(doc, y, "YOUR PLAN TIMELINE", TEAL);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  doc.text("One spine only. Card fields feed these dates.", LEFT, y);
+  y += 7;
+  if (!events.length) return y;
+
+  const spineX = 22;
+  const textX = 30;
+  const slots = [];
+  let cursor = y;
+  for (const event of events) {
+    const lines = (event.lines || []).filter(Boolean);
+    const height = 6 + lines.length * 4 + 4;
+    slots.push({ event, y: cursor, lines, height });
+    cursor += height;
+  }
+  const last = slots[slots.length - 1];
+  doc.setDrawColor(...PURPLE);
+  doc.setLineWidth(0.8);
+  doc.line(spineX, slots[0].y - 1, spineX, last.y + 1);
+
+  for (const slot of slots) {
+    const event = slot.event;
+    const dot = event.kind === "ef" ? TEAL : PURPLE;
+    doc.setFillColor(...dot);
+    doc.circle(spineX, slot.y, 1.7, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...(event.kind === "ef" ? TEAL : PURPLE));
+    const date = pdfSafe(event.dateText);
+    doc.text(date, textX, slot.y + 1);
+    const dateW = doc.getTextWidth(date);
+    doc.setTextColor(...INK);
+    doc.text(pdfSafe(`  ·  ${event.title}`), textX + dateW, slot.y + 1);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    let lineY = slot.y + 5.4;
+    for (const line of slot.lines) {
+      doc.text(pdfSafe(line), textX, lineY);
+      lineY += 4;
+    }
+  }
+  return cursor + 2;
+}
+
+function cardHeight(doc, card, width) {
+  let rows = 16;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  for (const row of card.rows || []) {
+    const lines = doc.splitTextToSize(pdfSafe(`${row.label}: ${row.value}`), width - 8);
+    rows += lines.length * 3.6;
+  }
+  if (card.portfolios) rows += portfolioReturns().length * 7.2;
+  rows += 7;
+  return Math.max(36, rows);
+}
+
+function paintCard(doc, x, y, w, h, card) {
+  doc.setDrawColor(214, 206, 220);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(x, y, w, h, 1.6, 1.6, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...TEAL);
+  doc.text(pdfSafe(card.kicker || ""), x + 3, y + 5);
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text(pdfSafe(card.title || ""), x + 3, y + 11);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(48, 44, 58);
+  let ly = y + 16;
+  for (const row of card.rows || []) {
+    const lines = doc.splitTextToSize(pdfSafe(`${row.label}: ${row.value}`), w - 8);
+    doc.text(lines, x + 3, ly);
+    ly += lines.length * 3.6;
+  }
+  if (card.portfolios) {
+    ly += 1;
+    for (const row of portfolioReturns()) {
+      const lines = doc.splitTextToSize(pdfSafe(row.line), w - 8);
+      doc.text(lines, x + 3, ly);
+      ly += lines.length * 3.6;
+    }
+  }
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(7.5);
+  doc.setTextColor(130, 120, 145);
+  doc.text("Dates: see timeline", x + 3, y + h - 3.5);
+}
+
+function paintCards(doc, y, cards) {
+  if (!cards?.length) return { y, rest: [] };
+  if (y > 250) return { y, rest: cards };
+  y = sectionLabel(doc, y, "PLAN CARDS  ·  FULL FIELDS");
+  const gap = 4;
+  const colW = (RIGHT - LEFT - gap) / 2;
+  let rowY = y;
+  for (let i = 0; i < cards.length; i += 2) {
+    const left = cards[i];
+    const right = cards[i + 1];
+    const h = Math.max(cardHeight(doc, left, colW), right ? cardHeight(doc, right, colW) : 0);
+    if (rowY + h > 274) return { y: rowY, rest: cards.slice(i) };
+    paintCard(doc, LEFT, rowY, colW, h, left);
+    if (right) paintCard(doc, LEFT + colW + gap, rowY, colW, h, right);
+    rowY += h + gap;
+  }
+  return { y: rowY, rest: [] };
+}
+
+function paintDisclaimer(doc) {
+  doc.setDrawColor(...HAIR);
+  doc.setLineWidth(0.2);
+  doc.line(LEFT, 280, RIGHT, 280);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(120, 114, 128);
+  doc.text("Not advice. Not a guarantee. Simulation for education only. Not a loan offer.", LEFT, 285);
+}
+
+/**
+ * A4 plan sheet. Page 1 is the header, privacy, and You today.
+ * Page 2 is one dated rail, then the card fields. Dates stay on the rail.
+ */
+export function buildFutureLifePdf(snap) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: false });
+  const safe = snap || {};
+  const dossier = safe.dossier || {};
+  paintPaper(doc);
+  let y = masthead(doc, safe, false);
+  if (dossier.privacy) y = paintPrivacy(doc, y, dossier.privacy);
+  y = paintYouToday(doc, y, dossier.youToday);
+  y = paintDebt(doc, y + 1, dossier.debt);
+  y = paintPath(doc, y, dossier.path);
+  if (y < 268) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    const note = doc.splitTextToSize(
+      "All dated milestones live on the single timeline. Section bodies do not repeat free-floating dates.",
+      RIGHT - LEFT,
+    );
+    doc.text(note, LEFT, y + 2);
+  }
+  paintDisclaimer(doc);
+
+  doc.addPage();
+  paintPaper(doc);
+  y = masthead(doc, safe, true);
+  y = paintRail(doc, y, planRail(safe));
+  let rest = dossier.cards || [];
+  let guard = 0;
+  while (rest.length && guard < 6) {
+    guard += 1;
+    const painted = paintCards(doc, y, rest);
+    if (painted.rest.length === rest.length) {
+      doc.addPage();
+      paintPaper(doc);
+      y = masthead(doc, safe, true);
+      continue;
+    }
+    y = painted.y;
+    rest = painted.rest;
+  }
+
+  const total = doc.getNumberOfPages();
+  for (let page = 1; page <= total; page += 1) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(`Page ${page} of ${total}`, RIGHT, 20.5, { align: "right" });
+    doc.setFontSize(7);
+    doc.text(`${page} / ${total}`, RIGHT, 290, { align: "right" });
+  }
   return doc;
 }

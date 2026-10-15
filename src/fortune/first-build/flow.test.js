@@ -19,7 +19,7 @@ import {
   present,
   reduce,
 } from "./flow.js";
-import { buildFutureLifePdf, moreMoneyFor, timelineLines } from "./timeline.js";
+import { buildFutureLifePdf, moreMoneyFor, planRail, timelineLines } from "./timeline.js";
 import { buildLife, cushionFinish, rightDoorJoined } from "./life.js";
 import { renderFirstBuild, bundleFileName } from "./view.js";
 import { keyboardOverlap } from "./app.js";
@@ -3195,5 +3195,102 @@ describe("Slice M input journey", () => {
     expect(fortuneDoorScreen("reason", { fromFortune: true, saved: "creditors" })).toBe("reason");
     expect(fortuneDoorScreen("home", { fromFortune: true })).toBe("home");
     expect(fortuneDoorScreen("", { fromFortune: false, saved: "creditors" })).toBe("home");
+  });
+
+  it("prints a two-page plan sheet: every card field, privacy once, and one dated rail", () => {
+    const asOf = new Date(2026, 9, 15);
+    let state = { ...freshState(), asOf };
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "takeHome", "5000");
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "spendBills", "500");
+    state = editMoney(state, "spendPersonal", "1000");
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "toggle-debt", id: "loans" });
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "debtOwed", "10000");
+    state = editMoney(state, "debtInstallment", "1200");
+    state = step(state, { type: "pick-overdue", pick: "no" });
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "pick-installment", pick: "no" });
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "continue" });
+    state = step(state, { type: "continue" });
+    expect(state.screen).toBe("st");
+    expect(state.packChosen).toBe(true);
+
+    state = step(state, { type: "start-ef" });
+    state = editMoney(state, "cushionNow", "0");
+    state = step(state, { type: "continue" });
+    state = editMoney(state, "cushionTarget", "13800");
+    state = editMoney(state, "monthlySave", "2300");
+    state = step(state, { type: "edit", key: "fundWhen", date: "2027-04-15" });
+    state = step(state, { type: "open-goals" });
+    state = step(state, { type: "edit", key: "goalName", text: "Trip" });
+    state = step(state, { type: "edit", key: "goalAmount", amount: "20000" });
+    state = step(state, { type: "edit", key: "goalDate", date: "2027-04-15" });
+    state = step(state, { type: "continue" });
+    expect(state.goals[0].name).toBe("Trip");
+    state = step(state, { type: "open-boost-mix" });
+    state = step(state, { type: "pick-boost", id: "balanced" });
+    state = { ...state, asOf };
+
+    const snap = futureSnapshot(state);
+    const rail = planRail(snap);
+    expect(rail.map((event) => event.kind)).toEqual(["pack", "monitor", "ef", "goal", "boost"]);
+    expect(rail[0].dateText).toBe("15 Oct 2026");
+    expect(rail[1].dateText).toBe("15 Jan 2027");
+    expect(rail[2].dateText).toBe("15 Apr 2027");
+    expect(rail[3].dateText).toBe("15 Apr 2027");
+    expect(rail[4].dateText).toBe("15 Apr 2027");
+    expect(rail[4].when.getTime()).toBeGreaterThanOrEqual(rail[2].when.getTime());
+    expect(rail.findIndex((event) => event.kind === "boost")).toBeGreaterThan(rail.findIndex((event) => event.kind === "ef"));
+
+    const pdf = buildFutureLifePdf(snap).output();
+    expect(pdf.split("This plan stays on this phone. Erase any time.").length - 1).toBe(1);
+    expect(pdf.split("Not advice. Not a guarantee.").length - 1).toBe(1);
+    expect(pdf.split("YOUR PLAN TIMELINE").length - 1).toBe(1);
+    expect(pdf).toContain("PLAN YOUR LIFE");
+    expect(pdf).toContain("YOU TODAY");
+    expect(pdf).toContain("My plan");
+    expect(pdf).toContain("Income / take-home");
+    expect(pdf).toContain("5,000");
+    expect(pdf).toContain("Bills");
+    expect(pdf).toContain("Personal / self");
+    expect(pdf).toContain("was not in expenses");
+    expect(pdf).toContain("1,200");
+    expect(pdf).toContain("2,300");
+    expect(pdf).toContain("Personal loan");
+    expect(pdf).toContain("10,000");
+    expect(pdf).toContain("on time");
+    expect(pdf).toContain("Sunday Pack");
+    expect(pdf).toContain("3-month package check");
+    expect(pdf).toContain("Emergency fund");
+    expect(pdf).toContain("Save 2,300 x 6 months");
+    expect(pdf).toContain("Trip");
+    expect(pdf).toContain("20,000");
+    expect(pdf).toContain("Emergency fund left out");
+    expect(pdf).toContain("Boost / Invest");
+    expect(pdf).toContain("see timeline");
+    expect(pdf).toContain("15 Oct 2026");
+    expect(pdf).toContain("15 Jan 2027");
+    expect(pdf).toContain("15 Apr 2027");
+    expect(pdf).toContain("Bad year about 10%");
+    expect(pdf).toContain("5% a year");
+    expect(pdf).toContain("6% a year");
+    expect(pdf).toContain("7% a year");
+    expect(pdf).toContain("8% a year");
+    expect(pdf).not.toMatch(/12\.0%|15\.0%|20\.0%|35\.0%/);
+    expect(pdf.indexOf("Sunday Pack opens")).toBeLessThan(pdf.indexOf("Pack monitor due"));
+    expect(pdf.indexOf("Pack monitor due")).toBeLessThan(pdf.indexOf("Emergency fund"));
+    expect(pdf.indexOf("Emergency fund")).toBeLessThan(pdf.indexOf("Trip"));
+    expect(pdf.indexOf("Goal")).toBeLessThan(pdf.indexOf("Boost / Invest unlock"));
+    const fills = [...pdf.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) rg/g)].map((match) =>
+      match.slice(1).map((part) => {
+        const n = Number(part);
+        return n > 1 ? n / 255 : n;
+      }),
+    );
+    expect(fills.some(([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b) > 0.15)).toBe(true);
   });
 });
