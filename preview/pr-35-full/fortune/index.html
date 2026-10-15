@@ -5,8 +5,25 @@
     <script>
       /* pyl-shell-guard */
       (function () {
-        var expected = document.documentElement.getAttribute("data-pyl-app");
         var path = location.pathname || "";
+        /* pyl-preview-clear: drop a worker that is still serving an older fortune-*.js */
+        if (path.indexOf("/preview/") !== -1 && "serviceWorker" in navigator) {
+          var stamp = "pyl-preview-clear";
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          }).then(function () {
+            if (!self.caches || !caches.keys) return;
+            return caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            });
+          }).then(function () {
+            if (navigator.serviceWorker.controller && !sessionStorage.getItem(stamp)) {
+              sessionStorage.setItem(stamp, "1");
+              location.reload();
+            }
+          }).catch(function () {});
+        }
+        var expected = document.documentElement.getAttribute("data-pyl-app");
         var app = /\/fortune(?:\/|$)/.test(path) ? "fortune" : /\/sunday(?:\/|$)/.test(path) ? "sunday" : "right-door";
         if (expected === app) return;
         document.documentElement.style.visibility = "hidden";
@@ -45,9 +62,9 @@
     <link rel="manifest" href="../fortune/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="../fortune/icons/icon.svg" />
     <link rel="apple-touch-icon" href="../fortune/apple-touch-icon.png" />
-    <script type="module" crossorigin src="../assets/fortune-CCIpo25E.js"></script>
-    <link rel="modulepreload" crossorigin href="../assets/register-sw-BTE3NAGB.js">
-    <link rel="stylesheet" crossorigin href="../assets/fortune-CH_Sf6VG.css">
+    <script type="module" crossorigin src="../assets/fortune-CUpKM1FL.js"></script>
+    <link rel="modulepreload" crossorigin href="../assets/register-sw-CN0QBcWM.js">
+    <link rel="stylesheet" crossorigin href="../assets/fortune-gpdOD486.css">
   </head>
   <body>
     <div id="app"></div>
