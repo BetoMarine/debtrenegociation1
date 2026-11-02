@@ -1,0 +1,6 @@
+:HL["/debtrenegociation1/shelf-truth/_next/static/chunks/2zspfwivqj_ti.css","style"]
+:HL["/debtrenegociation1/shelf-truth/_next/static/media/07a39a8a4660cc7c-s.p.0r6juujl39pe6.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/debtrenegociation1/shelf-truth/_next/static/media/191d227036512e10-s.p.0hs6q6udzld4a.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/debtrenegociation1/shelf-truth/_next/static/media/8cccf984c8510bbf-s.p.2li_3lqay9qjq.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+1:[["children",{"s":"__PAGE__","h":160}]]
+0:{"b":"U8GQJjNOOfP_upVSllj1S","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
