@@ -45,6 +45,7 @@ export const SCREENS = [
   "timeline",
   "after",
   "goals",
+  "goalask",
   "boost",
   "shelf",
   "pdf",
@@ -129,6 +130,7 @@ export function allowed(state, screen) {
     case "pdf":
     case "after":
     case "goals":
+    case "goalask":
     case "boost":
     case "shelf":
       return datesReady(state);
@@ -296,16 +298,18 @@ function commitGoal(state) {
     amount: String(amount),
     date: toIso(date),
   };
-  return {
-    ...state,
-    goals: [...state.goals, goal],
-    goalSeq: (state.goalSeq || 1) + 1,
-    goalName: "",
-    goalAmount: "",
-    goalDate: plan.iso || "",
-    goalMoved: moved,
-    showRequired: false,
-  };
+  return enter(
+    {
+      ...state,
+      goals: [...state.goals, goal],
+      goalSeq: (state.goalSeq || 1) + 1,
+      goalName: "",
+      goalAmount: "",
+      goalDate: plan.iso || "",
+      goalMoved: moved,
+    },
+    "goalask",
+  );
 }
 
 function goNext(state) {
@@ -342,6 +346,8 @@ function goNext(state) {
       return enter(state, "goals");
     case "goals":
       return commitGoal(state);
+    case "goalask":
+      return enter(state, "boost");
     case "boost":
       return enter(state, "shelf");
     case "shelf":
@@ -367,7 +373,8 @@ function goBack(state) {
     timeline: "cushion",
     after: "timeline",
     goals: "after",
-    boost: "after",
+    goalask: "goals",
+    boost: state.goals.length ? "goalask" : "after",
     shelf: "boost",
     pdf: "timeline",
   };
@@ -385,6 +392,17 @@ function apply(state, action) {
     let next = { ...state, [key]: String(action.value ?? "").slice(0, cap) };
     if (key === "cushionNow" || key === "cushionTarget" || key === "cushionSave") next = stampFunded(next);
     return { state: next };
+  }
+  if (type === "another") {
+    if (action.value === "yes") {
+      return {
+        state: enter(
+          { ...state, goalName: "", goalAmount: "", goalDate: "", goalMoved: false },
+          "goals",
+        ),
+      };
+    }
+    return { state: enter(state, "boost") };
   }
   if (type === "choose") {
     if (action.field === "debt") {
@@ -872,7 +890,7 @@ function buildTimeline(state) {
     chip: "Life timeline",
     strip: true,
     primary: { label: "Open goals and Boost", act: "next", tone: "primary" },
-    quiet: { label: "See the PDF", act: "go", value: "pdf", tone: "quiet" },
+    quiet: { label: "See the PDF", act: "go", value: "pdf", tone: "line" },
     blocks: [
       { type: "kicker", tone: "ok", label: "Ordered by date" },
       { type: "title", text: "Your life plan" },
@@ -943,7 +961,7 @@ function buildGoals(state) {
   const blocks = [
     { type: "kicker", tone: "ok", label: "Goals" },
     { type: "title", text: "Build your goals" },
-    { type: "body", text: "A goal starts on the cushion date or later. Boost is on this same beat." },
+    { type: "body", text: "Name one goal. The date stays on or after your cushion. Save it, then we ask if you want another." },
   ];
   if (state.goals.length) {
     blocks.push({
@@ -970,25 +988,38 @@ function buildGoals(state) {
   if (state.goalMoved) {
     blocks.push({ type: "hint", text: "That date was before the cushion. It now starts when the cushion is ready." });
   }
-  blocks.push({
-    type: "cards",
-    items: [
-      {
-        tone: "boost",
-        tag: "Boost",
-        title: "See Boost",
-        body: "Reference mixes \u00b7 same beat as these goals",
-        date: plan.date ? `After ${formatDay(plan.date)}` : "",
-        act: "go",
-        value: "boost",
-      },
-    ],
-  });
   return pack(state, {
     id: "goals",
     chip: "Goals",
     primary: { label: "Save goal", act: "next", tone: "primary" },
-    quiet: { label: "See Boost", act: "go", value: "boost", tone: "quiet" },
+    blocks,
+  });
+}
+
+function buildGoalAsk(state) {
+  const blocks = [
+    { type: "kicker", tone: "ok", label: "Goals" },
+    { type: "title", text: "Another goal?" },
+    { type: "body", text: "Yes takes you back to add one more. No goes on to Boost." },
+  ];
+  if (state.goals.length) {
+    blocks.push({
+      type: "cards",
+      items: state.goals.map((goal) => ({
+        tone: "goal",
+        tag: "Saved",
+        title: goal.name,
+        body: `HK$ ${formatMoney(parseAmount(goal.amount))}`,
+        date: formatDay(parseIso(goal.date)),
+        act: "stay",
+      })),
+    });
+  }
+  return pack(state, {
+    id: "goalask",
+    chip: "Goals",
+    primary: { label: "No \u00b7 go to Boost", act: "another", value: "no", tone: "primary" },
+    quiet: { label: "Yes \u00b7 add another", act: "another", value: "yes", tone: "line" },
     blocks,
   });
 }
@@ -997,12 +1028,15 @@ function buildBoost(state) {
   return pack(state, {
     id: "boost",
     chip: "Boost",
-    primary: { label: "Open Shelf", act: "go", value: "shelf", tone: "shelf" },
-    quiet: { label: "Keep browsing mixes", act: "browse", tone: "quiet" },
+    primary: { label: "Yes \u00b7 open Shelf", act: "go", value: "shelf", tone: "shelf" },
+    quiet: { label: "No \u00b7 see the PDF", act: "go", value: "pdf", tone: "line" },
     blocks: [
       { type: "kicker", tone: "warn", label: "Reference only" },
       { type: "title", text: "Boost mixes" },
-      { type: "body", text: "PYL model portfolios are a benchmark \u2014 not what to buy." },
+      {
+        type: "body",
+        text: "These Plan Your Life mixes are an internal benchmark for your plan. They are not a product to buy from us.",
+      },
       {
         type: "mixes",
         items: MIXES.map((mix) => ({ ...mix, on: mix.id === state.boostRef })),
@@ -1011,8 +1045,8 @@ function buildBoost(state) {
       {
         type: "confirm",
         tone: "shelf",
-        title: "Next: your bank",
-        body: "Research what your bank or insurer is pushing. Then bring that offer into Shelf for an unbiased break-down.",
+        title: "Did your bank or manager give you a proposal?",
+        body: "If they did, Shelf can help you understand it \u2014 what it is, what it costs, and who may get paid. We do not tell you to buy.",
       },
     ],
   });
@@ -1024,7 +1058,7 @@ function buildShelf(state) {
     id: "shelf",
     chip: "Shelf",
     primary: { label: "Continue decode", act: "next", tone: "shelf" },
-    quiet: { label: "Back to Boost", act: "go", value: "boost", tone: "quiet" },
+    quiet: { label: "See the PDF", act: "go", value: "pdf", tone: "line" },
     blocks: [
       { type: "kicker", tone: "shelf", label: "Tool at Boost" },
       { type: "title", text: "Bring the bank offer" },
@@ -1099,6 +1133,8 @@ export function present(state) {
       return buildAfter(current);
     case "goals":
       return buildGoals(current);
+    case "goalask":
+      return buildGoalAsk(current);
     case "boost":
       return buildBoost(current);
     case "shelf":

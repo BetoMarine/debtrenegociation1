@@ -519,6 +519,14 @@ button { cursor: pointer; }
   text-underline-offset: 4px;
 }
 
+.so-btn.line {
+  min-height: 52px;
+  margin-top: 10px;
+  background: #fff;
+  color: var(--so-ink);
+  border: 2px solid var(--so-ink);
+}
+
 .so-sheet {
   position: absolute;
   inset: 0;

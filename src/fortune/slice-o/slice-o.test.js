@@ -190,8 +190,10 @@ describe("Slice O dated spine", () => {
     expect(html).toContain("60/40");
     expect(html).toContain("80/20");
     expect(html).toContain("40/60");
-    expect(html).toContain("not what to buy");
-    expect(html).toContain("Open Shelf");
+    expect(html).toContain("not a product to buy");
+    expect(html).toContain("internal benchmark");
+    expect(html).toContain("Yes \u00b7 open Shelf");
+    expect(html).toContain("Did your bank or manager give you a proposal?");
     expect(html).not.toMatch(/Linda BO/);
     expect(html).not.toMatch(/Use this mix/i);
     expect(html).not.toMatch(/<b>Unlocked<\/b>/);
@@ -222,17 +224,54 @@ describe("Slice O dated spine", () => {
   it("moves a goal that starts before the cushion, and keeps Boost on the same beat", () => {
     let state = act(throughCushion(), { type: "go", screen: "goals" });
     expect(state.goalDate).toBe("2027-05-15");
+    const creating = renderSliceO(state);
+    expect(creating).toContain("Save goal");
+    expect(creating).not.toContain("See Boost");
+    expect(creating).not.toContain("Open Shelf");
     state = act(state, { type: "edit", key: "goalName", value: "Course" });
     state = act(state, { type: "edit", key: "goalAmount", value: "8000" });
     state = act(state, { type: "edit", key: "goalDate", value: "2026-12-01" });
     state = act(state, { type: "next" });
     expect(state.goals[0].date).toBe("2027-05-15");
     expect(state.goalMoved).toBe(true);
-    expect(state.screen).toBe("goals");
+    expect(state.screen).toBe("goalask");
     const html = renderSliceO(state);
-    expect(html).toContain("See Boost");
+    expect(html).toContain("Another goal?");
+    expect(html).toContain("No \u00b7 go to Boost");
+    expect(html).toContain("Yes \u00b7 add another");
     expect(html).toContain("Course");
     assertClean(html);
+  });
+
+  it("walks save, another goal, Boost, then Shelf or the PDF", () => {
+    let state = act(throughCushion(), { type: "go", screen: "goals" });
+    state = act(state, { type: "edit", key: "goalName", value: "Course" });
+    state = act(state, { type: "edit", key: "goalAmount", value: "8000" });
+    state = act(state, { type: "next" });
+    expect(state.screen).toBe("goalask");
+    const again = act(state, { type: "another", value: "yes" });
+    expect(again.screen).toBe("goals");
+    expect(again.goalName).toBe("");
+    expect(renderSliceO(again)).not.toContain("Open Shelf");
+    state = act(state, { type: "another", value: "no" });
+    expect(state.screen).toBe("boost");
+    const boost = renderSliceO(state);
+    expect(boost).toContain("internal benchmark");
+    expect(boost).toContain("not a product to buy");
+    expect(boost).toContain("Did your bank or manager give you a proposal?");
+    expect(boost).toContain("Yes \u00b7 open Shelf");
+    expect(boost).toContain("No \u00b7 see the PDF");
+    expect(boost).not.toMatch(/Linda|Use this mix|shop/i);
+    expect(act(state, { type: "go", screen: "pdf" }).screen).toBe("pdf");
+    const shelf = act(state, { type: "go", screen: "shelf" });
+    expect(shelf.screen).toBe("shelf");
+    const shelfHtml = renderSliceO(shelf);
+    expect(shelfHtml).toContain("See the PDF");
+    expect(shelfHtml).toContain("don\u2019t tell you to buy");
+    const plan = renderSliceO(act(throughCushion(), { type: "go", screen: "timeline" }));
+    expect(plan).toContain("See the PDF");
+    assertClean(boost);
+    assertClean(shelfHtml);
   });
 
   it("prints the same dated order, including You today", () => {

@@ -132,6 +132,10 @@ function onClick(event) {
     apply({ type: "go", screen: node.getAttribute("data-value") });
     return;
   }
+  if (act === "another") {
+    apply({ type: "another", value: node.getAttribute("data-value") });
+    return;
+  }
   if (act === "remove-goal") {
     apply({ type: "remove-goal", id: node.getAttribute("data-value") });
     return;
