@@ -60,15 +60,7 @@ input {
 }
 
 .ft-build {
-  flex: none;
-  margin: 0;
-  padding: 6px 12px 0;
-  text-align: center;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ft-soft);
+  display: none;
 }
 
 .ft-top {
@@ -147,8 +139,9 @@ input {
 }
 
 .ft-content {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  margin-bottom: 16px;
   overflow: auto;
   padding: 28px 24px 16px;
   scroll-padding-bottom: 16px;
@@ -341,11 +334,13 @@ input {
 
 .ft-actions {
   flex: none;
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
   background: #fff;
   padding: 0 24px max(30px, env(safe-area-inset-bottom));
+}
+
+.ft-screen > .ft-actions {
+  position: relative;
+  z-index: 4;
 }
 
 .ft-screen:has(.ft-privacy-foot) .ft-actions {
@@ -777,8 +772,9 @@ a.ft-btn {
 }
 
 .ft-life-stage {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  margin-bottom: 16px;
   overflow: auto;
   position: relative;
   scroll-padding-bottom: 16px;

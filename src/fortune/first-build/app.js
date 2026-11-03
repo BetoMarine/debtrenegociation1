@@ -50,20 +50,44 @@ function viewState() {
   return { ...state, rightDoorJoined: doorJoined };
 }
 
-/** Keep a focused field or opened card fully above the sticky dock. */
+/** Keep a card’s bottom at least 16px above the dock, not merely inside the scroller. */
 export function scrollAboveDock(el) {
   if (!el?.getBoundingClientRect) return;
   const scroller = el.closest(".ft-content, .ft-life-stage");
   if (!scroller) return;
+  const dock = el.closest(".ft-screen")?.querySelector(":scope > .ft-actions");
   const pad = 16;
-  const elRect = el.getBoundingClientRect();
-  const scRect = scroller.getBoundingClientRect();
-  if (elRect.bottom > scRect.bottom - pad) {
-    scroller.scrollTop += elRect.bottom - (scRect.bottom - pad);
-  }
-  const next = el.getBoundingClientRect();
+  const limit = dock
+    ? dock.getBoundingClientRect().top - pad
+    : scroller.getBoundingClientRect().bottom - pad;
+  let rect = el.getBoundingClientRect();
+  if (rect.bottom > limit) scroller.scrollTop += rect.bottom - limit;
+  rect = el.getBoundingClientRect();
   const top = scroller.getBoundingClientRect().top;
-  if (next.top < top) scroller.scrollTop -= top - next.top;
+  const room = limit - top;
+  if (rect.top < top && rect.height <= room) scroller.scrollTop -= top - rect.top;
+}
+
+function settleDock(host) {
+  const screen = host.querySelector(".ft-screen");
+  const dock = screen?.querySelector(":scope > .ft-actions");
+  const scroller = screen?.querySelector(".ft-life-stage, .ft-content");
+  if (!dock || !scroller) return;
+  const limit = () => dock.getBoundingClientRect().top - 16;
+  const toggle = screen.dataset.screen === "bx" ? scroller.querySelector(".ft-boost-toggle") : null;
+  const ef = scroller.querySelector('[data-ms="ef"]');
+  const primary = toggle || ef;
+  if (primary && primary.getBoundingClientRect().bottom > limit() + 1) {
+    scrollAboveDock(primary);
+    return;
+  }
+  const view = scroller.getBoundingClientRect();
+  const cut = [...scroller.querySelectorAll(".ft-ms-card, .ft-hub-card")].filter((el) => {
+    const rect = el.getBoundingClientRect();
+    const showing = rect.bottom > view.top + 1 && rect.top < view.bottom - 1;
+    return showing && rect.bottom > limit() + 1;
+  }).pop();
+  if (cut) scrollAboveDock(cut);
 }
 
 function revealAboveDock(host) {
@@ -97,6 +121,7 @@ function draw() {
     }
   }
   revealAboveDock(host);
+  settleDock(host);
   syncHash();
 }
 

@@ -2975,6 +2975,11 @@ describe("Slice M input journey", () => {
     expect(phone).not.toMatch(/min-height:\s*100dvh/);
     expect(css).toMatch(/scroll-padding-bottom:\s*16px/);
     expect(css).toMatch(/\.ft-content \{[^}]*padding: 28px 24px 16px;/);
+    expect(css).toMatch(/\.ft-content \{[^}]*margin-bottom:\s*16px/);
+    expect(css).toMatch(/\.ft-life-stage \{[^}]*margin-bottom:\s*16px/);
+    expect(css).toMatch(/\.ft-screen > \.ft-actions \{[^}]*position:\s*relative/);
+    expect(css).not.toMatch(/position:\s*sticky/);
+    expect(css).toMatch(/\.ft-build \{[^}]*display:\s*none/);
   });
 
   it("continues from filled loan debt the same way, with or without an overdue pick", () => {
