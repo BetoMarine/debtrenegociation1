@@ -294,8 +294,9 @@ describe("Slice O dated spine", () => {
 
   it("keeps the dock 16px clear and leaves live Fortune untouched", () => {
     const css = readFileSync("src/fortune/slice-o/slice-o.css", "utf8");
-    expect(css).toMatch(/\.so-dock\s*\{[^}]*padding-top:\s*16px/);
-    expect(css).toMatch(/\.so-body\s*\{[^}]*padding:\s*8px 24px 16px/);
+    expect(css).toMatch(/\.so-screen > \.so-dock\s*\{[^}]*position:\s*absolute/);
+    expect(css).toMatch(/\.so-scroll-end\s*\{[^}]*height:\s*calc\(var\(--so-dock-h, 168px\) \+ 16px\)/);
+    expect(css).toMatch(/scroll-padding-bottom:\s*calc\(var\(--so-dock-h, 168px\) \+ 16px\)/);
     expect(css).toMatch(/\.so-screen\s*\{[^}]*overflow:\s*hidden/);
     expect(keyboardOverlap(800, 500, 0)).toBe(300);
     expect(keyboardOverlap(800, 820, 0)).toBe(0);
