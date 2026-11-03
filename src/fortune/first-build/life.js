@@ -508,6 +508,8 @@ export function buildLife(state) {
   const finish = cushionFinish(state);
   const fundNow = showEf && money.now == null ? 0 : money.now;
   const fundPct = showEf ? pctOf(fundNow, money.target) ?? 0 : pct;
+  const fundedComplete = money.target != null && money.target > 0 && fundNow != null && fundNow >= money.target;
+  const fundedDay = fundedComplete ? money.fundWhen || atMidnight(asOf) : null;
   const place = net == null ? null : net > 0 ? formatDate(asOf) : "When it turns up";
   const goalCash = net != null && net < 0 ? "down-red" : net === 0 ? "flat-zero" : net != null && net > 0 ? "up-teal" : "flat";
   const goals = (Array.isArray(state?.goals) ? state.goals : [])
@@ -595,10 +597,12 @@ export function buildLife(state) {
       date:
         finish.incomplete && finish.doneBy
           ? formatDate(finish.doneBy)
-          : money.fundWhen
-            ? formatDate(money.fundWhen)
-            : place || formatDate(addMonths(asOf, 12)),
-      whenIso: money.fundWhenIso,
+          : fundedDay
+            ? formatDate(fundedDay)
+            : money.fundWhen
+              ? formatDate(money.fundWhen)
+              : place || formatDate(addMonths(asOf, 12)),
+      whenIso: money.fundWhenIso || (fundedDay ? toIso(fundedDay) : ""),
       now: fundNow,
       target: money.target,
       pct: fundPct,
@@ -618,9 +622,11 @@ export function buildLife(state) {
       byText:
         finish.incomplete && finish.doneByText
           ? finish.doneByText
-          : money.fundWhen
-            ? `By ${formatDate(money.fundWhen)}`
-            : "",
+          : fundedDay
+            ? `Done by ${formatDate(fundedDay)}`
+            : money.fundWhen
+              ? `By ${formatDate(money.fundWhen)}`
+              : "",
       saveText: money.save == null ? "" : `Save ${formatPlain(money.save)} \u00b7 ${months == null ? "\u2014" : months} months`,
       delta: efDelta,
       moved: efMoved,

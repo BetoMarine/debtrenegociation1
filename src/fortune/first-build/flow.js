@@ -648,7 +648,7 @@ function applyDebtSuggest(state) {
   };
 }
 
-/** Debt % is monthly debt repayment ÷ take-home. Left is pay minus the three buckets she entered. */
+/** Debt % is monthly debt repayment ÷ take-home. Left is pay minus the three buckets entered. */
 export function debtPicture(state) {
   const pay = parseAmount(state?.inputs?.takeHome?.amount);
   const repay = parseAmount(state?.inputs?.spendDebt?.amount);
@@ -752,7 +752,7 @@ function derivedEntry(state) {
   return state.entry;
 }
 
-/** She has opened the emergency fund: a savings figure, a target, a monthly save, or a Done-by date. */
+/** The emergency fund is open once a savings figure, a target, a monthly save, or a Done-by date exists. */
 function efStarted(state) {
   if (parseAmount(state?.inputs?.cushionNow?.amount) != null) return true;
   const target = parseAmount(state?.inputs?.cushionTarget?.amount);
@@ -1017,7 +1017,10 @@ function advance(state) {
       return projectLife(withSpan, "lenders");
     }
     case "g3":
-      if (boostAvailable(state)) return { ...state, screen: "bx", boostFrom: "g3", showRequired: false, infoOpen: false };
+      if (boostAvailable(state)) {
+        const from = state.investFrom === "ml" || state.investFrom === "l0" ? state.investFrom : "g0";
+        return openBenchmark(state, from);
+      }
       return { ...state, screen: "g0" };
     default:
       return state;
@@ -1158,7 +1161,7 @@ function backTo(state) {
       if (state.investFrom === "ml" || state.investFrom === "l0") return state.investFrom;
       return "g0";
     case "bx":
-      return ["ml", "gy", "l0", "gn", "g3"].includes(state.boostFrom) ? state.boostFrom : "g3";
+      return ["ml", "gy", "l0", "gn", "g0", "g3"].includes(state.boostFrom) ? state.boostFrom : "g3";
     case "l1":
     case "l2":
     case "l3":
@@ -1523,7 +1526,10 @@ function step(state, action) {
         return state;
       }
       if (action.pick === "insurance") return { ...state, screen: "g2" };
-      if (action.pick === "invest") return { ...state, screen: "g3", investFrom: "g0" };
+      if (action.pick === "invest") {
+        if (!boostAvailable(state)) return { ...state, screen: "g3", investFrom: "g0" };
+        return openBenchmark(state, "g0");
+      }
       return state;
     case "pick-next":
       if (state.screen !== "fd2") return state;
@@ -1823,7 +1829,7 @@ function step(state, action) {
     }
     case "open-invest":
       if ((state.screen !== "ml" && state.screen !== "l0") || !showBoost(state)) return state;
-      return { ...state, screen: "g3", investFrom: state.screen, showRequired: false, infoOpen: false, lifeDetail: false };
+      return openBenchmark(state, state.screen);
     case "edit-split":
       if (state.screen !== "ml" && state.screen !== "mt") return state;
       if (inputsJourney(state)) return { ...state, screen: "xb", showRequired: false, infoOpen: false };
@@ -2021,7 +2027,7 @@ export function hydrate(raw) {
     installmentInExpenses: raw.installmentInExpenses === true ? true : raw.installmentInExpenses === false ? false : null,
     packChosen: raw.packChosen === true,
     goalFrom: raw.goalFrom === "st" || raw.goalFrom === "ml" ? raw.goalFrom : null,
-    boostFrom: ["ml", "g3", "gy", "l0", "gn"].includes(raw.boostFrom) ? raw.boostFrom : null,
+    boostFrom: ["ml", "g3", "gy", "l0", "gn", "g0"].includes(raw.boostFrom) ? raw.boostFrom : null,
     investFrom: raw.investFrom === "ml" || raw.investFrom === "l0" || raw.investFrom === "g0" ? raw.investFrom : null,
   };
 }
@@ -2475,7 +2481,21 @@ export function futureSnapshot(state) {
 
 const BOOST_IDS = ["firm", "balanced", "growth", "frontier"];
 
-/** Cards on the unlocked Invest door. None is chosen until she picks. */
+/** Land on the benchmark mix. Balanced is the starting mix until a person picks another. */
+function openBenchmark(state, from) {
+  const pick = BOOST_IDS.includes(state.boostPick) ? state.boostPick : "balanced";
+  return {
+    ...state,
+    screen: "bx",
+    boostFrom: from,
+    boostPick: pick,
+    showRequired: false,
+    infoOpen: false,
+    lifeDetail: false,
+  };
+}
+
+/** Cards on the unlocked Invest door. None is chosen until a mix is picked. */
 function investBoost(state) {
   const chosenId = BOOST_IDS.includes(state.boostPick) ? state.boostPick : null;
   const mode = state.boostMode === "more" ? "more" : "sooner";
@@ -2522,7 +2542,7 @@ function plusAmount(n) {
   return signedAmount(n);
 }
 
-/** Declared split for Me today. A loan row stays off when she has no installment. */
+/** Declared split for Me today. A loan row stays off when there is no installment. */
 function meTodayPicture(state) {
   const pic = debtPicture(state);
   const helper = state.helper === true;
@@ -2880,7 +2900,7 @@ function helperScreens(state, base) {
           key: "sendHome",
           label: "Send money home each month",
           amount: state.inputs.sendHome.amount,
-          hint: "Example amount \u2014 she enters her own.",
+          hint: "Example amount. Enter your own.",
         },
       ],
       callout: {
@@ -3026,7 +3046,7 @@ function planScreens(state, base) {
           body: "This amount helps unlock Stabilize → Invest when the floor is ready.",
         },
       ],
-      note: "Empty until she enters. Never invent.",
+      note: "",
       primary: "Continue",
       quiet: "Not sure yet",
       quietAct: "savings-later",
@@ -3047,7 +3067,7 @@ function planScreens(state, base) {
         { key: "spendBills", label: "Bills", amount: state.inputs.spendBills.amount, hint: "" },
         { key: "spendPersonal", label: "Personal", amount: state.inputs.spendPersonal.amount, hint: "" },
       ],
-      note: "Empty until she enters. Never invent.",
+      note: "",
       primary: "Continue",
       showRequired: state.showRequired === true,
       requiredHint: "Enter bills and personal. A blank is not a number.",
@@ -3103,7 +3123,9 @@ function planScreens(state, base) {
         act: "open-life",
         kicker: "On your plan",
         title: "Emergency fund",
-        body: fund.byText || `Now ${fund.nowText} · Target ${fund.targetText}`,
+        body: fund.byText
+          ? `${fund.byText} · Now ${fund.nowText} · Target ${fund.targetText}`
+          : `Now ${fund.nowText} · Target ${fund.targetText}`,
       });
     }
     rest.push({
@@ -3137,7 +3159,7 @@ function planScreens(state, base) {
         id: "invest",
         act: "open-invest",
         title: "Invest",
-        body: "Still open after a goal. Continue on this door opens the cards.",
+        body: "Still open after a goal. Opens the benchmark mix.",
       });
       rest.push({
         id: "boost",
@@ -3161,14 +3183,14 @@ function planScreens(state, base) {
       kind: "hub",
       chip: "Plan",
       title: "My Life",
-      body: state.rdTaken ? "Plan · after she took Right Door" : "Me today · expenses visible",
+      body: state.rdTaken ? "Plan · after Right Door" : "Me today · expenses visible",
       frame: state.rdTaken ? "I04-plan-rd-first" : "I14-my-life",
       showLifeLink: inputsJourney(state),
       showPlan: inputsJourney(state),
       lead,
       rows: today.rows,
       rest,
-      note: state.rdTaken ? "" : "No Right Door card — she did not take RD.",
+      note: "",
       quiet: state.rdTaken ? "Back to Your Now" : "Edit expenses",
       quietAct: state.rdTaken ? "open-now" : "edit-split",
     };
@@ -3808,17 +3830,17 @@ export function present(state) {
         ...base,
         kind: "confirm",
         title: "Invest",
-        body: floor
-          ? "Your cushion is ready \u2014 this can open."
-          : "Boost stays open while your cushion is still building.",
+        body: "Benchmarks only. These model mixes are not a fund we sell. Continue opens them so you can pick one.",
         chip: "Plan",
         showPlan: true,
         primary: "Continue",
         lockedInvest: false,
         callout: {
           tone: "ok",
-          title: "Unlocked",
-          body: floor ? "Cushion gate met. Continue opens the cards." : "Cushion still building. Continue opens the cards.",
+          title: "Benchmark only",
+          body: floor
+            ? "Cushion gate met. Pick a mix on the next screen before using it."
+            : "Cushion still building. Pick a mix on the next screen before using it.",
         },
       };
     }
@@ -3853,11 +3875,14 @@ export function present(state) {
       investBoost: investBoost(state),
       callout: {
         tone: "ok",
-        title: "Benchmark open",
-        body: "Pick a mix. None is chosen until you do.",
+        title: picked ? picked.label : "Benchmark only",
+        body: picked
+          ? "Benchmarks only. This mix is a model, not a fund we sell. Switch it anytime."
+          : "Benchmarks only. Pick a mix. Nothing is used until one is chosen.",
       },
       primary: picked ? `Use ${picked.label}` : "Use this mix",
       primaryAct: "back",
+      primaryDisabled: !picked,
       quiet: "Back to Your life",
       quietAct: "open-life",
     };
