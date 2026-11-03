@@ -36,10 +36,12 @@ button { cursor: pointer; }
 .so-screen {
   min-height: 100dvh;
   height: calc(100dvh - var(--so-keyboard));
+  max-height: calc(100dvh - var(--so-keyboard));
   display: flex;
   flex-direction: column;
   background: #fff;
   position: relative;
+  overflow: hidden;
 }
 
 .so-top {
@@ -122,11 +124,12 @@ button { cursor: pointer; }
 .so-top .so-info { width: 32px; height: 32px; margin: 0 4px 0 0; }
 
 .so-body {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 8px 24px 0;
+  padding: 8px 24px 16px;
   -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: 16px;
 }
 
 .so-body h1 {

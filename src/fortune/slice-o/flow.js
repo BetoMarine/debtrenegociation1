@@ -24,7 +24,7 @@ import { SAMPLE_OFFER, decodeOffer } from "./shelf.js";
 
 export const STORAGE_KEY = "pyl-fortune-slice-o";
 export const SUNDAY_PACK_URL = "https://betomarine.github.io/debtrenegociation1/sunday/?from=fortune";
-export const RIGHT_DOOR_HREF = "../?from=fortune#/reason";
+export const RIGHT_DOOR_HREF = "https://betomarine.github.io/debtrenegociation1/?from=fortune#/reason";
 
 export const MIXES = [
   { id: "balanced", label: "Balanced (reference)", mix: "60/40" },
@@ -739,7 +739,7 @@ function buildDebtPath(state) {
             tone: "pack",
             tag: "Sunday Pack",
             title: "Open Sunday Pack",
-            body: "build \u2192 upload \u2192 THEN book \u00b7 sunday/?from=fortune",
+            body: "build \u2192 upload \u2192 THEN book",
             href: SUNDAY_PACK_URL,
             act: "door",
             value: "pack",
@@ -752,7 +752,6 @@ function buildDebtPath(state) {
         title: "~3 months expected",
         body: "When the path sticks, we put a positive-cashflow date on your plan (~3 months out).",
       },
-      { type: "hint", text: "URL: betomarine.github.io/\u2026/sunday/?from=fortune" },
     ],
   });
 }
@@ -1015,7 +1014,6 @@ function buildBoost(state) {
         title: "Next: your bank",
         body: "Research what your bank or insurer is pushing. Then bring that offer into Shelf for an unbiased break-down.",
       },
-      { type: "hint", text: "Linda BO keeps books clean for a future partner remap \u2014 we don\u2019t pitch them here." },
     ],
   });
 }
