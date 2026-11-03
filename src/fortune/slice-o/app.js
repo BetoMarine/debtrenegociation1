@@ -56,17 +56,6 @@ function draw() {
     }
   }
   syncHash();
-  syncDockClearance();
-}
-
-/** Scrollport inset is the live dock height plus 16px, so the last line clears the buttons. */
-export function syncDockClearance(host = root()) {
-  const screen = host?.querySelector(".so-screen");
-  const dock = screen?.querySelector(":scope > .so-dock");
-  if (!screen || !dock) return 0;
-  const height = Math.ceil(dock.getBoundingClientRect().height);
-  screen.style.setProperty("--so-dock-h", `${height}px`);
-  return height;
 }
 
 function persist() {
@@ -176,7 +165,6 @@ function bindKeyboard() {
   const applyOverlap = () => {
     const overlap = keyboardOverlap(window.innerHeight, viewport.height, viewport.offsetTop);
     document.documentElement.style.setProperty("--so-keyboard", `${overlap}px`);
-    syncDockClearance();
   };
   viewport.addEventListener("resize", applyOverlap);
   viewport.addEventListener("scroll", applyOverlap);
@@ -192,6 +180,5 @@ export function boot() {
   host.addEventListener("input", onInput);
   host.addEventListener("keydown", onKey);
   bindKeyboard();
-  window.addEventListener("resize", () => syncDockClearance());
   draw();
 }

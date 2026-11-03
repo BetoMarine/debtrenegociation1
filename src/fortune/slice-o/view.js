@@ -184,7 +184,7 @@ export function renderSliceO(state) {
   return `<div class="so-app" data-screen="${escapeHtml(view.id)}" data-build="slice-o">
     <div class="so-screen">
       ${topbar(view)}
-      <div class="so-body">${body}<div class="so-scroll-end" aria-hidden="true"></div></div>
+      <div class="so-body">${body}</div>
       ${dock(view)}
       ${view.infoOpen ? counsel() : ""}
     </div>
