@@ -50,6 +50,34 @@ function viewState() {
   return { ...state, rightDoorJoined: doorJoined };
 }
 
+/** Keep a focused field or opened card fully above the sticky dock. */
+export function scrollAboveDock(el) {
+  if (!el?.getBoundingClientRect) return;
+  const scroller = el.closest(".ft-content, .ft-life-stage");
+  if (!scroller) return;
+  const pad = 16;
+  const elRect = el.getBoundingClientRect();
+  const scRect = scroller.getBoundingClientRect();
+  if (elRect.bottom > scRect.bottom - pad) {
+    scroller.scrollTop += elRect.bottom - (scRect.bottom - pad);
+  }
+  const next = el.getBoundingClientRect();
+  const top = scroller.getBoundingClientRect().top;
+  if (next.top < top) scroller.scrollTop -= top - next.top;
+}
+
+function revealAboveDock(host) {
+  const open = host.querySelector(".ft-boost-slot.is-open");
+  if (!open) return;
+  const scroller = open.closest(".ft-content, .ft-life-stage");
+  if (!scroller) return;
+  const elRect = open.getBoundingClientRect();
+  const scRect = scroller.getBoundingClientRect();
+  const visibleBottom = scRect.bottom - 16;
+  const intersects = elRect.bottom > scRect.top && elRect.top < visibleBottom;
+  if (!intersects) scrollAboveDock(open);
+}
+
 function draw() {
   const host = root();
   if (!host) return;
@@ -65,8 +93,10 @@ function draw() {
         const pos = Math.min(caret, String(next.value || "").length);
         next.setSelectionRange(pos, pos);
       }
+      scrollAboveDock(next);
     }
   }
+  revealAboveDock(host);
   syncHash();
 }
 
@@ -185,6 +215,7 @@ function onClick(event) {
   }
   const btn = event.target.closest("[data-act]");
   if (!btn || !root()?.contains(btn)) return;
+  if (btn.hasAttribute("disabled") || btn.getAttribute("aria-disabled") === "true") return;
   const act = btn.getAttribute("data-act");
   if (act === "exit") {
     event.preventDefault();
@@ -315,7 +346,7 @@ function pinKeyboard() {
   document.documentElement.style.setProperty("--ft-keyboard", `${inset}px`);
   const active = document.activeElement;
   if (inset > 0 && active?.matches?.("[data-field]")) {
-    active.scrollIntoView({ block: "center", inline: "nearest" });
+    scrollAboveDock(active);
   }
 }
 

@@ -150,7 +150,8 @@ input {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 28px 24px 0;
+  padding: 28px 24px 16px;
+  scroll-padding-bottom: 16px;
 }
 
 .ft-content h1,
@@ -409,6 +410,12 @@ input {
   color: #fff;
 }
 
+.ft-btn.primary:disabled {
+  background: #cbd5e1;
+  color: #475569;
+  cursor: default;
+}
+
 a.ft-btn {
   text-decoration: none;
   box-sizing: border-box;
@@ -516,7 +523,7 @@ a.ft-btn {
 }
 
 .ft-future {
-  margin: 8px 0 4px;
+  margin: 8px 0 16px;
 }
 
 .ft-future-label {
@@ -761,11 +768,20 @@ a.ft-btn {
   white-space: nowrap;
 }
 
+.ft-life-head-bar {
+  flex: none;
+  padding: 4px 16px 0;
+  background: #fff;
+  position: relative;
+  z-index: 2;
+}
+
 .ft-life-stage {
   flex: 1;
   min-height: 0;
   overflow: auto;
   position: relative;
+  scroll-padding-bottom: 16px;
 }
 
 .ft-life {
@@ -1289,9 +1305,20 @@ div.ft-ms-card {
 .ft-life-link:focus-visible,
 .ft-ms-card:focus-visible,
 .ft-input input:focus-visible,
-.ft-hub-card:focus-visible {
+.ft-hub-card:focus-visible,
+.ft-boost-pick:focus-visible {
   outline: 2px solid var(--ft-fix);
   outline-offset: 2px;
+}
+
+.ft-hub-card,
+.ft-ms-card,
+.ft-callout,
+.ft-boost-pick,
+.ft-boost-panel,
+.ft-input,
+.ft-boost-slot {
+  scroll-margin-bottom: 16px;
 }
 
 .ft-hub-card {

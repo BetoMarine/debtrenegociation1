@@ -276,8 +276,9 @@ function actions(view) {
   }
   if (view.primary && view.id !== "e1") {
     const tone = view.primaryTone === "warn" ? " is-warn" : view.primaryTone === "pack" ? " is-pack" : "";
+    const disabled = view.primaryDisabled ? " disabled aria-disabled=\"true\"" : "";
     parts.push(
-      `<button class="ft-btn primary${tone}" type="button" data-act="${escapeHtml(view.primaryAct || "continue")}">${escapeHtml(view.primary)}</button>`,
+      `<button class="ft-btn primary${tone}" type="button"${disabled} data-act="${escapeHtml(view.primaryAct || "continue")}">${escapeHtml(view.primary)}</button>`,
     );
   }
   if (view.id === "e1" && view.primary) {
@@ -661,7 +662,15 @@ function spine(life) {
     .join("")}</ol>`;
 }
 
-function lifeBlock(life, focus) {
+function lifeHeadMarkup(life, solo) {
+  const pill = life.pill ? `<span class="ft-jpill is-${life.pill.tone}">${escapeHtml(life.pill.label)}</span>` : "";
+  const journey = life.journey
+    ? `<p class="ft-journey" data-journey="${escapeHtml(life.journey)}">${escapeHtml(life.journeyLabel)}</p>`
+    : "";
+  return `<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p>${journey}${spine(life)}${pill}</div>`;
+}
+
+function lifeBlock(life, focus, options = {}) {
   const solo = focus && focus !== "scroll";
   const order = railOrder(life, focus);
   const numberOf = (id) => String(order.indexOf(id) + 1);
@@ -732,12 +741,9 @@ function lifeBlock(life, focus) {
       }),
     );
   }
-  const pill = life.pill ? `<span class="ft-jpill is-${life.pill.tone}">${escapeHtml(life.pill.label)}</span>` : "";
   const note = focus === "rd" ? `<p class="ft-life-note">${escapeHtml(life.rd.note)}</p>` : "";
-  const journey = life.journey
-    ? `<p class="ft-journey" data-journey="${escapeHtml(life.journey)}">${escapeHtml(life.journeyLabel)}</p>`
-    : "";
-  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${`<div class="ft-life-head${solo ? " is-compact" : ""}"><h1>Your life</h1><p class="ft-life-sub">Today → age 70</p>${journey}${spine(life)}${pill}</div>`}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
+  const head = options.head === false ? "" : lifeHeadMarkup(life, solo);
+  return `<div class="ft-life" data-tone="${escapeHtml(life.tone)}" data-scope="${escapeHtml(life.scope || "full")}">${head}<div class="ft-life-timeline${solo ? " is-solo" : ""}">${rows.join("")}</div>${note}</div>`;
 }
 
 function inputSheet(view) {
@@ -827,9 +833,6 @@ export function renderFirstBuild(state) {
     return screenShell(view, `${topbar(view)}<div class="ft-life-stage">${efDetail(view.life)}</div>`);
   }
   if (view.kind === "life") {
-    const stage = view.lifeDetail
-      ? `<div class="ft-life-stage" inert>${lifeBlock(view.life, "scroll")}</div>${netSheet(view.life)}`
-      : `<div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus)}</div>`;
     const primary = view.fromInput
       ? `<button class="ft-btn primary" type="button" data-act="back-to-input">Back to input</button>`
       : view.projectNext
@@ -843,6 +846,12 @@ export function renderFirstBuild(state) {
       view.id === "l0" && view.life?.boost?.offer
         ? `<div class="ft-future"><p class="ft-future-label">Your future life</p>${boostSlot("life", view.life.boost, view.life.boost.lifeText || "")}</div>`
         : "";
+    const stableHead = view.lifeFocus === "scroll" && !view.lifeDetail;
+    const stage = view.lifeDetail
+      ? `<div class="ft-life-stage" inert>${lifeBlock(view.life, "scroll")}</div>${netSheet(view.life)}`
+      : stableHead
+        ? `<div class="ft-life-head-bar">${lifeHeadMarkup(view.life, false)}</div><div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus, { head: false })}${future}</div>`
+        : `<div class="ft-life-stage">${lifeBlock(view.life, view.lifeFocus)}</div>`;
     const door =
       view.id === "l0" && view.offerDoor
         ? `<a class="ft-btn quiet" href="${escapeHtml(rightDoorHref())}">Open Right Door</a>`
@@ -851,7 +860,7 @@ export function renderFirstBuild(state) {
     const invest = view.offerInvest ? `<button class="ft-btn quiet" type="button" data-act="open-invest">Invest</button>` : "";
     const cushionDate = view.offerDate ? `<button class="ft-btn quiet" type="button" data-act="edit-cushion-date">Edit cushion date</button>` : "";
     const planBack = primary || erase || download || door || savings || invest || cushionDate ? `<div class="ft-actions">${primary}${invest}${cushionDate}${savings}${download}${door}${erase}</div>` : "";
-    return screenShell(view, `${topbar(view)}${stage}${future}${planBack}`);
+    return screenShell(view, `${topbar(view)}${stage}${stableHead ? "" : future}${planBack}`);
   }
   return screenShell(view, screenHtml(view));
 }

@@ -233,14 +233,14 @@ describe("Slice A first-build flow", () => {
     expect(present(state).choices.map((c) => c.id)).toEqual(["goals", "insurance", "invest"]);
     expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(false);
     const openedEarly = go(state, { type: "pick-grow", pick: "invest" });
-    expect(openedEarly.screen).toBe("g3");
-    expect(present(openedEarly).callout.title).toBe("Unlocked");
-    expect(present(openedEarly).primary).toBe("Continue");
+    expect(openedEarly.screen).toBe("bx");
+    expect(openedEarly.boostPick).toBe("balanced");
+    expect(present(openedEarly).primary).toBe("Use Balanced");
+    expect(present(openedEarly).primaryDisabled).toBe(false);
     expect(present(openedEarly).showPlan).toBe(true);
-    expect(present(openedEarly).body).toBe("Boost stays open while your cushion is still building.");
+    expect(present(openedEarly).callout.body).toMatch(/Benchmarks only/);
     expect(renderFirstBuild(openedEarly)).not.toMatch(/Cushion not ready/);
-    expect(renderFirstBuild(openedEarly)).not.toMatch(/pick-boost|Bad year about/);
-    expect(go(openedEarly, { type: "continue" }).screen).toBe("bx");
+    expect(renderFirstBuild(openedEarly)).toMatch(/data-value="balanced" aria-pressed="true"/);
     expect(go(openedEarly, { type: "back" }).screen).toBe("g0");
     expect(go(state, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
 
@@ -260,7 +260,7 @@ describe("Slice A first-build flow", () => {
     expect(state.screen).toBe("g0");
     expect(cushionReady(state)).toBe(true);
     expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(false);
-    expect(present(go(state, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+    expect(present(go(state, { type: "pick-grow", pick: "invest" })).primary).toBe("Use Balanced");
   });
 
   it("keeps Invest open while the cushion is still building when nothing is due", () => {
@@ -295,31 +295,27 @@ describe("Slice A first-build flow", () => {
     expect(state.screen).toBe("g0");
     expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(false);
     const open = go(state, { type: "pick-grow", pick: "invest" });
-    expect(present(open).callout.title).toBe("Unlocked");
-    expect(present(open).body).toBe("Your cushion is ready — this can open.");
+    expect(open.screen).toBe("bx");
+    expect(open.boostPick).toBe("balanced");
+    expect(present(open).callout.body).toMatch(/Benchmarks only/);
     const door = renderFirstBuild(open);
     expect(door).not.toMatch(/Cushion not ready/);
     expect(door).not.toMatch(/Still locked/);
-    expect(door).not.toMatch(/pick-boost/);
-    const cardsState = go(open, { type: "continue" });
-    expect(cardsState.screen).toBe("bx");
-    const cards = renderFirstBuild(cardsState);
-    expect(cards).toMatch(/Bad year about 10%/);
-    expect(cards).toMatch(/Bad year about 15%/);
-    expect(cards).toMatch(/Bad year about 20%/);
-    expect(cards).toMatch(/Bad year about 25%/);
-    expect(cards).toMatch(/data-boost-for="invest"/);
-    expect([...cards.matchAll(/data-act="pick-boost"[^>]*aria-pressed="(true|false)"/g)].map((match) => match[1])).toEqual([
-      "false",
-      "false",
-      "false",
-      "false",
-    ]);
-    const picked = go(cardsState, { type: "pick-boost", id: "growth" });
+    expect(door).toMatch(/pick-boost/);
+    expect(door).toMatch(/Bad year about 10%/);
+    expect(door).toMatch(/Bad year about 15%/);
+    expect(door).toMatch(/Bad year about 20%/);
+    expect(door).toMatch(/Bad year about 25%/);
+    expect(door).toMatch(/data-boost-for="invest"/);
+    expect(door).toMatch(/data-value="balanced" aria-pressed="true"/);
+    expect(door).toMatch(/Use Balanced/);
+    expect(door).not.toMatch(/disabled/);
+    const picked = go(open, { type: "pick-boost", id: "growth" });
     expect(picked.screen).toBe("bx");
     expect(picked.boostPick).toBe("growth");
     expect(renderFirstBuild(picked)).toMatch(/data-value="growth" aria-pressed="true"/);
-    expect(go(picked, { type: "back" }).screen).toBe("g3");
+    expect(present(picked).primary).toBe("Use Growth");
+    expect(go(picked, { type: "back" }).screen).toBe("g0");
   });
 
   it("erase wipes Fortune only and returns to an empty Where are you", () => {
@@ -442,7 +438,7 @@ describe("Slice A first-build flow", () => {
     mark(reduce(erase, { type: "confirm-erase" }).state);
 
     const expected = Object.values(FRAME_IDS)
-      .map((id) => (id === "G3-invest-locked" ? "Gd4-invest-unlocked" : id))
+      .map((id) => (id === "G3-invest-locked" ? "CJ06-boost-open" : id))
       .sort();
     expect([...seen].sort()).toEqual(expected);
     for (const id of ["i0", "i1", "i2", "i2b", "i3", "i3b"]) {
@@ -853,7 +849,7 @@ describe("Slice C costs and deeper flows", () => {
     state = go(state, { type: "continue" });
     expect(state.screen).toBe("g0");
     expect(present(state).choices.find((c) => c.id === "invest").locked).toBe(false);
-    expect(present(go(state, { type: "pick-grow", pick: "invest" })).frame).toBe("Gd4-invest-unlocked");
+    expect(present(go(state, { type: "pick-grow", pick: "invest" })).frame).toBe("H11-boost-cards");
   });
 
   it("wires a goal amount into its own card and keeps cover on the insurance stub", () => {
@@ -905,7 +901,7 @@ describe("Slice C costs and deeper flows", () => {
     const menu = { ...state, screen: "g0" };
     expect(present(menu).choices.map((choice) => choice.id)).toEqual(["goals", "insurance", "invest"]);
     expect(go(menu, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
-    expect(go(menu, { type: "pick-grow", pick: "invest" }).screen).toBe("g3");
+    expect(go(menu, { type: "pick-grow", pick: "invest" }).screen).toBe("bx");
 
     state = go(menu, { type: "pick-grow", pick: "insurance" });
     state = go(state, { type: "continue" });
@@ -915,8 +911,9 @@ describe("Slice C costs and deeper flows", () => {
     expect(buildLife(state).stubs.find((stub) => stub.id === "invest").later).toBe("Cover 900 · a month");
 
     const openedInvest = go(menu, { type: "pick-grow", pick: "invest" });
-    expect(present(openedInvest).frame).toBe("Gd4-invest-unlocked");
-    expect(renderFirstBuild(openedInvest)).toMatch(/Unlocked/);
+    expect(present(openedInvest).frame).toBe("CJ06-boost-open");
+    expect(renderFirstBuild(openedInvest)).toMatch(/Benchmarks only/);
+    expect(renderFirstBuild(openedInvest)).toMatch(/Use Balanced/);
     expect(renderFirstBuild(openedInvest)).not.toMatch(/Cushion not ready/);
     expect(renderFirstBuild(openedInvest)).toMatch(/Show my current plan/);
     expect(renderFirstBuild(openedInvest)).not.toMatch(/behaviour score|behavior score/i);
@@ -1673,7 +1670,7 @@ describe("Unlock sequence", () => {
     expect(present(planning).choices.find((choice) => choice.id === "goals").locked).toBe(false);
     expect(present(planning).choices.find((choice) => choice.id === "insurance").locked).not.toBe(true);
     expect(go(planning, { type: "pick-grow", pick: "insurance" }).screen).toBe("g2");
-    expect(go(planning, { type: "pick-grow", pick: "invest" }).screen).toBe("g3");
+    expect(go(planning, { type: "pick-grow", pick: "invest" }).screen).toBe("bx");
     const goalsOpen = go(planning, { type: "pick-grow", pick: "goals" });
     expect(goalsOpen.screen).toBe("g1");
     expect(goalsOpen.screen).not.toBe("sf");
@@ -1872,7 +1869,7 @@ describe("Unlock sequence", () => {
     expect(opened.screen).toBe("g0");
     expect(cushionReady(opened)).toBe(true);
     expect(present(opened).choices.find((choice) => choice.id === "invest").locked).toBe(false);
-    expect(present(go(opened, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+    expect(present(go(opened, { type: "pick-grow", pick: "invest" })).primary).toBe("Use Balanced");
 
     const saved = hydrate(plan);
     expect(saved.inputs.stillDue.amount).toBe("4000");
@@ -1937,20 +1934,20 @@ describe("Unlock sequence", () => {
     expect(empty.screen).toBe("g0");
     expect(cushionReady(empty)).toBe(false);
     expect(present(empty).choices.find((choice) => choice.id === "invest").locked).toBe(false);
-    expect(present(go(empty, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
-    expect(present(go(empty, { type: "pick-grow", pick: "invest" })).frame).toBe("Gd4-invest-unlocked");
+    expect(present(go(empty, { type: "pick-grow", pick: "invest" })).callout.body).toMatch(/Benchmarks only/);
+    expect(present(go(empty, { type: "pick-grow", pick: "invest" })).frame).toBe("CJ06-boost-open");
 
     const planClear = menu("ok", "26000", "17000", "0", "9000", "9000");
     expect(planClear.screen).toBe("g0");
     expect(cushionReady(planClear)).toBe(true);
     expect(present(planClear).choices.find((choice) => choice.id === "invest").locked).toBe(false);
-    expect(present(go(planClear, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+    expect(present(go(planClear, { type: "pick-grow", pick: "invest" })).primary).toBe("Use Balanced");
 
     const stableClear = menu("stable", "24000", "16000", "0", "12000", "12000");
     expect(stableClear.screen).toBe("g0");
     expect(cushionReady(stableClear)).toBe(true);
     expect(present(stableClear).choices.find((choice) => choice.id === "invest").locked).toBe(false);
-    expect(present(go(stableClear, { type: "pick-grow", pick: "invest" })).callout.title).toBe("Unlocked");
+    expect(present(go(stableClear, { type: "pick-grow", pick: "invest" })).primary).toBe("Use Balanced");
 
     const owed = money(planClear, "overdue", "800");
     expect(buildLife(owed).today.burdenText).toBe("Still due / overdue 800");
@@ -2321,7 +2318,7 @@ describe("Slice G debt enquire to Right Door", () => {
     return step(state, { type: "continue" });
   }
 
-  it("asks debt type, combined totals, and a split she enters", () => {
+  it("asks debt type, combined totals, and a split the user enters", () => {
     let state = step(freshState(), { type: "pick-entry", entry: "ok" });
     state = editMoney(state, "takeHome", "18400");
     state = step(state, { type: "continue" });
@@ -2491,6 +2488,7 @@ describe("Slice I scenario positive", () => {
     expect(state.inputs.spendDebt.amount).toBe("");
     expect(renderFirstBuild(state)).toMatch(/Savings on hand/);
     expect(renderFirstBuild(state)).toMatch(/Amount on hand/);
+    expect(renderFirstBuild(state)).not.toMatch(/Empty until|Never invent|she /);
   });
 
   it("walks 100k / 50k / 200k into a car goal and Boost with no Right Door card", () => {
@@ -2521,7 +2519,17 @@ describe("Slice I scenario positive", () => {
     expect(plan).toMatch(/\+50,000/);
     expect(plan).not.toMatch(/Debt repayment/);
     expect(plan).not.toMatch(/data-act="open-rd"/);
+    expect(plan).not.toMatch(/Empty until|No Right Door card|Never invent|she /);
     expect(plan).toMatch(/data-act="open-boost-mix"/);
+    const funded = { ...state, asOf: new Date(2026, 10, 3) };
+    expect(buildLife(funded).ef.pct).toBe(100);
+    expect(buildLife(funded).ef.byText).toBe("Done by 3 Nov 2026");
+    expect(buildLife(funded).ef.whenIso).toBe("2026-11-03");
+    expect(renderFirstBuild(step(funded, { type: "open-life" }))).toMatch(/Done by 3 Nov 2026/);
+    const detail = renderFirstBuild(step(step(funded, { type: "open-life" }), { type: "open-milestone", id: "ef" }));
+    expect(detail).toMatch(/value="2026-11-03"/);
+    expect(detail).toMatch(/3 Nov 2026/);
+    expect(detail).not.toMatch(/Pick a date/);
     state = step(state, { type: "open-goals" });
     state = step(state, { type: "edit", key: "goalName", text: "Buy a car" });
     state = editMoney(state, "goalAmount", "80000");
@@ -2536,18 +2544,29 @@ describe("Slice I scenario positive", () => {
     expect(afterGoal).toMatch(/data-act="open-boost-mix"/);
     expect(afterGoal).not.toMatch(/data-act="open-rd"/);
     const invest = step(state, { type: "open-invest" });
-    expect(invest.screen).toBe("g3");
-    expect(present(invest).callout.title).toBe("Unlocked");
-    expect(present(invest).primary).toBe("Continue");
-    const cardsFromDoor = step(invest, { type: "continue" });
-    expect(cardsFromDoor.screen).toBe("bx");
-    expect(renderFirstBuild(cardsFromDoor)).toMatch(/Bad year about 10%/);
-    expect(step(cardsFromDoor, { type: "back" }).screen).toBe("g3");
+    expect(invest.screen).toBe("bx");
+    expect(invest.boostPick).toBe("balanced");
+    expect(present(invest).primary).toBe("Use Balanced");
+    expect(present(invest).primaryDisabled).toBe(false);
+    expect(present(invest).callout.body).toMatch(/Benchmarks only/);
+    expect(renderFirstBuild(invest)).toMatch(/Bad year about 10%/);
+    expect(renderFirstBuild(invest)).toMatch(/data-value="balanced" aria-pressed="true"/);
     expect(step(invest, { type: "back" }).screen).toBe("ml");
     const life = step(state, { type: "open-life" });
     expect(life.screen).toBe("l0");
-    expect(renderFirstBuild(life)).toMatch(/data-act="open-invest"/);
-    expect(step(life, { type: "open-invest" }).screen).toBe("g3");
+    const lifeHtml = renderFirstBuild(life);
+    expect(lifeHtml).toMatch(/data-act="open-invest"/);
+    const stageAt = lifeHtml.indexOf('<div class="ft-life-stage">');
+    const headAt = lifeHtml.indexOf('class="ft-life-head-bar"');
+    const futureAt = lifeHtml.indexOf('class="ft-future"');
+    const dockAt = lifeHtml.lastIndexOf('<div class="ft-actions">');
+    expect(headAt).toBeGreaterThan(0);
+    expect(headAt).toBeLessThan(stageAt);
+    expect(futureAt).toBeGreaterThan(stageAt);
+    expect(futureAt).toBeLessThan(dockAt);
+    expect(lifeHtml.slice(headAt, stageAt)).toMatch(/Your life/);
+    expect(lifeHtml.slice(headAt, stageAt)).toMatch(/Today → age 70/);
+    expect(step(life, { type: "open-invest" }).screen).toBe("bx");
     state = step(state, { type: "open-boost-mix" });
     expect(state.screen).toBe("bx");
     const cards = renderFirstBuild(state);
@@ -2561,6 +2580,8 @@ describe("Slice I scenario positive", () => {
       "false",
       "false",
     ]);
+    expect(cards).toMatch(/Use this mix/);
+    expect(cards).toMatch(/<button class="ft-btn primary" type="button" disabled aria-disabled="true" data-act="back">Use this mix<\/button>/);
     expect(step(state, { type: "back" }).screen).toBe("ml");
   });
 });
@@ -2677,11 +2698,11 @@ describe("Slice J cushion date", () => {
     expect(plan).not.toMatch(/data-act="open-rd"/);
     expect(cushionReady(later)).toBe(false);
     const invest = step(later, { type: "open-invest" });
-    expect(invest.screen).toBe("g3");
-    expect(present(invest).callout.title).toBe("Unlocked");
-    expect(present(invest).body).toBe("Boost stays open while your cushion is still building.");
-    const cards = step(invest, { type: "continue" });
-    expect(cards.screen).toBe("bx");
+    expect(invest.screen).toBe("bx");
+    expect(invest.boostPick).toBe("balanced");
+    expect(present(invest).primary).toBe("Use Balanced");
+    expect(present(invest).callout.body).toMatch(/Benchmarks only/);
+    const cards = invest;
     const cardsHtml = renderFirstBuild(cards);
     expect(cardsHtml).toMatch(/data-frame="CJ06-boost-open"/);
     expect(cardsHtml).toMatch(/Bad year about 10%/);
@@ -2952,6 +2973,8 @@ describe("Slice M input journey", () => {
     expect(phone).toMatch(/height: calc\(100dvh - var\(--ft-keyboard, 0px\)\)/);
     expect(phone).toMatch(/min-height:\s*0/);
     expect(phone).not.toMatch(/min-height:\s*100dvh/);
+    expect(css).toMatch(/scroll-padding-bottom:\s*16px/);
+    expect(css).toMatch(/\.ft-content \{[^}]*padding: 28px 24px 16px;/);
   });
 
   it("continues from filled loan debt the same way, with or without an overdue pick", () => {
@@ -3138,6 +3161,9 @@ describe("Slice M input journey", () => {
     const started = renderFirstBuild(state);
     expect(started).toMatch(/Emergency fund/);
     expect(started).toMatch(/data-act="open-life"/);
+    const fundedHub = renderFirstBuild({ ...state, asOf: new Date(2026, 10, 3) });
+    expect(fundedHub).toMatch(/Done by 3 Nov 2026/);
+    expect(fundedHub).not.toMatch(/Pick a date|Empty until|No Right Door card|she /);
     expect(started).toMatch(/Show my current plan/);
     expect(started).toMatch(/data-hub="ef"/);
 
