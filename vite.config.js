@@ -14,6 +14,7 @@ export default defineConfig({
         main: resolve(root, "index.html"),
         sunday: resolve(root, "sunday/index.html"),
         fortune: resolve(root, "fortune/index.html"),
+        fortuneO: resolve(root, "fortune-o/index.html"),
         offshore: resolve(root, "offshore/index.html"),
       },
     },
