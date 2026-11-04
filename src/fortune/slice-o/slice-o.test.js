@@ -141,6 +141,39 @@ describe("Slice O dated spine", () => {
     assertClean(html);
   });
 
+  it("returns from the life-plan cushion card to Your life plan", () => {
+    const timeline = throughCushion();
+    const opened = act(timeline, { type: "go", screen: "cushion" });
+    expect(opened.screen).toBe("cushion");
+    const back = act(opened, { type: "back" });
+    expect(back.screen).toBe("timeline");
+    const html = renderSliceO(back);
+    expect(html).toContain("Your life plan");
+    expect(html).not.toContain("You today");
+
+    let early = freshState({ asOf: "2026-11-03" });
+    early = act(early, { type: "next" });
+    early = act(early, { type: "next" });
+    early = act(early, { type: "edit", key: "income", value: "24000" });
+    early = act(early, { type: "next" });
+    early = act(early, { type: "edit", key: "bills", value: "6000" });
+    early = act(early, { type: "edit", key: "personal", value: "6000" });
+    early = act(early, { type: "next" });
+    early = act(early, { type: "choose", field: "debt", value: "no" });
+    early = act(early, { type: "next" });
+    early = act(early, { type: "next" });
+    expect(early.screen).toBe("cushion");
+    expect(early.cushionSet).not.toBe(true);
+    expect(act(early, { type: "back" }).screen).toBe("today");
+
+    const fromPlan = act(timeline, { type: "go", screen: "cashflow" });
+    expect(act(fromPlan, { type: "back" }).screen).toBe("timeline");
+    let setting = act(london(), { type: "next" });
+    setting = act(setting, { type: "next" });
+    expect(setting.screen).toBe("cashflow");
+    expect(act(setting, { type: "back" }).screen).toBe("debtpath");
+  });
+
   it("shows the completion date on arrival when the cushion is already funded", () => {
     let state = throughCushion();
     state = act(state, { type: "back" });

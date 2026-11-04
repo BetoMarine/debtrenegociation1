@@ -360,6 +360,9 @@ function goNext(state) {
 function goBack(state) {
   if (state.infoOpen) return { ...state, infoOpen: false };
   if (state.screen === "home") return state;
+  if (state.cushionSet === true && (state.screen === "cushion" || state.screen === "cashflow")) {
+    return enter(state, "timeline");
+  }
   if (state.screen === "cushion" && state.debtProblems !== true) return enter(state, "today");
   const backTo = {
     start: "home",
