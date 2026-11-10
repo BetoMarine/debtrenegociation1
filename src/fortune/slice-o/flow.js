@@ -337,7 +337,6 @@ function commitGoal(state) {
 function goNext(state) {
   switch (state.screen) {
     case "home":
-      return enter(state, "start");
     case "start":
       return enter(state, "income");
     case "income":
@@ -388,7 +387,7 @@ function goBack(state) {
   if (state.screen === "cushion" && state.debtProblems !== true) return enter(state, "today");
   const backTo = {
     start: "home",
-    income: "start",
+    income: "home",
     expenses: "income",
     debt: "expenses",
     today: "debt",
@@ -480,8 +479,7 @@ export function previewFrame(id) {
     state = reduce(state, action).state;
   };
   if (id === "home") return state;
-  go({ type: "next" });
-  if (id === "start") return state;
+  if (id === "start") return reduce(state, { type: "go", screen: "start" }).state;
   go({ type: "next" });
   go({ type: "edit", key: "income", value: "24000" });
   if (id === "income") return state;

@@ -50,7 +50,6 @@ function london() {
     state = act(state, action);
   };
   go({ type: "next" });
-  go({ type: "next" });
   go({ type: "edit", key: "income", value: "24000" });
   go({ type: "next" });
   go({ type: "edit", key: "bills", value: "6000" });
@@ -343,8 +342,19 @@ describe("Slice O dated spine", () => {
     const home = renderSliceO(fresh);
     expect(home).toContain('data-screen="home"');
     expect(home).toContain("Dated plan + Shelf");
-    expect(home).toContain("Start with numbers");
+    expect(home).toContain("One new-user spine. Cards by date. Shelf only at Boost — not the front door.");
     expect(home).toContain("FIX");
+    expect(home).toContain("EF");
+    expect(home).toContain("GOALS+BOOST");
+    expect(home).toContain("SHELF");
+    expect(home).toContain("1–3 · Debt first");
+    expect(home).toContain("4 · Emergency fund");
+    expect(home).toContain("5–6 · After those dates");
+    expect(home).toContain("Start with numbers");
+    const intoIncome = act(fresh, { type: "next" });
+    expect(intoIncome.screen).toBe("income");
+    expect(renderSliceO(intoIncome)).toContain("Take-home");
+    expect(act(intoIncome, { type: "back" }).screen).toBe("home");
     expect(home).not.toMatch(/data-act="choose"[^>]*Fix|data-act="choose"[^>]*Plan|data-act="choose"[^>]*Invest/);
     assertClean(home);
 
