@@ -4,8 +4,18 @@ import { renderSliceO } from "./view.js";
 
 const EXIT_URL = "https://www.google.com/";
 
+/** A tap that opens the link can land on the new page and hit the first button. */
+export const OPENING_CLICK_MS = 800;
+
 let state = loadState(safeStorage());
 let saveTimer = 0;
+let openedAt = 0;
+
+export function ignoreOpeningClick(elapsedMs, screen) {
+  const elapsed = Number(elapsedMs);
+  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed >= OPENING_CLICK_MS) return false;
+  return screen === "home" || screen === "start";
+}
 
 function safeStorage() {
   try {
@@ -103,6 +113,7 @@ async function download() {
 }
 
 function onClick(event) {
+  if (ignoreOpeningClick(Date.now() - openedAt, state.screen)) return;
   const node = event.target.closest?.("[data-act]");
   if (!node || !root()?.contains(node)) return;
   const act = node.getAttribute("data-act");
@@ -177,7 +188,9 @@ function bindKeyboard() {
 
 export function boot() {
   const frame = new URLSearchParams(location.search).get("frame");
-  state = frame && SCREENS.includes(frame) ? previewFrame(frame) : loadState(safeStorage());
+  const framed = frame && SCREENS.includes(frame);
+  state = framed ? previewFrame(frame) : loadState(safeStorage());
+  openedAt = framed ? 0 : Date.now();
   const host = root();
   if (!host) return;
   host.addEventListener("click", onClick);
