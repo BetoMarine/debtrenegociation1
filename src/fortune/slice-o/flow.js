@@ -157,6 +157,28 @@ export function settle(state) {
   return { ...state, screen: resumeScreen(state) };
 }
 
+/**
+ * The locked journey starts at income. Home explains the path. Start only
+ * introduces that step. Neither one is a plan the person left in progress.
+ */
+export function journeyStarted(state) {
+  if (!state || typeof state !== "object") return false;
+  if (parseAmount(state.income) != null) return true;
+  if (parseAmount(state.bills) != null || parseAmount(state.personal) != null) return true;
+  if (state.debtProblems !== null && state.debtProblems !== undefined) return true;
+  if (state.pathStarted === true || state.cushionPrimed === true || state.cushionSet === true) return true;
+  if (state.fundedOn) return true;
+  if (Array.isArray(state.goals) && state.goals.length > 0) return true;
+  return state.screen !== "home" && state.screen !== "start";
+}
+
+/** A new visit with no journey opens on the explain screen. A started plan resumes. */
+export function openVisit(state) {
+  const settled = settle(state || freshState());
+  if (journeyStarted(settled)) return settled;
+  return { ...settled, screen: "home" };
+}
+
 function cleanGoals(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -229,13 +251,13 @@ export function serialize(state) {
 }
 
 export function loadState(storage) {
-  if (!storage) return freshState();
+  if (!storage) return openVisit(freshState());
   try {
     const raw = storage.getItem(STORAGE_KEY);
-    if (!raw) return freshState();
-    return hydrate(JSON.parse(raw));
+    if (!raw) return openVisit(freshState());
+    return openVisit(hydrate(JSON.parse(raw)));
   } catch {
-    return freshState();
+    return openVisit(freshState());
   }
 }
 
@@ -315,7 +337,6 @@ function commitGoal(state) {
 function goNext(state) {
   switch (state.screen) {
     case "home":
-      return enter(state, "start");
     case "start":
       return enter(state, "income");
     case "income":
@@ -366,7 +387,7 @@ function goBack(state) {
   if (state.screen === "cushion" && state.debtProblems !== true) return enter(state, "today");
   const backTo = {
     start: "home",
-    income: "start",
+    income: "home",
     expenses: "income",
     debt: "expenses",
     today: "debt",
@@ -458,8 +479,7 @@ export function previewFrame(id) {
     state = reduce(state, action).state;
   };
   if (id === "home") return state;
-  go({ type: "next" });
-  if (id === "start") return state;
+  if (id === "start") return reduce(state, { type: "go", screen: "start" }).state;
   go({ type: "next" });
   go({ type: "edit", key: "income", value: "24000" });
   if (id === "income") return state;

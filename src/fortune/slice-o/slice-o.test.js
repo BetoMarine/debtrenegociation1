@@ -7,6 +7,7 @@ import {
   SUNDAY_PACK_URL,
   freshState,
   loadState,
+  openVisit,
   present,
   previewFrame,
   reduce,
@@ -15,7 +16,7 @@ import {
 import { buildSliceOPdf } from "./pdf.js";
 import { decodeOffer, SAMPLE_OFFER } from "./shelf.js";
 import { renderSliceO } from "./view.js";
-import { keyboardOverlap } from "./app.js";
+import { OPENING_CLICK_MS, ignoreOpeningClick, keyboardOverlap } from "./app.js";
 
 const BANNED = [
   /\bshe\b/i,
@@ -48,7 +49,6 @@ function london() {
   const go = (action) => {
     state = act(state, action);
   };
-  go({ type: "next" });
   go({ type: "next" });
   go({ type: "edit", key: "income", value: "24000" });
   go({ type: "next" });
@@ -334,6 +334,49 @@ describe("Slice O dated spine", () => {
     expect(pdf.indexOf("~3 Feb 2027")).toBeLessThan(pdf.indexOf("15 May 2027"));
     expect(pdf).toMatch(/not a product to buy/i);
     expect(pdf).not.toMatch(/you should buy/i);
+  });
+
+  it("opens a clean visit on the explain screen, and resumes once the journey has started", () => {
+    const fresh = loadState(memory());
+    expect(fresh.screen).toBe("home");
+    const home = renderSliceO(fresh);
+    expect(home).toContain('data-screen="home"');
+    expect(home).toContain("Dated plan + Shelf");
+    expect(home).toContain("One new-user spine. Cards by date. Shelf only at Boost — not the front door.");
+    expect(home).toContain("FIX");
+    expect(home).toContain("EF");
+    expect(home).toContain("GOALS+BOOST");
+    expect(home).toContain("SHELF");
+    expect(home).toContain("1–3 · Debt first");
+    expect(home).toContain("4 · Emergency fund");
+    expect(home).toContain("5–6 · After those dates");
+    expect(home).toContain("Start with numbers");
+    const intoIncome = act(fresh, { type: "next" });
+    expect(intoIncome.screen).toBe("income");
+    expect(renderSliceO(intoIncome)).toContain("Take-home");
+    expect(act(intoIncome, { type: "back" }).screen).toBe("home");
+    expect(home).not.toMatch(/data-act="choose"[^>]*Fix|data-act="choose"[^>]*Plan|data-act="choose"[^>]*Invest/);
+    assertClean(home);
+
+    const introOnly = freshState({ screen: "start" });
+    const store = memory();
+    storeState(store, introOnly);
+    expect(loadState(store).screen).toBe("home");
+    expect(openVisit(introOnly).screen).toBe("home");
+
+    const onIncome = freshState({ screen: "income" });
+    storeState(store, onIncome);
+    expect(loadState(store).screen).toBe("income");
+
+    const withPay = freshState({ screen: "expenses", income: "24000", bills: "6000" });
+    storeState(store, withPay);
+    expect(loadState(store).screen).toBe("expenses");
+
+    expect(ignoreOpeningClick(0, "home")).toBe(true);
+    expect(ignoreOpeningClick(OPENING_CLICK_MS - 1, "start")).toBe(true);
+    expect(ignoreOpeningClick(OPENING_CLICK_MS, "home")).toBe(false);
+    expect(ignoreOpeningClick(0, "income")).toBe(false);
+    expect(ignoreOpeningClick(0, "expenses")).toBe(false);
   });
 
   it("resumes the last step on this phone and can erase it", () => {
