@@ -50,6 +50,58 @@ function viewState() {
   return { ...state, rightDoorJoined: doorJoined };
 }
 
+/** Keep a card’s bottom at least 16px above the dock, not merely inside the scroller. */
+export function scrollAboveDock(el) {
+  if (!el?.getBoundingClientRect) return;
+  const scroller = el.closest(".ft-content, .ft-life-stage");
+  if (!scroller) return;
+  const dock = el.closest(".ft-screen")?.querySelector(":scope > .ft-actions");
+  const pad = 16;
+  const limit = dock
+    ? dock.getBoundingClientRect().top - pad
+    : scroller.getBoundingClientRect().bottom - pad;
+  let rect = el.getBoundingClientRect();
+  if (rect.bottom > limit) scroller.scrollTop += rect.bottom - limit;
+  rect = el.getBoundingClientRect();
+  const top = scroller.getBoundingClientRect().top;
+  const room = limit - top;
+  if (rect.top < top && rect.height <= room) scroller.scrollTop -= top - rect.top;
+}
+
+function settleDock(host) {
+  const screen = host.querySelector(".ft-screen");
+  const dock = screen?.querySelector(":scope > .ft-actions");
+  const scroller = screen?.querySelector(".ft-life-stage, .ft-content");
+  if (!dock || !scroller) return;
+  const limit = () => dock.getBoundingClientRect().top - 16;
+  const toggle = screen.dataset.screen === "bx" ? scroller.querySelector(".ft-boost-toggle") : null;
+  const ef = scroller.querySelector('[data-ms="ef"]');
+  const primary = toggle || ef;
+  if (primary && primary.getBoundingClientRect().bottom > limit() + 1) {
+    scrollAboveDock(primary);
+    return;
+  }
+  const view = scroller.getBoundingClientRect();
+  const cut = [...scroller.querySelectorAll(".ft-ms-card, .ft-hub-card")].filter((el) => {
+    const rect = el.getBoundingClientRect();
+    const showing = rect.bottom > view.top + 1 && rect.top < view.bottom - 1;
+    return showing && rect.bottom > limit() + 1;
+  }).pop();
+  if (cut) scrollAboveDock(cut);
+}
+
+function revealAboveDock(host) {
+  const open = host.querySelector(".ft-boost-slot.is-open");
+  if (!open) return;
+  const scroller = open.closest(".ft-content, .ft-life-stage");
+  if (!scroller) return;
+  const elRect = open.getBoundingClientRect();
+  const scRect = scroller.getBoundingClientRect();
+  const visibleBottom = scRect.bottom - 16;
+  const intersects = elRect.bottom > scRect.top && elRect.top < visibleBottom;
+  if (!intersects) scrollAboveDock(open);
+}
+
 function draw() {
   const host = root();
   if (!host) return;
@@ -65,8 +117,11 @@ function draw() {
         const pos = Math.min(caret, String(next.value || "").length);
         next.setSelectionRange(pos, pos);
       }
+      scrollAboveDock(next);
     }
   }
+  revealAboveDock(host);
+  settleDock(host);
   syncHash();
 }
 
@@ -185,6 +240,7 @@ function onClick(event) {
   }
   const btn = event.target.closest("[data-act]");
   if (!btn || !root()?.contains(btn)) return;
+  if (btn.hasAttribute("disabled") || btn.getAttribute("aria-disabled") === "true") return;
   const act = btn.getAttribute("data-act");
   if (act === "exit") {
     event.preventDefault();
@@ -315,7 +371,7 @@ function pinKeyboard() {
   document.documentElement.style.setProperty("--ft-keyboard", `${inset}px`);
   const active = document.activeElement;
   if (inset > 0 && active?.matches?.("[data-field]")) {
-    active.scrollIntoView({ block: "center", inline: "nearest" });
+    scrollAboveDock(active);
   }
 }
 

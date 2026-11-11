@@ -60,15 +60,7 @@ input {
 }
 
 .ft-build {
-  flex: none;
-  margin: 0;
-  padding: 6px 12px 0;
-  text-align: center;
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ft-soft);
+  display: none;
 }
 
 .ft-top {
@@ -147,10 +139,12 @@ input {
 }
 
 .ft-content {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  margin-bottom: 16px;
   overflow: auto;
-  padding: 28px 24px 0;
+  padding: 28px 24px 16px;
+  scroll-padding-bottom: 16px;
 }
 
 .ft-content h1,
@@ -340,11 +334,13 @@ input {
 
 .ft-actions {
   flex: none;
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
   background: #fff;
   padding: 0 24px max(30px, env(safe-area-inset-bottom));
+}
+
+.ft-screen > .ft-actions {
+  position: relative;
+  z-index: 4;
 }
 
 .ft-screen:has(.ft-privacy-foot) .ft-actions {
@@ -407,6 +403,12 @@ input {
 .ft-btn.primary {
   background: var(--ft-ink);
   color: #fff;
+}
+
+.ft-btn.primary:disabled {
+  background: #cbd5e1;
+  color: #475569;
+  cursor: default;
 }
 
 a.ft-btn {
@@ -516,7 +518,7 @@ a.ft-btn {
 }
 
 .ft-future {
-  margin: 8px 0 4px;
+  margin: 8px 0 16px;
 }
 
 .ft-future-label {
@@ -761,11 +763,21 @@ a.ft-btn {
   white-space: nowrap;
 }
 
+.ft-life-head-bar {
+  flex: none;
+  padding: 4px 16px 0;
+  background: #fff;
+  position: relative;
+  z-index: 2;
+}
+
 .ft-life-stage {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  margin-bottom: 16px;
   overflow: auto;
   position: relative;
+  scroll-padding-bottom: 16px;
 }
 
 .ft-life {
@@ -1289,9 +1301,20 @@ div.ft-ms-card {
 .ft-life-link:focus-visible,
 .ft-ms-card:focus-visible,
 .ft-input input:focus-visible,
-.ft-hub-card:focus-visible {
+.ft-hub-card:focus-visible,
+.ft-boost-pick:focus-visible {
   outline: 2px solid var(--ft-fix);
   outline-offset: 2px;
+}
+
+.ft-hub-card,
+.ft-ms-card,
+.ft-callout,
+.ft-boost-pick,
+.ft-boost-panel,
+.ft-input,
+.ft-boost-slot {
+  scroll-margin-bottom: 16px;
 }
 
 .ft-hub-card {
